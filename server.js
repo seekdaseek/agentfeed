@@ -112,4 +112,19 @@ app.get('/', (_req, res) => res.json({
   })),
 }));
 
-app.listen(PORT, () => console.log(`agentfeed up on :${PORT} (x402: ${x402Network})`));
+// ---- MCP rail (Session 3): same tools at POST /mcp for agents in Claude/Cursor/frameworks
+const { initMcp } = require('./mcp');
+
+(async () => {
+  if (paymentsOn) {
+    try {
+      await initMcp(app);
+    } catch (e) {
+      console.error('FATAL: MCP rail init failed:', e.message);
+      process.exit(1);
+    }
+  } else {
+    console.log('[mcp] skipped (X402_MODE=off)');
+  }
+  app.listen(PORT, () => console.log(`agentfeed up on :${PORT} (x402: ${x402Network})`));
+})();

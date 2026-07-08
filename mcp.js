@@ -61,7 +61,7 @@ async function initMcp(app) {
       hooks: {
         onAfterSettlement: async ({ toolName, settlement, paymentPayload }) => {
           logCall({
-            tool: toolName, status: 'paid',
+            tool: def.name, status: 'paid',
             payer_wallet: paymentPayload?.payer || settlement?.payer || null,
             tx_sig: settlement?.transaction || null,
             amount_usdc: def.usd,

@@ -12,6 +12,7 @@ const { getPrice } = require('./tools/prices');
 const { getFunding } = require('./tools/funding');
 const { getFearGreed } = require('./tools/feargreed');
 const { getWalletHoldings, getTokenMetadata } = require('./tools/onchain');
+const { getRecentLiquidations, getLiquidationStats } = require('./tools/liquidations');
 
 const TOOL_DEFS = [
   { name: 'get_sol_price', usd: 0.001, desc: 'Live SOL/USD spot price with confidence interval (Pyth oracle).',
@@ -34,6 +35,13 @@ const TOOL_DEFS = [
   { name: 'get_token_metadata', usd: 0.005, desc: 'SPL token metadata: name, symbol, decimals, supply, price (Helius DAS).',
     schema: { mint: z.string().describe('SPL token mint address (base58)') },
     run: (a) => getTokenMetadata(a.mint) },
+  { name: 'get_recent_liquidations', usd: 0.003, desc: 'Recent SOL/BTC perp liquidations from Bybit: timestamp, long/short, size, price, USD value. Filterable.',
+    schema: { symbol: z.string().optional().describe('SOL or BTC (omit for both)'),
+              limit: z.number().optional().describe('max rows, 1-100, default 25'),
+              min_usd: z.number().optional().describe('only prints >= this USD size') },
+    run: (a) => getRecentLiquidations({ query: a }) },
+  { name: 'get_liquidation_stats', usd: 0.004, desc: 'SOL+BTC liquidation aggregates: 1h and 24h totals, longs vs shorts USD split, biggest print.',
+    schema: {}, run: () => getLiquidationStats() },
 ];
 
 async function initMcp(app) {
@@ -105,7 +113,7 @@ async function initMcp(app) {
     }
   });
 
-  console.log(`[mcp] rail active at POST /mcp — 6 paid + 2 free tools (network=${networkName})`);
+  console.log(`[mcp] rail active at POST /mcp — ${TOOL_DEFS.filter(d=>d.usd).length} paid + ${TOOL_DEFS.filter(d=>!d.usd).length} free tools (network=${networkName})`);
 }
 
 module.exports = { initMcp, TOOL_DEFS };

@@ -14,6 +14,8 @@ const PRICES = {
   'GET /api/market-snapshot':          { usd: 0.003, tool: 'get_market_snapshot', desc: 'Full market snapshot in one call' },
   'GET /api/wallet-holdings/:wallet':  { usd: 0.008, tool: 'get_wallet_holdings', desc: 'Solana wallet holdings via Helius DAS' },
   'GET /api/token-metadata/:mint':     { usd: 0.005, tool: 'get_token_metadata',  desc: 'SPL token metadata via Helius DAS' },
+  'GET /api/liquidations':             { usd: 0.003, tool: 'get_recent_liquidations', desc: 'Recent SOL/BTC liquidations (Bybit), filterable' },
+  'GET /api/liquidation-stats':        { usd: 0.004, tool: 'get_liquidation_stats',   desc: '1h/24h liquidation totals, long/short split, biggest print' },
 };
 
 function buildPaymentLayer() {

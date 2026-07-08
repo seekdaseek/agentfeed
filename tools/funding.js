@@ -1,33 +1,45 @@
-// tools/funding.js — perp funding rates from Binance public futures API.
-// NOTE (spec §8): confirm redistribution terms before mainnet listing,
-// or swap source. Module is isolated so a swap is one-file.
-const SYMBOLS = { SOL: 'SOLUSDT', BTC: 'BTCUSDT' };
-const API = 'https://fapi.binance.com/fapi/v1/premiumIndex';
+// tools/funding.js — perp funding from Hyperliquid public info API.
+// Swapped from Binance (their ToS prohibits charging for their market data).
+// Hyperliquid: decentralized perp DEX, public API, no account/ToS gate.
+const API = 'https://api.hyperliquid.xyz/info';
+const SYMBOLS = ['SOL', 'BTC'];
 
-const cache = new Map(); // symbol -> { at, data }
+let cached = null; // { at, byName }
 const CACHE_MS = 60_000;
 
+async function refresh() {
+  if (cached && Date.now() - cached.at < CACHE_MS) return cached.byName;
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'metaAndAssetCtxs' }),
+    signal: AbortSignal.timeout(6000),
+  });
+  if (!res.ok) throw new Error(`hyperliquid ${res.status}`);
+  const [meta, ctxs] = await res.json();
+  const byName = {};
+  meta.universe.forEach((u, i) => {
+    if (SYMBOLS.includes(u.name) && ctxs[i]) byName[u.name] = ctxs[i];
+  });
+  cached = { at: Date.now(), byName };
+  return byName;
+}
+
 async function getFunding(symbol) {
-  const pair = SYMBOLS[symbol];
-  if (!pair) throw new Error(`unsupported symbol: ${symbol}`);
-
-  const hit = cache.get(symbol);
-  if (hit && Date.now() - hit.at < CACHE_MS) return hit.data;
-
-  const res = await fetch(`${API}?symbol=${pair}`, { signal: AbortSignal.timeout(5000) });
-  if (!res.ok) throw new Error(`binance ${res.status}`);
-  const j = await res.json();
-
-  const data = {
+  if (!SYMBOLS.includes(symbol)) throw new Error(`unsupported symbol: ${symbol}`);
+  const byName = await refresh();
+  const c = byName[symbol];
+  if (!c) throw new Error(`hyperliquid: no ctx for ${symbol}`);
+  const hourly = Number(c.funding);
+  return {
     symbol,
-    funding_rate: Number(j.lastFundingRate),
-    funding_rate_pct: Number((Number(j.lastFundingRate) * 100).toFixed(4)),
-    next_funding_time: Number(j.nextFundingTime),
-    mark_price: Number(Number(j.markPrice).toFixed(symbol === 'BTC' ? 2 : 4)),
-    source: 'binance-futures',
+    funding_rate_hourly: hourly,
+    funding_rate_8h_equiv: Number((hourly * 8).toFixed(8)),
+    funding_rate_pct_hourly: Number((hourly * 100).toFixed(6)),
+    mark_price: Number(Number(c.markPx).toFixed(symbol === 'BTC' ? 2 : 4)),
+    open_interest: Number(c.openInterest),
+    source: 'hyperliquid',
   };
-  cache.set(symbol, { at: Date.now(), data });
-  return data;
 }
 
 module.exports = { getFunding };

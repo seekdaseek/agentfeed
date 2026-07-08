@@ -11,7 +11,6 @@ const PRICES = {
   'GET /api/sol-price':                { usd: 0.001, tool: 'get_sol_price',       desc: 'SOL spot price via Pyth' },
   'GET /api/btc-price':                { usd: 0.001, tool: 'get_btc_price',       desc: 'BTC spot price via Pyth' },
   'GET /api/funding-rate':             { usd: 0.002, tool: 'get_funding_rate',    desc: 'SOL+BTC perp funding rates' },
-  'GET /api/fear-greed':               { usd: 0.001, tool: 'get_fear_greed',      desc: 'Crypto Fear & Greed index' },
   'GET /api/market-snapshot':          { usd: 0.003, tool: 'get_market_snapshot', desc: 'Full market snapshot in one call' },
   'GET /api/wallet-holdings/:wallet':  { usd: 0.008, tool: 'get_wallet_holdings', desc: 'Solana wallet holdings via Helius DAS' },
   'GET /api/token-metadata/:mint':     { usd: 0.005, tool: 'get_token_metadata',  desc: 'SPL token metadata via Helius DAS' },

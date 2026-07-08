@@ -1,7 +1,4 @@
-// mcp.js — Session 3: MCP rail. Same 7 tools, exposed to agents inside
-// Claude/Cursor/agent frameworks via Streamable HTTP at POST /mcp.
-// Paid per-call in USDC through @x402/mcp payment wrappers; settlements
-// land in the same SQLite audit trail as the HTTP rail.
+// mcp.js — Session 3/4: MCP rail. 6 paid tools + 2 free (pricing, fear_greed taster).
 const express = require('express');
 const { z } = require('zod');
 const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
@@ -21,9 +18,9 @@ const TOOL_DEFS = [
     schema: {}, run: () => getPrice('SOL') },
   { name: 'get_btc_price', usd: 0.001, desc: 'Live BTC/USD spot price with confidence interval (Pyth oracle).',
     schema: {}, run: () => getPrice('BTC') },
-  { name: 'get_funding_rate', usd: 0.002, desc: 'Current SOL and BTC perpetual funding rates and mark prices.',
+  { name: 'get_funding_rate', usd: 0.002, desc: 'Current SOL and BTC perp funding rates, mark prices, open interest (Hyperliquid).',
     schema: {}, run: async () => ({ sol: await getFunding('SOL'), btc: await getFunding('BTC') }) },
-  { name: 'get_fear_greed', usd: 0.001, desc: 'Crypto Fear & Greed index (0-100) with classification.',
+  { name: 'get_fear_greed', usd: 0, desc: 'Crypto Fear & Greed index (0-100) with classification.',
     schema: {}, run: () => getFearGreed() },
   { name: 'get_market_snapshot', usd: 0.003, desc: 'SOL+BTC prices, funding rates, and Fear & Greed in one call.',
     schema: {}, run: async () => {
@@ -50,9 +47,9 @@ async function initMcp(app) {
     .register(network, new ExactSvmScheme());
   await rs.initialize();
 
-  // one payment wrapper per tool (per-tool pricing), all sharing audit hooks
   const wrappers = {};
   for (const def of TOOL_DEFS) {
+    if (!def.usd) continue;
     const accepts = await rs.buildPaymentRequirements({
       scheme: 'exact', network, payTo, price: `$${def.usd}`,
     });
@@ -76,15 +73,14 @@ async function initMcp(app) {
     for (const def of TOOL_DEFS) {
       s.tool(
         def.name,
-        `${def.desc} Costs $${def.usd} USDC per call (x402, Solana ${networkName}).`,
+        def.usd ? `${def.desc} Costs $${def.usd} USDC per call (x402, Solana ${networkName}).` : `${def.desc} Free.`,
         def.schema,
-        wrappers[def.name](async (args) => {
+        (def.usd ? wrappers[def.name] : ((h) => h))(async (args) => {
           const data = await def.run(args || {});
           return { content: [{ type: 'text', text: JSON.stringify({ tool: def.name, data }) }] };
         })
       );
     }
-    // free tool so agents can budget before paying
     s.tool('pricing', 'Free: list all agentfeed tools with USDC prices.', {}, async () => ({
       content: [{ type: 'text', text: JSON.stringify(
         TOOL_DEFS.map((d) => ({ tool: d.name, price_usdc: d.usd, description: d.desc }))
@@ -93,7 +89,6 @@ async function initMcp(app) {
     return s;
   }
 
-  // stateless Streamable HTTP: fresh transport+server per request
   app.post('/mcp', express.json(), async (req, res) => {
     try {
       const transport = new StreamableHTTPServerTransport({
@@ -110,7 +105,7 @@ async function initMcp(app) {
     }
   });
 
-  console.log(`[mcp] rail active at POST /mcp — ${TOOL_DEFS.length} paid tools + free pricing (network=${networkName})`);
+  console.log(`[mcp] rail active at POST /mcp — 6 paid + 2 free tools (network=${networkName})`);
 }
 
 module.exports = { initMcp, TOOL_DEFS };

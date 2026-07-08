@@ -117,6 +117,14 @@ app.get('/api/trade-context', tool('get_trade_context', 0.01,
 // ---- free meta routes
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'agentfeed', x402: x402Network }));
 
+const { renderLanding } = require('./tools/landing');
+app.get('/', (req, res, next) => {
+  if ((req.headers.accept || '').includes('text/html')) {
+    return res.type('html').send(renderLanding(PRICES, x402Network));
+  }
+  next();
+});
+
 app.get('/', (_req, res) => res.json({
   service: 'agentfeed',
   description: 'Market + Solana on-chain data for AI agents, paid per-call in USDC via x402.',

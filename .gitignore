@@ -3,3 +3,4 @@ node_modules/
 agentfeed.db*
 payer-wallet.json
 diag-client.mjs
+mcp-publisher

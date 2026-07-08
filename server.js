@@ -106,6 +106,10 @@ app.get('/api/liquidations', tool('get_recent_liquidations', 0.003,
 app.get('/api/liquidation-stats', tool('get_liquidation_stats', 0.004,
   () => getLiquidationStats()));
 
+const { getPositioning } = require('./tools/positioning');
+app.get('/api/positioning', tool('get_positioning', 0.004,
+  () => getPositioning()));
+
 // ---- free meta routes
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'agentfeed', x402: x402Network }));
 

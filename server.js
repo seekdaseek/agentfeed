@@ -118,6 +118,25 @@ app.get('/', (_req, res) => res.json({
   })),
 }));
 
+// discovery manifest (x402 convention: /.well-known/x402.json)
+app.get('/.well-known/x402.json', (_req, res) => res.json({
+  x402Version: 2,
+  service: 'agentfeed',
+  description: 'Crypto market, liquidations, and Solana on-chain data for AI agents. Pay per call in USDC on Solana via x402. No API keys.',
+  website: 'https://x402.ochinimus.app',
+  mcp: 'https://x402.ochinimus.app/mcp',
+  network: x402Network === 'mainnet' ? 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp' : 'solana:devnet',
+  payTo: process.env.PAY_TO,
+  resources: Object.entries(PRICES).map(([route, p]) => ({
+    resource: 'https://x402.ochinimus.app' + route.replace('GET ', ''),
+    method: 'GET',
+    name: p.tool,
+    description: p.desc,
+    price_usd: p.usd,
+    asset: 'USDC',
+  })),
+}));
+
 // ---- MCP rail (Session 3): same tools at POST /mcp for agents in Claude/Cursor/frameworks
 const { initMcp } = require('./mcp');
 

@@ -114,6 +114,10 @@ const { getTradeContext } = require('./tools/tradecontext');
 app.get('/api/trade-context', tool('get_trade_context', 0.01,
   () => getTradeContext()));
 
+const { getTokenRisk } = require('./tools/tokenrisk');
+app.get('/api/token-risk/:mint', tool('get_token_risk', 0.01,
+  (req) => getTokenRisk(req.params.mint)));
+
 // ---- free meta routes
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'agentfeed', x402: x402Network }));
 

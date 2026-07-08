@@ -18,6 +18,7 @@ const PRICES = {
   'GET /api/liquidation-stats':        { usd: 0.004, tool: 'get_liquidation_stats',   desc: '1h/24h liquidation totals, long/short split, biggest print' },
   'GET /api/positioning':              { usd: 0.004, tool: 'get_positioning',        desc: 'SOL+BTC long/short account ratio + open interest with 1h/24h OI change' },
   'GET /api/trade-context':            { usd: 0.01,  tool: 'get_trade_context',      desc: 'Full market state in one call: prices, funding, fear/greed, positioning, liquidations' },
+  'GET /api/token-risk/:mint':         { usd: 0.01,  tool: 'get_token_risk',         desc: 'Token rug-risk signals: mint/freeze authority status, top-holder concentration, risk flags' },
 };
 
 function buildPaymentLayer() {

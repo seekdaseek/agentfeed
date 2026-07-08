@@ -15,6 +15,7 @@ const { getWalletHoldings, getTokenMetadata } = require('./tools/onchain');
 const { getRecentLiquidations, getLiquidationStats } = require('./tools/liquidations');
 const { getPositioning } = require('./tools/positioning');
 const { getTradeContext } = require('./tools/tradecontext');
+const { getTokenRisk } = require('./tools/tokenrisk');
 
 const TOOL_DEFS = [
   { name: 'get_sol_price', usd: 0.001, desc: 'Live SOL/USD spot price with confidence interval (Pyth oracle).',
@@ -48,6 +49,9 @@ const TOOL_DEFS = [
     schema: {}, run: () => getPositioning() },
   { name: 'get_trade_context', usd: 0.01, desc: 'Full market state in one call: SOL+BTC prices, funding, Fear & Greed, long/short positioning, open interest, and liquidation stats. The complete pre-trade picture.',
     schema: {}, run: () => getTradeContext() },
+  { name: 'get_token_risk', usd: 0.01, desc: 'SPL token rug-risk signals: mint/freeze authority status (revoked = safer), top-1/top-10 holder concentration, and risk flags. Not a honeypot/LP-lock checker.',
+    schema: { mint: z.string().describe('SPL token mint address (base58)') },
+    run: (a) => getTokenRisk(a.mint) },
 ];
 
 async function initMcp(app) {

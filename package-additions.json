@@ -1,0 +1,10 @@
+{
+  "note": "merge these into /opt/agentfeed/package.json dependencies",
+  "dependencies": {
+    "@x402/express": "2.17.0",
+    "@x402/svm": "2.17.0",
+    "@x402/core": "2.17.0",
+    "@x402/fetch": "2.17.0",
+    "@solana/kit": "^7.0.0"
+  }
+}

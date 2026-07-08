@@ -1,0 +1,5 @@
+# append to /opt/agentfeed/.env
+X402_MODE=on
+X402_NETWORK=devnet
+FACILITATOR_URL=https://facilitator.x402.org
+PAY_TO=4a8o45skRPcyjAdyR8yES215Swvh8uTpZD6KLarhxCJ7

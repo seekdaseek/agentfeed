@@ -21,7 +21,7 @@ const insert = db.prepare(
 
 const URL = 'wss://stream.bybit.com/v5/public/linear';
 const TOPICS = ['allLiquidation.SOLUSDT', 'allLiquidation.BTCUSDT'];
-let ws, pingTimer, backoff = 1000;
+let ws, pingTimer, backoff = 1000, lastMsg = Date.now();
 
 function connect() {
   ws = new WebSocket(URL);
@@ -31,11 +31,12 @@ function connect() {
     ws.send(JSON.stringify({ op: 'subscribe', args: TOPICS }));
     pingTimer = setInterval(() => {
       if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ op: 'ping' }));
-    }, 20000);
+    }, 15000);
     console.log(new Date().toISOString(), 'connected + subscribed');
   });
 
   ws.on('message', (raw) => {
+    lastMsg = Date.now();
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
     if (!msg.topic || !msg.topic.startsWith('allLiquidation.') || !Array.isArray(msg.data)) return;
@@ -60,3 +61,11 @@ function connect() {
 }
 
 connect();
+
+// staleness watchdog: if no message (incl. pongs) for 60s, kill socket -> triggers reconnect
+setInterval(() => {
+  if (ws && ws.readyState === WebSocket.OPEN && Date.now() - lastMsg > 60000) {
+    console.log(new Date().toISOString(), 'stale connection, terminating');
+    ws.terminate();
+  }
+}, 30000);

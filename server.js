@@ -110,6 +110,10 @@ const { getPositioning } = require('./tools/positioning');
 app.get('/api/positioning', tool('get_positioning', 0.004,
   () => getPositioning()));
 
+const { getTradeContext } = require('./tools/tradecontext');
+app.get('/api/trade-context', tool('get_trade_context', 0.01,
+  () => getTradeContext()));
+
 // ---- free meta routes
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'agentfeed', x402: x402Network }));
 

@@ -14,6 +14,7 @@ const { getFearGreed } = require('./tools/feargreed');
 const { getWalletHoldings, getTokenMetadata } = require('./tools/onchain');
 const { getRecentLiquidations, getLiquidationStats } = require('./tools/liquidations');
 const { getPositioning } = require('./tools/positioning');
+const { getTradeContext } = require('./tools/tradecontext');
 
 const TOOL_DEFS = [
   { name: 'get_sol_price', usd: 0.001, desc: 'Live SOL/USD spot price with confidence interval (Pyth oracle).',
@@ -45,6 +46,8 @@ const TOOL_DEFS = [
     schema: {}, run: () => getLiquidationStats() },
   { name: 'get_positioning', usd: 0.004, desc: 'SOL+BTC positioning: long/short account ratio (retail crowding) + open interest with 1h/24h change (Bybit).',
     schema: {}, run: () => getPositioning() },
+  { name: 'get_trade_context', usd: 0.01, desc: 'Full market state in one call: SOL+BTC prices, funding, Fear & Greed, long/short positioning, open interest, and liquidation stats. The complete pre-trade picture.',
+    schema: {}, run: () => getTradeContext() },
 ];
 
 async function initMcp(app) {

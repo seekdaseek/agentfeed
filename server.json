@@ -2,13 +2,13 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.seekdaseek/agentfeed",
   "title": "AgentFeed",
-  "description": "Crypto market + Solana on-chain data for AI agents. Pay per call in USDC via x402. No API keys.",
+  "description": "Crypto trading data for AI agents: prices, funding, liquidations, positioning. USDC via x402.",
   "websiteUrl": "https://x402.ochinimus.app",
   "repository": {
     "url": "https://github.com/seekdaseek/agentfeed",
     "source": "github"
   },
-  "version": "1.0.0",
+  "version": "1.1.0",
   "remotes": [
     {
       "type": "streamable-http",

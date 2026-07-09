@@ -1,9 +1,17 @@
-node_modules/
+# secrets
 .env
-agentfeed.db*
-payer-wallet.json
-diag-client.mjs
-mcp-publisher
-liquidations.db
-liquidations.db-shm
-liquidations.db-wal
+.env.*
+!.env.example
+
+# runtime data (backups stay on disk, out of git)
+backups/
+*.db
+*.db-shm
+*.db-wal
+
+# node
+node_modules/
+npm-debug.log*
+
+# logs
+*.log

@@ -3,6 +3,7 @@
 // Verified against @x402/express 2.17.0 + @x402/svm 2.17.0 real APIs.
 const { paymentMiddleware, x402ResourceServer } = require('@x402/express');
 const { HTTPFacilitatorClient } = require('@x402/core/server');
+const { bazaarResourceServerExtension, declareDiscoveryExtension } = require('@x402/extensions/bazaar');
 const { SOLANA_MAINNET_CAIP2, SOLANA_DEVNET_CAIP2 } = require('@x402/svm');
 const { ExactSvmScheme } = require('@x402/svm/exact/server');
 
@@ -34,8 +35,22 @@ function buildPaymentLayer() {
       : { url: facilitatorUrl },
   );
   const resourceServer = new x402ResourceServer(facilitator)
-    .register(network, new ExactSvmScheme());
+    .register(network, new ExactSvmScheme())
+    .registerExtension(bazaarResourceServerExtension);
 
+  const TAGS = {
+    get_sol_price:            ['crypto','price','solana','pyth'],
+    get_btc_price:            ['crypto','price','bitcoin','pyth'],
+    get_funding_rate:         ['funding','perps','crypto','trading'],
+    get_market_snapshot:      ['market-data','crypto','trading','snapshot'],
+    get_wallet_holdings:      ['solana','wallet','tokens','onchain'],
+    get_token_metadata:       ['solana','tokens','metadata','onchain'],
+    get_recent_liquidations:  ['liquidations','crypto','trading','realtime','bybit'],
+    get_liquidation_stats:    ['liquidations','crypto','trading','stats'],
+    get_positioning:          ['positioning','open-interest','long-short','crypto'],
+    get_trade_context:        ['market-data','trading','liquidations','positioning','crypto'],
+    get_token_risk:           ['solana','tokens','risk','rug-check','security'],
+  };
   const routes = {};
   for (const [pattern, p] of Object.entries(PRICES)) {
     routes[pattern] = {
@@ -46,6 +61,9 @@ function buildPaymentLayer() {
         payTo,
       },
       description: p.desc,
+      serviceName: 'AgentFeed',
+      tags: TAGS[p.tool] || ['crypto','trading'],
+      extensions: declareDiscoveryExtension({}),
     };
   }
 

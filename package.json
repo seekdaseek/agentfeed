@@ -10,6 +10,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@coinbase/x402": "^2.1.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@solana/kit": "^7.0.0",
     "@x402/core": "^2.17.0",

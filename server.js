@@ -100,11 +100,13 @@ app.get('/api/wallet-holdings/:wallet', tool('get_wallet_holdings', 0.008,
 app.get('/api/token-metadata/:mint', tool('get_token_metadata', 0.005,
   (req) => getTokenMetadata(req.params.mint)));
 
-const { getRecentLiquidations, getLiquidationStats } = require('./tools/liquidations');
+const { getRecentLiquidations, getLiquidationStats, getLastLiquidation } = require('./tools/liquidations');
 app.get('/api/liquidations', tool('get_recent_liquidations', 0.003,
   (req) => getRecentLiquidations(req)));
 app.get('/api/liquidation-stats', tool('get_liquidation_stats', 0.004,
   () => getLiquidationStats()));
+app.get('/api/last-liquidation', tool('get_last_liquidation', 0,
+  () => getLastLiquidation()));
 
 const { getPositioning } = require('./tools/positioning');
 app.get('/api/positioning', tool('get_positioning', 0.004,

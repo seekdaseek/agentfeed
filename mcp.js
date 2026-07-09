@@ -12,7 +12,7 @@ const { getPrice } = require('./tools/prices');
 const { getFunding } = require('./tools/funding');
 const { getFearGreed } = require('./tools/feargreed');
 const { getWalletHoldings, getTokenMetadata } = require('./tools/onchain');
-const { getRecentLiquidations, getLiquidationStats } = require('./tools/liquidations');
+const { getRecentLiquidations, getLiquidationStats, getLastLiquidation } = require('./tools/liquidations');
 const { getPositioning } = require('./tools/positioning');
 const { getTradeContext } = require('./tools/tradecontext');
 const { getTokenRisk } = require('./tools/tokenrisk');
@@ -45,6 +45,8 @@ const TOOL_DEFS = [
     run: (a) => getRecentLiquidations({ query: a }) },
   { name: 'get_liquidation_stats', usd: 0.004, desc: 'SOL+BTC liquidation aggregates: 1h and 24h totals, longs vs shorts USD split, biggest print.',
     schema: {}, run: () => getLiquidationStats() },
+  { name: 'get_last_liquidation', usd: 0, desc: 'FREE taster: last SOL and BTC liquidation (15-min delayed). Real-time via get_recent_liquidations.',
+    schema: {}, run: () => getLastLiquidation() },
   { name: 'get_positioning', usd: 0.004, desc: 'SOL+BTC positioning: long/short account ratio (retail crowding) + open interest with 1h/24h change (Bybit).',
     schema: {}, run: () => getPositioning() },
   { name: 'get_trade_context', usd: 0.01, desc: 'Full market state in one call: SOL+BTC prices, funding, Fear & Greed, long/short positioning, open interest, and liquidation stats. The complete pre-trade picture.',

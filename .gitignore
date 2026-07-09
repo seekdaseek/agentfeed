@@ -4,3 +4,6 @@ agentfeed.db*
 payer-wallet.json
 diag-client.mjs
 mcp-publisher
+liquidations.db
+liquidations.db-shm
+liquidations.db-wal

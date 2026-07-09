@@ -15,3 +15,9 @@ npm-debug.log*
 
 # logs
 *.log
+
+# restored from pre-overwrite .gitignore (payer keypair + local tooling)
+payer-wallet.json
+diag-client.mjs
+mcp-publisher
+agentfeed.db*

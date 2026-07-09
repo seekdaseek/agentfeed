@@ -61,7 +61,10 @@ async function initMcp(app) {
   const payTo = process.env.PAY_TO;
   if (!facilitatorUrl || !payTo) throw new Error('FACILITATOR_URL / PAY_TO missing from .env');
 
-  const rs = new x402ResourceServer(new HTTPFacilitatorClient({ url: facilitatorUrl }))
+  const facilitatorCfg = facilitatorUrl.includes('api.cdp.coinbase.com')
+    ? require('@coinbase/x402').facilitator
+    : { url: facilitatorUrl };
+  const rs = new x402ResourceServer(new HTTPFacilitatorClient(facilitatorCfg))
     .register(network, new ExactSvmScheme());
   await rs.initialize();
 

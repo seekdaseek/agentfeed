@@ -28,7 +28,11 @@ function buildPaymentLayer() {
   const payTo = process.env.PAY_TO;
   if (!payTo) throw new Error('PAY_TO missing from .env (treasury address)');
 
-  const facilitator = new HTTPFacilitatorClient({ url: facilitatorUrl });
+  const facilitator = new HTTPFacilitatorClient(
+    facilitatorUrl.includes('api.cdp.coinbase.com')
+      ? require('@coinbase/x402').facilitator
+      : { url: facilitatorUrl },
+  );
   const resourceServer = new x402ResourceServer(facilitator)
     .register(network, new ExactSvmScheme());
 

@@ -10,6 +10,7 @@ const { getFearGreed } = require('./tools/feargreed');
 const { getWalletHoldings, getTokenMetadata } = require('./tools/onchain');
 
 const app = express();
+app.set('trust proxy', 1);
 app.disable('x-powered-by');
 const PORT = process.env.PORT || 3006;
 

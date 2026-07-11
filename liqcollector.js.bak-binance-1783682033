@@ -54,12 +54,11 @@ function makeConn({ name, url, onOpen, onMessage, ping, pingMs }) {
       backoff = 1000;
       lastMsg = Date.now();
       if (onOpen) onOpen(ws);
-      if (ping && pingMs > 0) pingTimer = setInterval(() => {
+      pingTimer = setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) ws.send(ping);
       }, pingMs);
       console.log(new Date().toISOString(), name, 'connected + subscribed');
     });
-    ws.on('ping', () => { lastMsg = Date.now(); });
     ws.on('message', (raw) => {
       lastMsg = Date.now();
       try { onMessage(raw.toString()); } catch (e) { console.error(name, 'handler error:', e.message); }
@@ -122,23 +121,3 @@ makeConn({
 // makeConn({ name: 'binance', url: 'wss://fstream.binance.com/ws/!forceOrder@arr', ... })
 
 refreshCtVals();
-
-// ---- BINANCE: sampled feed (largest liq per symbol per 1000ms). Routed /market path (legacy URLs dead since 2026-04-23).
-// S is the LIQUIDATION ORDER side: SELL = long was force-closed -> flip to our convention ('Buy' = long liquidated).
-const BINANCE_SYMBOLS = new Set(['SOLUSDT', 'BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'DOGEUSDT']);
-makeConn({
-  name: 'binance',
-  url: 'wss://fstream.binance.com/market/ws/!forceOrder@arr',
-  ping: null,           // Binance server pings us; ws lib auto-pongs
-  pingMs: 0,
-  onMessage: (raw) => {
-    const msg = JSON.parse(raw);
-    if (msg.e !== 'forceOrder' || !msg.o) return;
-    const o = msg.o;
-    if (!BINANCE_SYMBOLS.has(o.s)) return;
-    const size = parseFloat(o.z), price = parseFloat(o.ap);
-    if (!isFinite(size) || !isFinite(price) || size <= 0) return;
-    const side = o.S === 'SELL' ? 'Buy' : 'Sell'; // flip: their order side -> our liquidated-position convention
-    insert.run(o.T, o.s, side, size, price, size * price, 'binance');
-  },
-});

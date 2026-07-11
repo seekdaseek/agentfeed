@@ -6,7 +6,6 @@ const { HTTPFacilitatorClient } = require('@x402/core/server');
 const { bazaarResourceServerExtension, declareDiscoveryExtension } = require('@x402/extensions/bazaar');
 const { SOLANA_MAINNET_CAIP2, SOLANA_DEVNET_CAIP2 } = require('@x402/svm');
 const { ExactSvmScheme } = require('@x402/svm/exact/server');
-const { ExactEvmScheme } = require('@x402/evm/exact/server');
 
 // ---- pricing table: single source of truth (spec §2)
 const PRICES = {
@@ -35,12 +34,8 @@ function buildPaymentLayer() {
       ? require('@coinbase/x402').facilitator
       : { url: facilitatorUrl },
   );
-  const payToEvm = process.env.PAY_TO_EVM;
-  const EVM_NETWORK = 'eip155:8453'; // Base mainnet
   const resourceServer = new x402ResourceServer(facilitator)
-    .register(network, new ExactSvmScheme());
-  if (payToEvm) resourceServer.register(EVM_NETWORK, new ExactEvmScheme());
-  resourceServer
+    .register(network, new ExactSvmScheme())
     .registerExtension(bazaarResourceServerExtension);
 
   const TAGS = {
@@ -59,20 +54,12 @@ function buildPaymentLayer() {
   const routes = {};
   for (const [pattern, p] of Object.entries(PRICES)) {
     routes[pattern] = {
-      accepts: [
-        {
-          scheme: 'exact',
-          price: `$${p.usd}`,      // SDK converts to USDC units for the network
-          network,
-          payTo,
-        },
-        ...(payToEvm ? [{
-          scheme: 'exact',
-          price: `$${p.usd}`,
-          network: EVM_NETWORK,     // Base mainnet, USDC auto-resolved
-          payTo: payToEvm,
-        }] : []),
-      ],
+      accepts: {
+        scheme: 'exact',
+        price: `$${p.usd}`,        // SDK converts to USDC units for the network
+        network,
+        payTo,
+      },
       description: p.desc,
       serviceName: 'AgentFeed',
       tags: TAGS[p.tool] || ['crypto','trading'],

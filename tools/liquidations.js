@@ -3,7 +3,7 @@
 const Database = require('better-sqlite3');
 const db = new Database('/opt/agentfeed/liquidations.db', { readonly: true, fileMustExist: true });
 
-const SYMBOLS = { SOL: 'SOLUSDT', BTC: 'BTCUSDT' };
+const SYMBOLS = { SOL: 'SOLUSDT', BTC: 'BTCUSDT', ETH: 'ETHUSDT', XRP: 'XRPUSDT', DOGE: 'DOGEUSDT' };
 
 function label(side) { return side === 'Sell' ? 'short_liquidated' : 'long_liquidated'; }
 
@@ -12,7 +12,7 @@ function getRecentLiquidations(req) {
   const limit = Math.min(Math.max(parseInt(q.limit) || 25, 1), 100);
   const minUsd = Math.max(parseFloat(q.min_usd) || 0, 0);
   const symbol = q.symbol ? SYMBOLS[String(q.symbol).toUpperCase()] : null;
-  if (q.symbol && !symbol) throw new Error('symbol must be SOL or BTC');
+  if (q.symbol && !symbol) throw new Error('symbol must be one of: SOL, BTC, ETH, XRP, DOGE');
 
   const rows = db.prepare(`
     SELECT ts, symbol, side, size, price, usd, exchange FROM liquidations
@@ -22,7 +22,7 @@ function getRecentLiquidations(req) {
 
   return {
     source: 'multi_exchange_collector',
-    exchanges: ['bybit', 'okx'],
+    exchanges: ['bybit', 'okx', 'binance'],
     count: rows.length,
     liquidations: rows.map(r => ({
       ts: r.ts, symbol: r.symbol, exchange: r.exchange, event: label(r.side),
@@ -59,7 +59,7 @@ function windowStats(symbol, ms) {
 
 function getLiquidationStats() {
   const oldest = db.prepare('SELECT MIN(ts) t FROM liquidations').get().t;
-  const out = { source: 'multi_exchange_collector', exchanges: ['bybit', 'okx'], collecting_since: oldest };
+  const out = { source: 'multi_exchange_collector', exchanges: ['bybit', 'okx', 'binance'], collecting_since: oldest };
   for (const [k, sym] of Object.entries(SYMBOLS)) {
     out[k.toLowerCase()] = { '1h': windowStats(sym, 3600e3), '24h': windowStats(sym, 86400e3) };
   }

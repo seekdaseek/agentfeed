@@ -6,7 +6,6 @@ const { StreamableHTTPServerTransport } = require('@modelcontextprotocol/sdk/ser
 const { createPaymentWrapper, x402ResourceServer } = require('@x402/mcp');
 const { HTTPFacilitatorClient } = require('@x402/core/server');
 const { ExactSvmScheme } = require('@x402/svm/exact/server');
-const { ExactEvmScheme } = require('@x402/evm/exact/server');
 const { SOLANA_MAINNET_CAIP2, SOLANA_DEVNET_CAIP2 } = require('@x402/svm');
 const { logCall } = require('./db');
 const { getPrice } = require('./tools/prices');
@@ -67,11 +66,8 @@ async function initMcp(app) {
   const facilitatorCfg = facilitatorUrl.includes('api.cdp.coinbase.com')
     ? require('@coinbase/x402').facilitator
     : { url: facilitatorUrl };
-  const payToEvm = process.env.PAY_TO_EVM;
-  const EVM_NETWORK = 'eip155:8453'; // Base mainnet
   const rs = new x402ResourceServer(new HTTPFacilitatorClient(facilitatorCfg))
     .register(network, new ExactSvmScheme());
-  if (payToEvm) rs.register(EVM_NETWORK, new ExactEvmScheme());
   await rs.initialize();
 
   const wrappers = {};
@@ -80,12 +76,6 @@ async function initMcp(app) {
     const accepts = await rs.buildPaymentRequirements({
       scheme: 'exact', network, payTo, price: `$${def.usd}`,
     });
-    if (payToEvm) {
-      const evmAccepts = await rs.buildPaymentRequirements({
-        scheme: 'exact', network: EVM_NETWORK, payTo: payToEvm, price: `$${def.usd}`,
-      });
-      accepts.push(...evmAccepts);
-    }
     wrappers[def.name] = createPaymentWrapper(rs, {
       accepts,
       hooks: {

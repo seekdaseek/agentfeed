@@ -21,3 +21,6 @@ payer-wallet.json
 diag-client.mjs
 mcp-publisher
 agentfeed.db*
+exports/agentfeed-liq-dataset_*.zip
+*.bak-*
+*.bak

@@ -24,3 +24,5 @@ agentfeed.db*
 exports/agentfeed-liq-dataset_*.zip
 *.bak-*
 *.bak
+*.bak.js
+*.bak-*

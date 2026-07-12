@@ -1,11 +1,11 @@
-AGENTFEED Liquidation Dataset — build 20260711
+AGENTFEED Liquidation Dataset — build 20260712
 =============================================
 Multi-exchange crypto perpetual liquidation ticks.
 
 COVERAGE
 - Symbols: SOLUSDT, BTCUSDT (from 2026-07-08); ETHUSDT, XRPUSDT, DOGEUSDT (from 2026-07-10)
 - Exchanges: Bybit (complete feed), OKX (sampled by exchange), Binance (sampled: largest print per symbol per 1000ms, from 2026-07-10)
-- Rows: 4765 | Range (UTC): 2026-07-08 16:42:32 -> 2026-07-10 23:52:59
+- Rows: 7888 | Range (UTC): 2026-07-08 16:42:32 -> 2026-07-11 23:59:59
 
 SCHEMA (CSV)
 ts_ms       epoch milliseconds of liquidation

@@ -3,22 +3,37 @@
 const Database = require('better-sqlite3');
 const db = new Database('/opt/agentfeed/liquidations.db', { readonly: true, fileMustExist: true });
 
+const { CORE, isAll, inClause } = require('../universe.js');
 const SYMBOLS = { SOL: 'SOLUSDT', BTC: 'BTCUSDT', ETH: 'ETHUSDT', XRP: 'XRPUSDT', DOGE: 'DOGEUSDT' };
 
 function label(side) { return side === 'Sell' ? 'short_liquidated' : 'long_liquidated'; }
+
+// v3: the collector records every USDT perp, so accept them. Aliases (SOL/BTC/...) still
+// resolve; anything else must look like a USDT perp. Regex-validated (query is parameterized).
+function resolveSymbol(s) {
+  if (!s) return null;
+  const u = String(s).toUpperCase();
+  if (SYMBOLS[u]) return SYMBOLS[u];
+  if (/^[A-Z0-9]{1,20}USDT$/.test(u)) return u;
+  throw new Error('symbol must be an alias (SOL, BTC, ETH, XRP, DOGE) or a USDT perp symbol (e.g. SXTUSDT)');
+}
 
 function getRecentLiquidations(req) {
   const q = req.query || {};
   const limit = Math.min(Math.max(parseInt(q.limit) || 25, 1), 100);
   const minUsd = Math.max(parseFloat(q.min_usd) || 0, 0);
-  const symbol = q.symbol ? SYMBOLS[String(q.symbol).toUpperCase()] : null;
-  if (q.symbol && !symbol) throw new Error('symbol must be one of: SOL, BTC, ETH, XRP, DOGE');
+  const symbol = resolveSymbol(q.symbol);
+
+  // v3: collector now records the full universe. Default to CORE so existing callers see
+  // no change; scope=all opts into everything.
+  const scopeSql  = symbol ? 'AND symbol = ?' : (isAll(q) ? '' : `AND symbol IN (${inClause(CORE)})`);
+  const scopeArgs = symbol ? [symbol]         : (isAll(q) ? [] : CORE);
 
   const rows = db.prepare(`
     SELECT ts, symbol, side, size, price, usd, exchange FROM liquidations
-    WHERE usd >= ? ${symbol ? 'AND symbol = ?' : ''}
+    WHERE usd >= ? ${scopeSql}
     ORDER BY ts DESC LIMIT ?
-  `).all(...(symbol ? [minUsd, symbol, limit] : [minUsd, limit]));
+  `).all(minUsd, ...scopeArgs, limit);
 
   return {
     source: 'multi_exchange_collector',
@@ -66,7 +81,35 @@ function getLiquidationStats() {
   return out;
 }
 
-module.exports = { getRecentLiquidations, getLiquidationStats };
+function getLiquidationLeaders(req) {
+  const q = (req && req.query) || {};
+  const mins  = Math.min(Math.max(parseInt(q.window_min) || 60, 5), 1440);
+  const limit = Math.min(Math.max(parseInt(q.limit) || 10, 1), 50);
+  const since = Date.now() - mins * 60000;
+  const rows = db.prepare(`
+    SELECT symbol,
+           COUNT(*) AS events,
+           ROUND(SUM(usd), 2) AS total_usd,
+           ROUND(COALESCE(SUM(CASE WHEN side = 'Buy'  THEN usd END), 0), 2) AS longs_usd,
+           ROUND(COALESCE(SUM(CASE WHEN side = 'Sell' THEN usd END), 0), 2) AS shorts_usd,
+           ROUND(MAX(usd), 2) AS biggest_usd,
+           COUNT(DISTINCT exchange) AS venues
+    FROM liquidations WHERE ts >= ?
+    GROUP BY symbol
+    ORDER BY total_usd DESC
+    LIMIT ?
+  `).all(since, limit);
+  return {
+    source: 'multi_exchange_collector',
+    universe: 'all_usdt_perps',
+    exchanges: ['bybit', 'okx', 'binance'],
+    window_min: mins,
+    count: rows.length,
+    leaders: rows.map(r => ({ ...r, dominant_side: r.longs_usd >= r.shorts_usd ? 'longs' : 'shorts' })),
+  };
+}
+
+module.exports = { getRecentLiquidations, getLiquidationStats, getLiquidationLeaders };
 
 function getLastLiquidation() {
   const cutoff = Date.now() - 15 * 60 * 1000;

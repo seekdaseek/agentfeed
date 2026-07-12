@@ -8,7 +8,7 @@ function renderLanding(PRICES, network) {
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AgentFeed — crypto trading data for AI agents, paid in USDC via x402</title>
-<meta name="description" content="SOL+BTC prices, funding, real-time liquidations, long/short positioning, open interest. Pay per call in USDC on Solana via x402. No API keys.">
+<meta name="description" content="Real-time liquidations across ~600 USDT perps on Bybit, OKX and Binance — including Bybit's complete unthrottled tape — plus full-universe cascade detection, long/short positioning, open interest, funding and prices. Pay per call in USDC via x402 on Solana or Base. No API keys.">
 <style>
   :root{--bg:#0a0e14;--card:#111722;--txt:#d7dde7;--dim:#7d8899;--gold:#ffd84d;--line:#1e2635}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -27,8 +27,12 @@ function renderLanding(PRICES, network) {
   .foot{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(--line);padding-top:14px}
 </style></head><body>
 <h1>AgentFeed</h1>
-<p class="tag">Crypto trading data for AI agents. Pay per call in USDC on Solana via x402 — no API keys, no accounts, no subscriptions.</p>
-<span class="badge">x402 ${network}</span><span class="badge">MCP + REST</span><span class="badge">real-time liquidations</span><span class="badge">positioning</span>
+<p class="tag">Live liquidations, cascade detection, positioning, funding and prices for AI trading agents — <b>~600 USDT perps</b> across Bybit, OKX and Binance. Pay per call in USDC via x402 on Solana or Base. No API keys, no accounts, no subscriptions.</p>
+<span class="badge">x402 ${network}</span><span class="badge">Solana + Base</span><span class="badge">elizaOS plugin</span><span class="badge">MCP + REST</span><span class="badge">~600 perps, 3 exchanges</span><span class="badge">full-universe cascades</span>
+
+<p style="color:var(--dim);font-size:13px;margin-top:18px;border-left:2px solid var(--gold);padding-left:12px">
+Bybit's <code>allLiquidation</code> is the only <b>complete, unthrottled</b> public liquidation stream among the major perp venues — Binance and OKX both throttle to ~1 print/sec/symbol, a documented limitation that undercounts hardest during cascades. No exchange publishes historical liquidation data (Binance deleted theirs; Bybit never had one). We record it live. <a href="https://ochinimuse.gumroad.com/l/liqdata">Free dataset + full quality disclosure &rarr;</a>
+</p>
 
 <h2>MCP endpoint (Claude, Cursor, agent frameworks)</h2>
 <pre>https://x402.ochinimus.app/mcp</pre>
@@ -45,7 +49,7 @@ function renderLanding(PRICES, network) {
   <a href="/.well-known/x402.json">x402 manifest</a> ·
   <a href="/health">health</a>
 </div>
-<div class="foot">Built by <a href="https://ochinimus.app">ochinimus</a> · Solana mainnet settlement · agents hitting this URL get JSON</div>
+<div class="foot">Built by <a href="https://ochinimus.app">ochinimus</a> · USDC settlement on Solana &amp; Base · <a href="https://www.npmjs.com/package/@seekdaseek/plugin-agentfeed">elizaOS plugin</a> · <a href="https://smithery.ai/server/ochinimus/agentfeed">Smithery</a> · <a href="https://ochinimuse.gumroad.com/l/liqdata">datasets</a> · agents hitting this URL get JSON</div>
 </body></html>`;
 }
 module.exports = { renderLanding };

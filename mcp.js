@@ -13,7 +13,8 @@ const { getPrice } = require('./tools/prices');
 const { getFunding } = require('./tools/funding');
 const { getFearGreed } = require('./tools/feargreed');
 const { getWalletHoldings, getTokenMetadata } = require('./tools/onchain');
-const { getRecentLiquidations, getLiquidationStats, getLastLiquidation } = require('./tools/liquidations');
+const { getRecentLiquidations, getLiquidationStats, getLastLiquidation, getLiquidationLeaders } = require('./tools/liquidations');
+const { getCascadeAlert } = require('./tools/cascade');
 const { getPositioning } = require('./tools/positioning');
 const { getTradeContext } = require('./tools/tradecontext');
 const { getTokenRisk } = require('./tools/tokenrisk');
@@ -39,12 +40,27 @@ const TOOL_DEFS = [
   { name: 'get_token_metadata', usd: 0.005, desc: 'SPL token metadata: name, symbol, decimals, supply, price (Helius DAS).',
     schema: { mint: z.string().describe('SPL token mint address (base58)') },
     run: (a) => getTokenMetadata(a.mint) },
-  { name: 'get_recent_liquidations', usd: 0.003, desc: 'Recent SOL/BTC perp liquidations from Bybit: timestamp, long/short, size, price, USD value. Filterable.',
-    schema: { symbol: z.string().optional().describe('SOL or BTC (omit for both)'),
+  { name: 'get_recent_liquidations', usd: 0.003, desc: 'Recent perp liquidations across Bybit (complete unthrottled tape), OKX and Binance: timestamp, long/short, size, price, USD value. Any USDT perp (~600 symbols), not just majors.',
+    schema: { symbol: z.string().optional().describe('SOL, BTC, ETH, XRP, DOGE, or any USDT perp e.g. SXTUSDT (omit for majors)'),
+              scope: z.enum(['core', 'all']).optional().describe('core = the 5 majors (default), all = every recorded USDT perp'),
               limit: z.number().optional().describe('max rows, 1-100, default 25'),
               min_usd: z.number().optional().describe('only prints >= this USD size') },
     run: (a) => getRecentLiquidations({ query: a }) },
-  { name: 'get_liquidation_stats', usd: 0.004, desc: 'SOL+BTC liquidation aggregates: 1h and 24h totals, longs vs shorts USD split, biggest print.',
+  { name: 'get_cascade_alert', usd: 0.01, desc: 'Liquidation cascade detector for the 5 majors (SOL, BTC, ETH, XRP, DOGE): returns cascades active NOW - clustered same-side liquidations with symbol, side, USD total, prints, duration, severity (minor/major/extreme). Empty cascades array = no cascade in window. For all ~600 USDT perps across 3 exchanges, use get_cascade_scan.',
+    schema: { window: z.number().optional().describe('lookback window seconds, 30-300, default 90'),
+              min_events: z.number().optional().describe('min prints to qualify, default 4'),
+              min_usd: z.number().optional().describe('min summed USD, default 50000') },
+    run: (a) => getCascadeAlert({ query: a }) },
+  { name: 'get_cascade_scan', usd: 0.05, desc: 'FULL-UNIVERSE cascade scan: detects liquidation cascades across ~600 USDT perps on Bybit, OKX and Binance simultaneously - not just majors. Bybit is the only complete unthrottled liquidation tape in crypto and no exchange publishes history of it, so this coverage is not available anywhere else. Returns symbol, side, USD total, prints, duration, severity.',
+    schema: { window: z.number().optional().describe('lookback window seconds, 30-300, default 90'),
+              min_events: z.number().optional().describe('min prints to qualify, default 4'),
+              min_usd: z.number().optional().describe('min summed USD, default 50000') },
+    run: (a) => getCascadeAlert({ query: { ...a, scope: 'all' } }) },
+  { name: 'get_liquidation_leaders', usd: 0.02, desc: 'What is blowing up RIGHT NOW: top symbols ranked by liquidation USD across ~600 USDT perps on Bybit, OKX and Binance. Per symbol: total liquidated, long vs short split, biggest single print, venue count, dominant side. The fastest read on where leverage is being flushed.',
+    schema: { window_min: z.number().optional().describe('lookback minutes, 5-1440, default 60'),
+              limit: z.number().optional().describe('top N symbols, 1-50, default 10') },
+    run: (a) => getLiquidationLeaders({ query: a }) },
+  { name: 'get_liquidation_stats', usd: 0.004, desc: 'Liquidation aggregates for the 5 majors (SOL, BTC, ETH, XRP, DOGE): 1h and 24h totals, longs vs shorts USD split, biggest print, broken out per exchange.',
     schema: {}, run: () => getLiquidationStats() },
   { name: 'get_last_liquidation', usd: 0, desc: 'FREE taster: last SOL and BTC liquidation (15-min delayed). Real-time via get_recent_liquidations.',
     schema: {}, run: () => getLastLiquidation() },

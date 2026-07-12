@@ -19,9 +19,9 @@ if (!process.env.HELIUS_API_KEY) {
   process.exit(1);
 }
 
-// ---- rate limit: 10 req/min per IP (wallet-based in Session 4)
+// ---- rate limit: 60 req/min per IP (wallet-based in Session 4)
 const buckets = new Map();
-const LIMIT = 10;
+const LIMIT = 60;
 const WINDOW_MS = 60_000;
 app.use((req, res, next) => {
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
@@ -33,7 +33,7 @@ app.use((req, res, next) => {
     buckets.set(ip, b);
   }
   b.count++;
-  if (b.count > LIMIT) return res.status(429).json({ error: 'rate limit: 10 req/min' });
+  if (b.count > LIMIT) return res.status(429).json({ error: 'rate limit: 60 req/min' });
   next();
 });
 setInterval(() => {
@@ -101,13 +101,22 @@ app.get('/api/wallet-holdings/:wallet', tool('get_wallet_holdings', 0.008,
 app.get('/api/token-metadata/:mint', tool('get_token_metadata', 0.005,
   (req) => getTokenMetadata(req.params.mint)));
 
-const { getRecentLiquidations, getLiquidationStats, getLastLiquidation } = require('./tools/liquidations');
+const { getRecentLiquidations, getLiquidationStats, getLastLiquidation, getLiquidationLeaders } = require('./tools/liquidations');
 app.get('/api/liquidations', tool('get_recent_liquidations', 0.003,
   (req) => getRecentLiquidations(req)));
+app.get('/api/liquidation-leaders', tool('get_liquidation_leaders', 0.02,
+  (req) => getLiquidationLeaders(req)));
 app.get('/api/liquidation-stats', tool('get_liquidation_stats', 0.004,
   () => getLiquidationStats()));
 app.get('/api/last-liquidation', tool('get_last_liquidation', 0,
   () => getLastLiquidation()));
+
+const { getCascadeAlert } = require('./tools/cascade');
+app.get('/api/cascade', tool('get_cascade_alert', 0.01,
+  (req) => getCascadeAlert(req)));
+// full universe (~600 perps). same detector, scope forced to 'all'.
+app.get('/api/cascade-scan', tool('get_cascade_scan', 0.05,
+  (req) => getCascadeAlert({ query: { ...(req.query || {}), scope: 'all' } })));
 
 const { getPositioning } = require('./tools/positioning');
 app.get('/api/positioning', tool('get_positioning', 0.004,
@@ -134,18 +143,32 @@ app.get('/', (req, res, next) => {
 
 app.get('/', (_req, res) => res.json({
   service: 'agentfeed',
-  description: 'Market + Solana on-chain data for AI agents, paid per-call in USDC via x402.',
-  x402: { active: paymentsOn, network: x402Network },
+  description: 'Live crypto market data for AI agents - liquidations, positioning, funding, prices, token risk. Paid per-call in USDC via x402 on Solana or Base. No API keys.',
+  x402: { active: paymentsOn, network: x402Network, chains: ['solana:mainnet', 'eip155:8453'] },
+  free_tools: ['get_fear_greed', 'pricing'],
+  links: {
+    github: 'https://github.com/seekdaseek/agentfeed',
+    elizaos_plugin: 'https://www.npmjs.com/package/@seekdaseek/plugin-agentfeed',
+    smithery: 'https://smithery.ai/server/ochinimus/agentfeed',
+    dataset: 'https://ochinimuse.gumroad.com/l/liqdata',
+    studio: 'https://ochinimus.app',
+  },
   tools: Object.entries(PRICES).map(([route, p]) => ({
     name: p.tool, route, price_usdc: p.usd, description: p.desc,
   })),
+}));
+
+// Glama connector ownership claim (checked automatically by glama.ai)
+app.get('/.well-known/glama.json', (_req, res) => res.json({
+  $schema: 'https://glama.ai/mcp/schemas/connector.json',
+  maintainers: [{ email: 'ochinimus@gmail.com' }],
 }));
 
 // discovery manifest (x402 convention: /.well-known/x402.json)
 app.get('/.well-known/x402.json', (_req, res) => res.json({
   x402Version: 2,
   service: 'agentfeed',
-  description: 'Crypto market, liquidations, and Solana on-chain data for AI agents. Pay per call in USDC on Solana via x402. No API keys.',
+  description: 'Crypto market, liquidations, and Solana on-chain data for AI agents. Pay per call in USDC via x402 on Solana or Base. No API keys.',
   website: 'https://x402.ochinimus.app',
   mcp: 'https://x402.ochinimus.app/mcp',
   network: x402Network === 'mainnet' ? 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp' : 'solana:devnet',

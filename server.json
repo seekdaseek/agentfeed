@@ -2,13 +2,13 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.seekdaseek/agentfeed",
   "title": "AgentFeed",
-  "description": "Crypto data for trading agents: liquidations, positioning, funding. x402 USDC on Solana or Base.",
+  "description": "Crypto liquidations for AI agents: full-universe cascade detection across ~600 USDT perps on Bybit, OKX and Binance, plus positioning, funding and Solana on-chain data. Pay per call in USDC via x402.",
   "websiteUrl": "https://x402.ochinimus.app",
   "repository": {
     "url": "https://github.com/seekdaseek/agentfeed",
     "source": "github"
   },
-  "version": "1.3.0",
+  "version": "1.4.0",
   "remotes": [
     {
       "type": "streamable-http",

@@ -20,11 +20,14 @@ const PRICES = {
   'GET /api/cascade':                  { usd: 0.01,  tool: 'get_cascade_alert',      desc: 'Liquidation cascade detector for the 5 majors (SOL/BTC/ETH/XRP/DOGE) across Bybit+OKX+Binance. For all ~600 perps use /api/cascade-scan' },
   'GET /api/cascade-scan':             { usd: 0.05,  tool: 'get_cascade_scan',       desc: 'FULL-UNIVERSE cascade scan: ~600 USDT perps across Bybit+OKX+Binance. Bybit is the only complete unthrottled liquidation tape in crypto and no exchange publishes history of it' },
   'GET /api/liquidation-leaders':      { usd: 0.02,  tool: 'get_liquidation_leaders', desc: 'What is blowing up right now: top symbols by liquidation USD across ~600 USDT perps, with long/short split, biggest print and venue count' },
+  'GET /api/sharp-move':               { usd: 0.02,  tool: 'get_sharp_move',           desc: 'SHARP MONEY detector for World Cup betting markets: abnormal PRE-MATCH moves in the de-margined consensus win probability (TxODDS StablePrice, anchored on Solana). Threshold = p99.9 of 8.4M real ticks' },
   'GET /api/liquidation-stats':        { usd: 0.004, tool: 'get_liquidation_stats',   desc: '1h/24h liquidation totals for the 5 majors (SOL/BTC/ETH/XRP/DOGE), long/short split, biggest print, per-exchange breakdown' },
   'GET /api/positioning':              { usd: 0.004, tool: 'get_positioning',        desc: 'SOL+BTC long/short account ratio + open interest with 1h/24h OI change' },
   'GET /api/trade-context':            { usd: 0.01,  tool: 'get_trade_context',      desc: 'Full market state in one call: prices, funding, fear/greed, positioning, liquidations' },
   'GET /api/token-risk/:mint':         { usd: 0.01,  tool: 'get_token_risk',         desc: 'Token rug-risk signals: mint/freeze authority status, top-holder concentration, risk flags' },
 };
+
+Object.assign(PRICES, require('./expansion').PRICES_ADD);
 
 function buildPaymentLayer() {
   const networkName = (process.env.X402_NETWORK || 'devnet').toLowerCase();
@@ -55,11 +58,15 @@ function buildPaymentLayer() {
     get_token_metadata:       ['solana','tokens','metadata','onchain'],
     get_recent_liquidations:  ['liquidations','crypto','trading','realtime','bybit'],
     get_cascade_alert:        ['liquidations','cascade','alerts','trading','realtime'],
+    get_cascade_scan:         ['liquidations','cascade','alerts','trading','realtime','perps','bybit','okx','binance','sharp-money'],
+    get_liquidation_leaders:  ['liquidations','trading','crypto','perps','leaderboard','realtime'],
+    get_sharp_move:           ['sports-betting','odds','world-cup','football','soccer','sharp-money','signals','trading','prediction'],
     get_liquidation_stats:    ['liquidations','crypto','trading','stats'],
     get_positioning:          ['positioning','open-interest','long-short','crypto'],
     get_trade_context:        ['market-data','trading','liquidations','positioning','crypto'],
     get_token_risk:           ['solana','tokens','risk','rug-check','security'],
   };
+  Object.assign(TAGS, require('./expansion').TAGS_ADD);
   const routes = {};
   for (const [pattern, p] of Object.entries(PRICES)) {
     routes[pattern] = {

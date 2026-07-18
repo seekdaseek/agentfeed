@@ -118,6 +118,11 @@ app.get('/api/cascade', tool('get_cascade_alert', 0.01,
 app.get('/api/cascade-scan', tool('get_cascade_scan', 0.05,
   (req) => getCascadeAlert({ query: { ...(req.query || {}), scope: 'all' } })));
 
+// World Cup sharp-money detector (TxLINE odds -> LineWatch collector -> pre-match move detector)
+const { getSharpMove } = require('./tools/sharpmove');
+app.get('/api/sharp-move', tool('get_sharp_move', 0.02,
+  (req) => getSharpMove(req)));
+
 const { getPositioning } = require('./tools/positioning');
 app.get('/api/positioning', tool('get_positioning', 0.004,
   () => getPositioning()));
@@ -129,6 +134,8 @@ app.get('/api/trade-context', tool('get_trade_context', 0.01,
 const { getTokenRisk } = require('./tools/tokenrisk');
 app.get('/api/token-risk/:mint', tool('get_token_risk', 0.01,
   (req) => getTokenRisk(req.params.mint)));
+
+require('./expansion').register(app, tool);
 
 // ---- free meta routes
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'agentfeed', x402: x402Network }));
@@ -171,8 +178,6 @@ app.get('/.well-known/x402.json', (_req, res) => res.json({
   description: 'Crypto market, liquidations, and Solana on-chain data for AI agents. Pay per call in USDC via x402 on Solana or Base. No API keys.',
   website: 'https://x402.ochinimus.app',
   mcp: 'https://x402.ochinimus.app/mcp',
-  network: x402Network === 'mainnet' ? 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp' : 'solana:devnet',
-  payTo: process.env.PAY_TO,
   resources: Object.entries(PRICES).map(([route, p]) => ({
     resource: 'https://x402.ochinimus.app' + route.replace('GET ', ''),
     method: 'GET',
@@ -180,6 +185,10 @@ app.get('/.well-known/x402.json', (_req, res) => res.json({
     description: p.desc,
     price_usd: p.usd,
     asset: 'USDC',
+    accepts: [
+      { scheme: 'exact', network: x402Network === 'mainnet' ? 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp' : 'solana:devnet', payTo: process.env.PAY_TO, asset: 'USDC', price_usd: p.usd },
+      ...(process.env.PAY_TO_EVM ? [{ scheme: 'exact', network: 'eip155:8453', payTo: process.env.PAY_TO_EVM, asset: 'USDC', price_usd: p.usd }] : []),
+    ],
   })),
 }));
 

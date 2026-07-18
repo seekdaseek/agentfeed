@@ -15,6 +15,7 @@ const { getFearGreed } = require('./tools/feargreed');
 const { getWalletHoldings, getTokenMetadata } = require('./tools/onchain');
 const { getRecentLiquidations, getLiquidationStats, getLastLiquidation, getLiquidationLeaders } = require('./tools/liquidations');
 const { getCascadeAlert } = require('./tools/cascade');
+const { getSharpMove } = require('./tools/sharpmove');
 const { getPositioning } = require('./tools/positioning');
 const { getTradeContext } = require('./tools/tradecontext');
 const { getTokenRisk } = require('./tools/tokenrisk');
@@ -60,6 +61,11 @@ const TOOL_DEFS = [
     schema: { window_min: z.number().optional().describe('lookback minutes, 5-1440, default 60'),
               limit: z.number().optional().describe('top N symbols, 1-50, default 10') },
     run: (a) => getLiquidationLeaders({ query: a }) },
+  { name: 'get_sharp_move', usd: 0.02, desc: 'SHARP MONEY DETECTOR for World Cup betting markets. Finds abnormal PRE-MATCH moves in the de-margined consensus win probability (TxODDS StablePrice, cryptographically anchored on Solana). Because no match is in play, there is nothing to react to - a win probability that jumps before kickoff is money arriving, not a reaction to a goal or a red card. Default threshold 2.81 percentage points per 5 minutes is the p99.9 of 8,464,803 real odds ticks harvested across 137 matches; the median 5-minute move is 0.08pp, so a firing is roughly 35x normal. Returns match, competition, minutes to kickoff, the probability path, move size, direction (odds shortening or drifting) and severity (notable/sharp/extreme). Use before placing or pricing a World Cup bet, or to detect informed money entering a market.',
+    schema: { window: z.number().optional().describe('lookback window in seconds, 60-1800, default 300'),
+              min_pp: z.number().optional().describe('minimum move in percentage points, default 2.81 (= p99.9 of real moves)'),
+              lookback_min: z.number().optional().describe('how far back to search, minutes, 5-1440, default 60') },
+    run: (a) => getSharpMove({ query: a }) },
   { name: 'get_liquidation_stats', usd: 0.004, desc: 'Liquidation aggregates for the 5 majors (SOL, BTC, ETH, XRP, DOGE): 1h and 24h totals, longs vs shorts USD split, biggest print, broken out per exchange.',
     schema: {}, run: () => getLiquidationStats() },
   { name: 'get_last_liquidation', usd: 0, desc: 'FREE taster: last SOL and BTC liquidation (15-min delayed). Real-time via get_recent_liquidations.',
@@ -72,6 +78,8 @@ const TOOL_DEFS = [
     schema: { mint: z.string().describe('SPL token mint address (base58)') },
     run: (a) => getTokenRisk(a.mint) },
 ];
+
+TOOL_DEFS.push(...require('./expansion').MCP_DEFS_ADD);
 
 async function initMcp(app) {
   const networkName = (process.env.X402_NETWORK || 'devnet').toLowerCase();

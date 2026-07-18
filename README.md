@@ -61,6 +61,52 @@ Notional uses `filled_qty × avg_fill_price` — what actually executed — not 
 
 ---
 
+## Tools
+
+All 41 paid tools, billed per call in USDC. Plus 3 free: get_fear_greed, get_last_liquidation, pricing.
+
+- **get_sol_price** ($0.001) — SOL spot price via Pyth
+- **get_btc_price** ($0.001) — BTC spot price via Pyth
+- **get_funding_rate** ($0.002) — SOL+BTC perp funding rates
+- **get_market_snapshot** ($0.003) — Full market snapshot in one call
+- **get_wallet_holdings** ($0.008) — Solana wallet holdings via Helius DAS
+- **get_token_metadata** ($0.005) — SPL token metadata via Helius DAS
+- **get_recent_liquidations** ($0.003) — Recent liquidations across ~600 USDT perps (Bybit complete tape + OKX + Binance)
+- **get_cascade_alert** ($0.01) — Live liquidation cascade detector for the 5 majors (SOL/BTC/ETH/XRP/DOGE)
+- **get_cascade_scan** ($0.05) — Full-universe cascade scan across ~600 USDT perps
+- **get_liquidation_leaders** ($0.02) — What is blowing up right now: top symbols by liquidation USD
+- **get_liquidation_stats** ($0.004) — 1h/24h liquidation totals for the 5 majors, long/short split
+- **get_positioning** ($0.004) — SOL+BTC long/short account ratio + open interest with 1h/24h change
+- **get_trade_context** ($0.01) — Full market state in one call
+- **get_token_risk** ($0.01) — SPL token rug-risk signals
+- **get_sharp_move** ($0.02) — Sharp-money detector for World Cup betting markets
+- **get_liq_history** ($0.05) — Historical liquidation tape, time-bucketed
+- **get_liq_heatmap** ($0.05) — Liquidation heatmap by price level from our own tape
+- **get_cascade_history** ($0.03) — Past liquidation cascades reconstructed from our tape
+- **get_squeeze_score** ($0.10) — FLAGSHIP: 0-100 short-squeeze / long-flush signal
+- **get_venue_liq_share** ($0.02) — Which venue is flushing whom
+- **get_funding_cross** ($0.01) — Funding for any USDT perp across Bybit + OKX + Hyperliquid
+- **get_funding_extremes** ($0.02) — Most crowded funding trades across ~600 USDT perps
+- **get_open_interest** ($0.01) — Open interest for any USDT perp with 1h/24h change
+- **get_oi_spike_scan** ($0.02) — Abnormal open-interest jumps across ~600 USDT perps
+- **get_long_short** ($0.01) — Long/short account ratio for any USDT perp with trend
+- **get_basis** ($0.01) — Perp-vs-spot basis for any USDT pair
+- **get_volatility** ($0.01) — Realized volatility for any USDT perp
+- **get_funding_history** ($0.005) — Funding-rate history for any USDT perp
+- **get_top_movers** ($0.01) — 24h top gainers and losers across ~600 USDT perps
+- **get_orderbook_imbalance** ($0.01) — Bid/ask resting-liquidity imbalance for any USDT perp
+- **get_orderbook_walls** ($0.01) — Largest resting orders each side of the book
+- **get_whale_trades** ($0.02) — Large prints from the live trade tape for any USDT perp
+- **get_spread_arb** ($0.02) — Best bid/ask across Bybit, OKX and Hyperliquid with cross-venue edge
+- **get_token_holders** ($0.02) — Top holders of any SPL token with concentration metrics
+- **get_wallet_activity** ($0.02) — Recent transactions of any Solana wallet, parsed
+- **get_priority_fees** ($0.005) — Solana priority-fee estimate right now, all levels
+- **get_jito_tips** ($0.005) — Jito bundle tip floor percentiles (p25-p99)
+- **get_sol_network** ($0.005) — Solana network health: TPS, slot, epoch progress
+- **get_tvl** ($0.005) — TVL for any DeFi protocol or top-15 chains ranking
+- **get_stablecoin_flows** ($0.01) — Total stablecoin supply with 7d/30d deltas
+- **get_dex_quote** ($0.005) — Live Jupiter swap quote for any SPL pair
+
 ## 44 tools & pricing
 
 **41 paid tools + 3 free tasters.** Every call is metered individually in USDC over x402 — no bundles, no minimums. Calling all 41 paid tools once costs **$0.64** — the entire market read for 64 cents.

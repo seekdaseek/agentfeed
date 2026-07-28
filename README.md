@@ -106,10 +106,13 @@ Notional uses `filled_qty × avg_fill_price` — what actually executed — not 
 | get_tvl | $0.005 | TVL for any DeFi protocol or top-15 chains |
 | get_stablecoin_flows | $0.01 | Total stablecoin supply with 7d/30d deltas |
 | get_dex_quote | $0.005 | Live Jupiter swap quote for any SPL pair |
+| get_peg_deviation | $0.02 | Tokenized-equity peg deviation vs the underlying last trade |
+| get_peg_sessions | $0.03 | Peg deviation by session: open, premarket, afterhours, overnight, weekend |
+| get_peg_universe | $0.05 | Tracked tokenized equities ranked by off-hours peg risk |
 
-## 44 tools & pricing
+## 47 tools & pricing
 
-**41 paid tools + 3 free tasters.** Every call is metered individually in USDC over x402 — no bundles, no minimums. Calling all 41 paid tools once costs **$0.64** — the entire market read for 64 cents.
+**44 paid tools + 3 free tasters.** Every call is metered individually in USDC over x402 — no bundles, no minimums. Calling all 44 paid tools once costs **$0.74** — the entire market read for 74 cents.
 
 The flagship is [`get_squeeze_score`](#the-moat--our-own-liquidation-tape) — a 0-100 short-squeeze / long-flush composite built from funding, crowding, OI build and the liq-skew of our exclusive tape. One number, one dime, answers "is this trade crowded and about to hurt someone."
 
@@ -122,6 +125,16 @@ The flagship is [`get_squeeze_score`](#the-moat--our-own-liquidation-tape) — a
 | `get_liq_heatmap` | $0.05 | `/api/liq-heatmap` | Liquidation heatmap by PRICE LEVEL from our own tape: where leverage actually got flushed in the last N hours — USD, prints, long/short s… |
 | `get_cascade_history` | $0.03 | `/api/cascade-history` | PAST liquidation cascades reconstructed from our tape: clustered same-side flush events with start/end, prints, USD total, peak print |
 | `get_venue_liq_share` | $0.02 | `/api/venue-liq-share` | Which venue is flushing whom: per-exchange liquidation share (Bybit/OKX/Binance) with long/short split and biggest print, any symbol or w… |
+
+### The second moat — our own tokenized-equity peg tape
+
+| Tool | Price | Route | What you get |
+|---|---|---|---|
+| `get_peg_universe` | $0.05 | `/api/peg-universe` | Every tokenized US equity we track, ranked by off-hours peg risk: p95 and max deviation bps, market-open as control, median liquidity |
+| `get_peg_sessions` | $0.03 | `/api/peg-sessions` | Peg deviation by trading session — open, premarket, afterhours, overnight, weekend — worst off-hours window flagged |
+| `get_peg_deviation` | $0.02 | `/api/peg-deviation` | Peg deviation for one tokenized equity: on-chain DEX price vs the underlying last real trade, in bps |
+
+Sampled every 5 minutes since 19 July 2026. Deviation is measured against the underlying's last real trade — outside US market hours that is the last print before the close, not a live quote. Dead pools are excluded rather than reported as perfect pegs.
 
 ### Live liquidations & cascades
 

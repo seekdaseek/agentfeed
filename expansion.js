@@ -12,6 +12,7 @@ const M = require('./tools/micro');
 const L = require('./tools/liqdb');
 const S = require('./tools/solana2');
 const F = require('./tools/defi');
+const P = require('./tools/peg');
 
 const sym = (d) => z.string().optional().describe(`USDT perp symbol e.g. SOLUSDT, BTCUSDT (default ${d})`);
 const symReq = z.string().describe('USDT perp symbol e.g. SOLUSDT');
@@ -146,6 +147,23 @@ const EXP = [
     tags: ['solana', 'dex', 'jupiter', 'swap'],
     schema: { input_mint: z.string().describe('input mint (base58)'), output_mint: z.string().describe('output mint (base58)'), amount: z.string().describe('amount in raw base units of input mint') },
     run: (a) => F.getDexQuote(a) },
+
+  // ---- MOAT: our own tokenized-equity peg tape ----
+  { name: 'get_peg_deviation', route: 'GET /api/peg-deviation', usd: 0.02,
+    desc: 'Peg deviation for a tokenized US equity on Solana: on-chain DEX price vs the underlying last real trade, in bps, with 24h stats split into market-open and off-hours. Sampled every 5 minutes by our own collector; this tape exists nowhere else.',
+    tags: ['rwa','tokenized-stocks','peg','solana','exclusive'],
+    schema: { symbol: z.string().describe('Tokenized equity symbol e.g. CRCLx, MSTRx, COINx'), hours: z.number().optional().describe('lookback 1-168, default 24') },
+    run: (a) => P.getPegDeviation(a) },
+  { name: 'get_peg_sessions', route: 'GET /api/peg-sessions', usd: 0.03,
+    desc: 'Peg deviation broken out by trading session (open, premarket, afterhours, overnight, weekend): mean, p95, max bps and median liquidity per session, with the worst off-hours window flagged. Market-open acts as the control.',
+    tags: ['rwa','tokenized-stocks','peg','sessions','exclusive'],
+    schema: { symbol: z.string().describe('Tokenized equity symbol e.g. CRCLx, MSTRx, COINx'), days: z.number().optional().describe('lookback 1-30, default 7') },
+    run: (a) => P.getPegSessions(a) },
+  { name: 'get_peg_universe', route: 'GET /api/peg-universe', usd: 0.05,
+    desc: 'Every tokenized US equity we track, ranked by off-hours peg risk: p95 and max deviation bps, market-open deviation as control, median liquidity. Dead pools are excluded rather than reported as perfect pegs.',
+    tags: ['rwa','tokenized-stocks','peg','ranking','exclusive'],
+    schema: { days: z.number().optional().describe('lookback 1-30, default 7'), min_liquidity_usd: z.number().optional().describe('filter out thinner pools') },
+    run: (a) => P.getPegUniverse(a) },
 ];
 
 // ---- derived exports ----

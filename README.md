@@ -218,7 +218,7 @@ Sampled every 5 minutes since 19 July 2026. Deviation is measured against the un
 ## Use it from an elizaOS agent
 
 ```bash
-npm i @seekdaseek/plugin-agentfeed   # v0.3.0 — all 44 tools as actions
+npm i @seekdaseek/plugin-agentfeed   # v0.4.0 — all 47 tools as actions
 ```
 
 Set `AGENTFEED_PRIVATE_KEY` to a funded Solana wallet and the agent pays per call automatically. Default spend cap $0.50/call (`AGENTFEED_MAX_SPEND_PER_CALL` to change).

@@ -17,7 +17,7 @@ Two rails, same data:
 ## What makes this different: the liquidation tape
 
 We run our own liquidation collector across **Bybit, OKX and Binance** — every USDT-margined
-perpetual on all three, roughly **600 symbols**, recorded continuously since 2026-07-08.
+perpetual on all three, roughly **780 symbols**, recorded continuously since 2026-07-08.
 
 **This data cannot be bought.** Not from us, not from anyone:
 
@@ -71,9 +71,9 @@ Notional uses `filled_qty × avg_fill_price` — what actually executed — not 
 | get_market_snapshot | $0.003 | Full market snapshot in one call |
 | get_wallet_holdings | $0.008 | Solana wallet holdings via Helius DAS |
 | get_token_metadata | $0.005 | SPL token metadata via Helius DAS |
-| get_recent_liquidations | $0.003 | Recent liquidations across ~600 USDT perps |
+| get_recent_liquidations | $0.003 | Recent liquidations across 780+ USDT perps |
 | get_cascade_alert | $0.01 | Live liquidation cascade detector for the 5 majors |
-| get_cascade_scan | $0.05 | Full-universe cascade scan across ~600 USDT perps |
+| get_cascade_scan | $0.05 | Full-universe cascade scan across 780+ USDT perps |
 | get_liquidation_leaders | $0.02 | Top symbols by liquidation USD right now |
 | get_liquidation_stats | $0.004 | 1h/24h liquidation totals, long/short split |
 | get_positioning | $0.004 | SOL+BTC long/short ratio + open interest |
@@ -86,14 +86,14 @@ Notional uses `filled_qty × avg_fill_price` — what actually executed — not 
 | get_squeeze_score | $0.10 | FLAGSHIP: 0-100 short-squeeze / long-flush signal |
 | get_venue_liq_share | $0.02 | Which venue is flushing whom |
 | get_funding_cross | $0.01 | Funding for any USDT perp across Bybit + OKX + Hyperliquid |
-| get_funding_extremes | $0.02 | Most crowded funding trades across ~600 perps |
+| get_funding_extremes | $0.02 | Most crowded funding trades across 780+ perps |
 | get_open_interest | $0.01 | Open interest for any USDT perp with 1h/24h change |
-| get_oi_spike_scan | $0.02 | Abnormal open-interest jumps across ~600 perps |
+| get_oi_spike_scan | $0.02 | Abnormal open-interest jumps across 780+ perps |
 | get_long_short | $0.01 | Long/short account ratio for any USDT perp |
 | get_basis | $0.01 | Perp-vs-spot basis for any USDT pair |
 | get_volatility | $0.01 | Realized volatility for any USDT perp |
 | get_funding_history | $0.005 | Funding-rate history for any USDT perp |
-| get_top_movers | $0.01 | 24h top gainers and losers across ~600 perps |
+| get_top_movers | $0.01 | 24h top gainers and losers across 780+ perps |
 | get_orderbook_imbalance | $0.01 | Bid/ask resting-liquidity imbalance |
 | get_orderbook_walls | $0.01 | Largest resting orders each side of the book |
 | get_whale_trades | $0.02 | Large prints from the live trade tape |
@@ -140,10 +140,10 @@ Sampled every 5 minutes since 19 July 2026. Deviation is measured against the un
 
 | Tool | Price | Route | What you get |
 |---|---|---|---|
-| `get_recent_liquidations` | $0.003 | `/api/liquidations` | Recent liquidations across ~600 USDT perps (Bybit complete tape + OKX + Binance) |
+| `get_recent_liquidations` | $0.003 | `/api/liquidations` | Recent liquidations across 780+ USDT perps (Bybit complete tape + OKX + Binance) |
 | `get_cascade_alert` | $0.01 | `/api/cascade` | Liquidation cascade detector for the 5 majors (SOL/BTC/ETH/XRP/DOGE) across Bybit+OKX+Binance |
-| `get_cascade_scan` | $0.05 | `/api/cascade-scan` | FULL-UNIVERSE cascade scan: ~600 USDT perps across Bybit+OKX+Binance |
-| `get_liquidation_leaders` | $0.02 | `/api/liquidation-leaders` | What is blowing up right now: top symbols by liquidation USD across ~600 USDT perps, with long/short split, biggest print and venue count |
+| `get_cascade_scan` | $0.05 | `/api/cascade-scan` | FULL-UNIVERSE cascade scan: 780+ USDT perps across Bybit+OKX+Binance |
+| `get_liquidation_leaders` | $0.02 | `/api/liquidation-leaders` | What is blowing up right now: top symbols by liquidation USD across 780+ USDT perps, with long/short split, biggest print and venue count |
 | `get_liquidation_stats` | $0.004 | `/api/liquidation-stats` | 1h/24h liquidation totals for the 5 majors (SOL/BTC/ETH/XRP/DOGE), long/short split, biggest print, per-exchange breakdown |
 
 ### Derivatives
@@ -151,14 +151,14 @@ Sampled every 5 minutes since 19 July 2026. Deviation is measured against the un
 | Tool | Price | Route | What you get |
 |---|---|---|---|
 | `get_funding_cross` | $0.01 | `/api/funding-cross` | Funding for ANY USDT perp across Bybit + OKX + Hyperliquid in one call, with cross-venue spread and crowding read |
-| `get_funding_extremes` | $0.02 | `/api/funding-extremes` | Most crowded trades across ~600 USDT perps: top most-positive and most-negative funding with annualized %, 24h price move and OI |
+| `get_funding_extremes` | $0.02 | `/api/funding-extremes` | Most crowded trades across 780+ USDT perps: top most-positive and most-negative funding with annualized %, 24h price move and OI |
 | `get_open_interest` | $0.01 | `/api/open-interest` | Open interest for ANY USDT perp: Bybit OI in base + USD with 1h/24h change, plus OKX OI |
-| `get_oi_spike_scan` | $0.02 | `/api/oi-spike-scan` | Abnormal open-interest jumps across ~600 USDT perps vs a 30min+ baseline — where new leverage is piling in, with funding and price context |
+| `get_oi_spike_scan` | $0.02 | `/api/oi-spike-scan` | Abnormal open-interest jumps across 780+ USDT perps vs a 30min+ baseline — where new leverage is piling in, with funding and price context |
 | `get_long_short` | $0.01 | `/api/long-short` | Long/short account ratio for ANY USDT perp with 1h and 24h trend (retail crowding gauge) |
 | `get_basis` | $0.01 | `/api/basis` | Perp-vs-spot basis for any USDT pair: premium/discount %, contango/backwardation read, funding context |
 | `get_volatility` | $0.01 | `/api/volatility` | Realized volatility for any USDT perp: 7d and 30d annualized from daily closes, plus today's range |
 | `get_funding_history` | $0.005 | `/api/funding-history` | Funding-rate history for any USDT perp (up to 200 intervals): average, annualized, share of positive intervals — what the carry has actua… |
-| `get_top_movers` | $0.01 | `/api/top-movers` | 24h top gainers and losers across ~600 USDT perps with a liquidity floor, funding attached |
+| `get_top_movers` | $0.01 | `/api/top-movers` | 24h top gainers and losers across 780+ USDT perps with a liquidity floor, funding attached |
 
 ### Microstructure
 

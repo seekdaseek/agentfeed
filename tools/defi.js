@@ -4,7 +4,7 @@ const { cached, fetchJson } = require('../lib/cache');
 
 const LLAMA = () => process.env.LLAMA_API || 'https://api.llama.fi';
 const STABLES = () => process.env.STABLES_API || 'https://stablecoins.llama.fi';
-const JUP = () => process.env.JUP_API || 'https://quote-api.jup.ag';
+const JUP = () => process.env.JUP_API || 'https://lite-api.jup.ag';
 const BASE58_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 // ---- get_tvl ($0.005) — chain or protocol TVL
@@ -65,7 +65,7 @@ async function getDexQuote(p = {}) {
   const key = `jup:${input_mint}:${output_mint}:${amount}`;
   return cached(key, 5_000, async () => {
     const q = await fetchJson(
-      `${JUP()}/v6/quote?inputMint=${input_mint}&outputMint=${output_mint}&amount=${amount}&slippageBps=50`);
+      `${JUP()}/swap/v1/quote?inputMint=${input_mint}&outputMint=${output_mint}&amount=${amount}&slippageBps=50`);
     if (q.error) throw new Error(`jupiter: ${q.error}`);
     return {
       input_mint, output_mint, in_amount: q.inAmount, out_amount: q.outAmount,

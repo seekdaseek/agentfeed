@@ -68,7 +68,7 @@ const TOOL_DEFS = [
     run: (a) => getSharpMove({ query: a }) },
   { name: 'get_liquidation_stats', usd: 0.004, desc: 'Liquidation aggregates for the 5 majors (SOL, BTC, ETH, XRP, DOGE): 1h and 24h totals, longs vs shorts USD split, biggest print, broken out per exchange.',
     schema: {}, run: () => getLiquidationStats() },
-  { name: 'get_last_liquidation', usd: 0, desc: 'FREE taster: last SOL and BTC liquidation (15-min delayed). Real-time via get_recent_liquidations.',
+  { name: 'get_last_liquidation', usd: 0, desc: 'FREE taster: last liquidation for SOL, BTC, ETH, XRP and DOGE (15-min delayed). Real-time via get_recent_liquidations.',
     schema: {}, run: () => getLastLiquidation() },
   { name: 'get_positioning', usd: 0.004, desc: 'SOL+BTC positioning: long/short account ratio (retail crowding) + open interest with 1h/24h change (Bybit).',
     schema: {}, run: () => getPositioning() },

@@ -8,6 +8,90 @@ const JUP = () => process.env.JUP_API || 'https://lite-api.jup.ag';
 const BASE58_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 // ---- get_tvl ($0.005) — chain or protocol TVL
+function normSlug(s) { return String(s || '').trim().toLowerCase().replace(/^parent#/, ''); }
+function best(list) { return list.slice().sort((a, b) => (b.tvl || 0) - (a.tvl || 0))[0]; }
+
+// Deterministic single-protocol match. Every arm picks the HIGHEST-TVL candidate
+// rather than whatever DefiLlama happens to list first.
+function resolveSingle(protos, target) {
+  const bySlug = protos.filter((x) => (x.slug || '').toLowerCase() === target);
+  if (bySlug.length) return best(bySlug);
+  const byName = protos.filter((x) => (x.name || '').toLowerCase() === target);
+  if (byName.length) return best(byName);
+  const bySym = protos.filter((x) => (x.symbol || '').toLowerCase() === target && x.symbol !== '-');
+  if (bySym.length) return best(bySym);
+  return null;
+}
+
+// Brand -> every deployment under one parentProtocol, summed.
+function resolveFamily(protos, target) {
+  const parents = new Map();
+  for (const p of protos) {
+    if (!p.parentProtocol) continue;
+    const key = normSlug(p.parentProtocol);
+    if (!parents.has(key)) parents.set(key, []);
+    parents.get(key).push(p);
+  }
+  const flat = (s) => s.replace(/-/g, '');
+  let keys = [...parents.keys()].filter((k) => k === target);
+  if (!keys.length) {
+    keys = [...parents.keys()].filter((k) => k.startsWith(target + '-') || flat(k) === flat(target));
+  }
+  if (keys.length !== 1) return null;
+  const key = keys[0];
+  const kids = parents.get(key).filter((p) => (p.tvl || 0) > 0).sort((a, b) => (b.tvl || 0) - (a.tvl || 0));
+  if (!kids.length) return null;
+  // A family of one is just that protocol — do not dress it up as an aggregate.
+  if (kids.length === 1) return { __single: kids[0] };
+  const total = kids.reduce((s, p) => s + (p.tvl || 0), 0);
+  // TVL-weighted change, computed only from components that report one.
+  const wchg = (field) => {
+    let num = 0, den = 0;
+    for (const p of kids) if (p[field] != null) { num += p[field] * (p.tvl || 0); den += (p.tvl || 0); }
+    return den ? Number((num / den).toFixed(2)) : null;
+  };
+  // Display name: longest common word-prefix of the children, else the parent slug.
+  const words = kids.map((p) => String(p.name || '').split(' '));
+  let common = [];
+  for (let i = 0; i < words[0].length; i++) {
+    const w = words[0][i];
+    if (words.every((ws) => ws[i] === w)) common.push(w); else break;
+  }
+  const display = common.length ? common.join(' ') : key;
+  return {
+    scope: 'protocol_family',
+    protocol: display,
+    slug: key,
+    category: kids[0].category,
+    chains: [...new Set(kids.flatMap((p) => p.chains || []))],
+    tvl_usd: Math.round(total),
+    change_1d_pct: wchg('change_1d'),
+    change_7d_pct: wchg('change_7d'),
+    deployments: kids.length,
+    components: kids.map((p) => ({
+      name: p.name, slug: p.slug, tvl_usd: Math.round(p.tvl || 0),
+      change_1d_pct: p.change_1d != null ? Number(p.change_1d.toFixed(2)) : null,
+    })),
+    note: `aggregate of ${kids.length} deployment(s); change is TVL-weighted. Query a component slug for one deployment.`,
+    source: 'defillama',
+  };
+}
+
+// Near-miss suggestions so a failed call teaches the caller the right name.
+function suggestProtocols(protos, target) {
+  const seen = new Set(), out = [];
+  for (const p of protos.slice().sort((a, b) => (b.tvl || 0) - (a.tvl || 0))) {
+    const n = String(p.name || '').toLowerCase();
+    if (!n.includes(target) || (p.tvl || 0) <= 0) continue;
+    const k = normSlug(p.parentProtocol) || p.slug;
+    if (seen.has(k)) continue;
+    seen.add(k); out.push(normSlug(p.parentProtocol) || p.slug);
+    if (out.length === 5) break;
+  }
+  return out;
+}
+
+
 async function getTvl(p = {}) {
   const target = String(p.target || '').trim().toLowerCase();
   if (!target || target === 'chains') {
@@ -19,11 +103,15 @@ async function getTvl(p = {}) {
     });
   }
   const protos = await cached('tvl:protocols', 300_000, () => fetchJson(`${LLAMA()}/protocols`));
-  const hit = protos.find((x) => x.slug === target) ||
-    protos.find((x) => (x.name || '').toLowerCase() === target) ||
-    protos.find((x) => (x.symbol || '').toLowerCase() === target);
-  if (!hit) throw new Error(`protocol not found on defillama: ${target} (use the defillama slug)`);
+  const fam = resolveFamily(protos, target);
+  if (fam && !fam.__single) return fam;
+  const hit = (fam && fam.__single) || resolveSingle(protos, target);
+  if (!hit) {
+    const s = suggestProtocols(protos, target);
+    throw new Error(`protocol not found on defillama: ${target}` + (s.length ? ` — did you mean: ${s.join(', ')}` : ' (use the defillama slug)'));
+  }
   return {
+    scope: 'protocol',
     protocol: hit.name, slug: hit.slug, category: hit.category, chains: hit.chains,
     tvl_usd: Math.round(hit.tvl || 0),
     change_1d_pct: hit.change_1d != null ? Number(hit.change_1d.toFixed(2)) : null,

@@ -26,3 +26,37 @@ exports/agentfeed-liq-dataset_*.zip
 *.bak
 *.bak.js
 *.bak-*
+
+.env*
+
+# ---- 2026-08-27 hardening ----
+
+# Key material. The list above named only payer-wallet.json by hand, so any
+# new keyfile landed unprotected. These are generic.
+*.key
+*.pem
+*keypair*.json
+
+# Backup copies the *.bak- patterns miss because they have no dash after
+# "bak": mcp.js.bak44, payments.js.bak44, server.js.bak44, mcp.js.bak2-<epoch>.
+# These are byte copies of payments.js / server.js / mcp.js and must never be
+# committed to a public repo.
+*.bak[0-9]*
+
+# Local scratch and one-off tooling. Not part of the service, kept on the box.
+# Named individually rather than test-* because test-client.mjs,
+# test-client-evm.mjs and test-mcp-client.mjs ARE tracked and must stay so.
+probe-tools.js
+shape-probe.js
+patch-sharpmove.js
+patch.py
+build-epoch.py
+build-launchledger-epoch.py
+test-answer.mjs
+test-squeeze.js
+test-upstream.js
+.tvl-helpers.snippet
+
+# Local dataset staging. liquidations_full_20260807.csv is 123MB, over
+# GitHub's 100MB hard per-file limit, so it can never be pushed from here.
+hf/

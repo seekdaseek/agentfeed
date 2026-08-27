@@ -79,7 +79,6 @@ Notional uses `filled_qty × avg_fill_price` — what actually executed — not 
 | get_positioning | $0.004 | SOL+BTC long/short ratio + open interest |
 | get_trade_context | $0.01 | Full market state in one call |
 | get_token_risk | $0.01 | SPL token rug-risk signals |
-| get_sharp_move | $0.02 | Sharp-money detector for World Cup betting markets |
 | get_liq_history | $0.05 | Historical liquidation tape, time-bucketed |
 | get_liq_heatmap | $0.05 | Liquidation heatmap by price level from our tape |
 | get_cascade_history | $0.03 | Past liquidation cascades from our tape |
@@ -200,12 +199,6 @@ Sampled every 5 minutes since 19 July 2026. Deviation is measured against the un
 | `get_tvl` | $0.005 | `/api/tvl` | TVL for any DeFi protocol (with 1d/7d change) or top-15 chains ranking |
 | `get_stablecoin_flows` | $0.01 | `/api/stablecoin-flows` | Total stablecoin supply with 7d/30d deltas and top stables — the macro risk-on/risk-off dial for crypto |
 | `get_dex_quote` | $0.005 | `/api/dex-quote` | Live Jupiter swap quote for any SPL pair: output amount, price impact, route |
-
-### Sports sharp money
-
-| Tool | Price | Route | What you get |
-|---|---|---|---|
-| `get_sharp_move` | $0.02 | `/api/sharp-move` | Sharp-money detector for World Cup betting markets: abnormal pre-match moves in de-margined consensus win probability (TxODDS StablePrice… |
 
 ### Free tasters
 

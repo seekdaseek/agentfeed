@@ -120,6 +120,7 @@ app.get('/api/cascade', tool('get_cascade_alert', 0.01,
 app.get('/api/cascade-scan', tool('get_cascade_scan', 0.05,
   (req) => getCascadeAlert({ query: { ...(req.query || {}), scope: 'all' } })));
 
+
 const { getPositioning } = require('./tools/positioning');
 app.get('/api/positioning', tool('get_positioning', 0.004,
   () => getPositioning()));

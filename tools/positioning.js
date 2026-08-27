@@ -6,7 +6,18 @@ async function bybit(path) {
   const res = await fetch(BASE + path);
   if (!res.ok) throw new Error(`bybit ${res.status}`);
   const j = await res.json();
-  if (j.retCode !== 0) throw new Error(`bybit: ${j.retMsg}`);
+  if (j.retCode !== 0) {
+    const e = new Error(`bybit: ${j.retMsg}`);
+    // retCode 10001 = Bybit rejected the PARAMETERS on an HTTP 200, i.e. the
+    // caller named something Bybit does not list -> 400, not 502. Every other
+    // retCode and every transport failure stays 502. Full rationale in
+    // tools/derivs.js, which carries the measured retMsg variants.
+    // getPositioning() takes no caller symbol today (it is pinned to SOL and
+    // BTC), so this cannot fire from user input yet; it is tagged so the three
+    // Bybit helpers classify identically if it ever does.
+    if (j.retCode === 10001) e.upstreamParamError = true;
+    throw e;
+  }
   return j.result;
 }
 

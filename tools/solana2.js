@@ -16,14 +16,36 @@ async function rpc(method, params) {
     body: JSON.stringify({ jsonrpc: '2.0', id: 'agentfeed', method, params }),
     timeoutMs: 10_000,
   });
-  if (j.error) throw new Error(`helius rpc: ${j.error.message}`);
+  if (j.error) {
+    const e = new Error(`helius rpc: ${j.error.message}`);
+    // A mint whose holder set is too large to enumerate is the CALLER naming
+    // something the upstream cannot answer for, not a fault here. Same class as
+    // bybit retCode 10001 in derivs/micro/positioning, and tagged at the shared
+    // helper for the same reason those are. Without this the three most obvious
+    // mints anyone would try - SOL, USDC, BONK - return 502 from
+    // /telegraph/api/token-holders, and telegraph's validator FAILS an endpoint
+    // on 5xx while passing a 4xx, so a registered route reads as dead.
+    //
+    // Matched on BOTH the JSON-RPC code and the wording, deliberately narrow:
+    // -32600 is the generic "Invalid Request" and Helius reuses it, so matching
+    // the code alone would blame the caller for unrelated upstream failures.
+    if (j.error.code === -32600 && /too many accounts/i.test(j.error.message || '')) {
+      e.badRequest = true;
+    }
+    throw e;
+  }
   return j.result;
 }
 
 // ---- get_token_holders ($0.02) — top holders + concentration metrics
 async function getTokenHolders(p = {}) {
   const mint = p.mint;
-  if (!BASE58_RE.test(mint || '')) throw new Error('invalid mint address');
+  // A malformed or absent mint is the caller's input, so it is a 400 like the
+  // too-many-accounts case above. server.js tool() already answers 400 for any
+  // throw, so this changes nothing on the paid rail; it exists for telegraph's
+  // statusFor(), which otherwise reads an untagged throw as 502 and fails a
+  // healthy registered endpoint when a validator probes it with no argument.
+  if (!BASE58_RE.test(mint || '')) { const e = new Error('invalid mint address'); e.badRequest = true; throw e; }
   return cached(`holders:${mint}`, 60_000, async () => {
     const [asset, largest] = await Promise.all([
       rpc('getAsset', { id: mint }),
@@ -49,7 +71,7 @@ async function getTokenHolders(p = {}) {
 // ---- get_wallet_activity ($0.02) — parsed recent transactions, human-readable
 async function getWalletActivity(p = {}) {
   const wallet = p.wallet;
-  if (!BASE58_RE.test(wallet || '')) throw new Error('invalid wallet address');
+  if (!BASE58_RE.test(wallet || '')) { const e = new Error('invalid wallet address'); e.badRequest = true; throw e; }
   const limit = Math.min(Math.max(parseInt(p.limit) || 10, 1), 25);
   return cached(`activity:${wallet}:${limit}`, 30_000, async () => {
     const txs = await fetchJson(

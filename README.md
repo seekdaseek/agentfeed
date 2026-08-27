@@ -65,8 +65,8 @@ Notional uses `filled_qty × avg_fill_price` — what actually executed — not 
 
 | Tool | Price | Description |
 | --- | --- | --- |
-| get_sol_price | $0.001 | SOL spot price via Pyth |
-| get_btc_price | $0.001 | BTC spot price via Pyth |
+| get_sol_price | $0.001 | SOL spot price |
+| get_btc_price | $0.001 | BTC spot price |
 | get_funding_rate | $0.002 | SOL+BTC perp funding rates |
 | get_market_snapshot | $0.003 | Full market snapshot in one call |
 | get_wallet_holdings | $0.008 | Solana wallet holdings via Helius DAS |
@@ -173,8 +173,8 @@ Sampled every 5 minutes since 19 July 2026. Deviation is measured against the un
 
 | Tool | Price | Route | What you get |
 |---|---|---|---|
-| `get_sol_price` | $0.001 | `/api/sol-price` | SOL spot price via Pyth |
-| `get_btc_price` | $0.001 | `/api/btc-price` | BTC spot price via Pyth |
+| `get_sol_price` | $0.001 | `/api/sol-price` | SOL spot price |
+| `get_btc_price` | $0.001 | `/api/btc-price` | BTC spot price |
 | `get_funding_rate` | $0.002 | `/api/funding-rate` | SOL+BTC perp funding rates |
 | `get_market_snapshot` | $0.003 | `/api/market-snapshot` | Full market snapshot in one call |
 | `get_positioning` | $0.004 | `/api/positioning` | SOL+BTC long/short account ratio + open interest with 1h/24h OI change |

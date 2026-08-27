@@ -17,7 +17,7 @@ Working name: agentfeed (rename whenever). One backend, two rails: raw HTTP x402
 ├── payments.js         x402 middleware — 402 envelope, X-PAYMENT verify, settle
 ├── mcp.js              MCP server (Streamable HTTP) exposing same tools
 ├── tools/
-│   ├── prices.js       Pyth Hermes: SOL (ef0d8b6f), BTC (e62df6c8)
+│   ├── prices.js       multi-source: Coinbase, Kraken, Pyth Hermes fallback — SOL, BTC
 │   ├── funding.js      funding rate source (reuse skrly market strip source)
 │   ├── feargreed.js    alternative.me
 │   └── onchain.js      Helius DAS: wallet holdings, token metadata
@@ -30,8 +30,8 @@ Working name: agentfeed (rename whenever). One backend, two rails: raw HTTP x402
 ## 2. Endpoints / MCP tools
 | Tool / route              | Source        | Price (USDC) | Notes |
 |---------------------------|---------------|--------------|-------|
-| get_sol_price             | Pyth Hermes   | 0.001        | spot + confidence |
-| get_btc_price             | Pyth Hermes   | 0.001        | |
+| get_sol_price             | multi-source: Coinbase, Kraken, Pyth Hermes fallback | 0.001        | spot price. `confidence` and `publish_time` are null unless Pyth Hermes served the request — Coinbase and Kraken publish neither |
+| get_btc_price             | multi-source: Coinbase, Kraken, Pyth Hermes fallback | 0.001        | spot price. same null-when-unavailable fields as above |
 | get_funding_rate          | existing src  | 0.002        | SOL + BTC perp funding |
 | get_fear_greed            | alternative.me| 0.001        | cache 30 min |
 | get_market_snapshot       | all above     | 0.003        | one call, everything — agents prefer fewer calls |

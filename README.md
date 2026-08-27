@@ -109,7 +109,7 @@ Notional uses `filled_qty × avg_fill_price` — what actually executed — not 
 | get_peg_sessions | $0.03 | Peg deviation by session: open, premarket, afterhours, overnight, weekend |
 | get_peg_universe | $0.05 | Tracked tokenized equities ranked by off-hours peg risk |
 
-## 47 tools & pricing
+## 50 tools (44 HTTP + MCP) & pricing
 
 **44 paid tools + 3 free tasters.** Every call is metered individually in USDC over x402 — no bundles, no minimums. Calling all 44 paid tools once costs **$0.74** — the entire market read for 74 cents.
 
@@ -211,7 +211,7 @@ Sampled every 5 minutes since 19 July 2026. Deviation is measured against the un
 ## Use it from an elizaOS agent
 
 ```bash
-npm i @seekdaseek/plugin-agentfeed   # v0.4.0 — all 47 tools as actions
+npm i @seekdaseek/plugin-agentfeed   # v0.4.1 — all 50 tools as actions
 ```
 
 Set `AGENTFEED_PRIVATE_KEY` to a funded Solana wallet and the agent pays per call automatically. Default spend cap $0.50/call (`AGENTFEED_MAX_SPEND_PER_CALL` to change).

@@ -15,14 +15,15 @@ const { getFearGreed } = require('./tools/feargreed');
 const { getWalletHoldings, getTokenMetadata } = require('./tools/onchain');
 const { getRecentLiquidations, getLiquidationStats, getLastLiquidation, getLiquidationLeaders } = require('./tools/liquidations');
 const { getCascadeAlert } = require('./tools/cascade');
+const { getCascadeForecast, getCascadeForecastFree, getForecastQuestion, getForecastRecord } = require('./tools/cascade-forecast');
 const { getPositioning } = require('./tools/positioning');
 const { getTradeContext } = require('./tools/tradecontext');
 const { getTokenRisk } = require('./tools/tokenrisk');
 
 const TOOL_DEFS = [
-  { name: 'get_sol_price', usd: 0.001, desc: 'Live SOL/USD spot price with confidence interval (Pyth oracle).',
+  { name: 'get_sol_price', usd: 0.001, desc: 'Live SOL/USD spot price (multi-source: Coinbase, Kraken, Pyth Hermes fallback). The confidence and publish_time fields are null unless Pyth Hermes served the request; Coinbase and Kraken publish neither.',
     schema: {}, run: () => getPrice('SOL') },
-  { name: 'get_btc_price', usd: 0.001, desc: 'Live BTC/USD spot price with confidence interval (Pyth oracle).',
+  { name: 'get_btc_price', usd: 0.001, desc: 'Live BTC/USD spot price (multi-source: Coinbase, Kraken, Pyth Hermes fallback). The confidence and publish_time fields are null unless Pyth Hermes served the request; Coinbase and Kraken publish neither.',
     schema: {}, run: () => getPrice('BTC') },
   { name: 'get_funding_rate', usd: 0.002, desc: 'Current SOL and BTC perp funding rates, mark prices, open interest (Hyperliquid).',
     schema: {}, run: async () => ({ sol: await getFunding('SOL'), btc: await getFunding('BTC') }) },
@@ -56,13 +57,22 @@ const TOOL_DEFS = [
               min_events: z.number().optional().describe('min prints to qualify, default 4'),
               min_usd: z.number().optional().describe('min summed USD, default 50000') },
     run: (a) => getCascadeAlert({ query: { ...a, scope: 'all' } }) },
+
+  { name: 'get_cascade_forecast_free', usd: 0, desc: 'FREE taster: the full-quality liquidation forecast for SOL, no delay and nothing withheld. Use it to check the calibration before paying for coverage of the other ~345 symbols.',
+    schema: {}, run: () => getCascadeForecastFree() },
+  { name: 'get_forecast_question', usd: 0, desc: 'FREE: the exact question the forecast answers, machine readable, plus how to settle it yourself from the public exchange feed and the full list of covered symbols. Read this before building on the forecast.',
+    schema: {}, run: () => getForecastQuestion() },
+  { name: 'get_forecast_record', usd: 0, desc: 'FREE: the live track record of this miner. Every forecast was written down BEFORE its 15-minute window opened and settled afterwards from the exchange public feed, and the raw rows are returned alongside the score so you can recompute it yourself rather than take it on trust. Returns settled count, base rate, Brier skill against climatology, coverage, calibration error and a reliability curve. A backtest is a claim about the past that its author also chose how to compute; this is not that.',
+    schema: { symbol: z.string().optional().describe('restrict the record to one symbol'),
+              rows: z.number().optional().describe('how many raw rows to return, max 500, default 50') },
+    run: (a) => getForecastRecord({ query: a }) },
   { name: 'get_liquidation_leaders', usd: 0.02, desc: 'What is blowing up RIGHT NOW: top symbols ranked by liquidation USD across ~600 USDT perps on Bybit, OKX and Binance. Per symbol: total liquidated, long vs short split, biggest single print, venue count, dominant side. The fastest read on where leverage is being flushed.',
     schema: { window_min: z.number().optional().describe('lookback minutes, 5-1440, default 60'),
               limit: z.number().optional().describe('top N symbols, 1-50, default 10') },
     run: (a) => getLiquidationLeaders({ query: a }) },
   { name: 'get_liquidation_stats', usd: 0.004, desc: 'Liquidation aggregates for the 5 majors (SOL, BTC, ETH, XRP, DOGE): 1h and 24h totals, longs vs shorts USD split, biggest print, broken out per exchange.',
     schema: {}, run: () => getLiquidationStats() },
-  { name: 'get_last_liquidation', usd: 0, desc: 'FREE taster: last SOL and BTC liquidation (15-min delayed). Real-time via get_recent_liquidations.',
+  { name: 'get_last_liquidation', usd: 0, desc: 'FREE taster: last liquidation for SOL, BTC, ETH, XRP and DOGE (15-min delayed). Real-time via get_recent_liquidations.',
     schema: {}, run: () => getLastLiquidation() },
   { name: 'get_positioning', usd: 0.004, desc: 'SOL+BTC positioning: long/short account ratio (retail crowding) + open interest with 1h/24h change (Bybit).',
     schema: {}, run: () => getPositioning() },
@@ -72,6 +82,8 @@ const TOOL_DEFS = [
     schema: { mint: z.string().describe('SPL token mint address (base58)') },
     run: (a) => getTokenRisk(a.mint) },
 ];
+
+TOOL_DEFS.push(...require('./expansion').MCP_DEFS_ADD);
 
 async function initMcp(app) {
   const networkName = (process.env.X402_NETWORK || 'devnet').toLowerCase();

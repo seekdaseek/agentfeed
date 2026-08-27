@@ -41,6 +41,8 @@ setInterval(() => {
   for (const [ip, b] of buckets) if (now - b.windowStart > WINDOW_MS * 2) buckets.delete(ip);
 }, 120_000).unref();
 
+require('./telegraph').register(app);
+
 // ---- x402 payment layer (mounted BEFORE the /api routes)
 const paymentsOn = (process.env.X402_MODE || 'on').toLowerCase() !== 'off';
 let x402Network = 'off';
@@ -130,6 +132,8 @@ const { getTokenRisk } = require('./tools/tokenrisk');
 app.get('/api/token-risk/:mint', tool('get_token_risk', 0.01,
   (req) => getTokenRisk(req.params.mint)));
 
+require('./expansion').register(app, tool);
+
 // ---- free meta routes
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'agentfeed', x402: x402Network }));
 
@@ -171,8 +175,6 @@ app.get('/.well-known/x402.json', (_req, res) => res.json({
   description: 'Crypto market, liquidations, and Solana on-chain data for AI agents. Pay per call in USDC via x402 on Solana or Base. No API keys.',
   website: 'https://x402.ochinimus.app',
   mcp: 'https://x402.ochinimus.app/mcp',
-  network: x402Network === 'mainnet' ? 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp' : 'solana:devnet',
-  payTo: process.env.PAY_TO,
   resources: Object.entries(PRICES).map(([route, p]) => ({
     resource: 'https://x402.ochinimus.app' + route.replace('GET ', ''),
     method: 'GET',
@@ -180,6 +182,10 @@ app.get('/.well-known/x402.json', (_req, res) => res.json({
     description: p.desc,
     price_usd: p.usd,
     asset: 'USDC',
+    accepts: [
+      { scheme: 'exact', network: x402Network === 'mainnet' ? 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp' : 'solana:devnet', payTo: process.env.PAY_TO, asset: 'USDC', price_usd: p.usd },
+      ...(process.env.PAY_TO_EVM ? [{ scheme: 'exact', network: 'eip155:8453', payTo: process.env.PAY_TO_EVM, asset: 'USDC', price_usd: p.usd }] : []),
+    ],
   })),
 }));
 

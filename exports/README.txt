@@ -1,22 +1,23 @@
-AGENTFEED Liquidation Dataset — build 20260712
+AGENTFEED Liquidation Dataset — build 20260827
 =============================================
 Crypto perpetual liquidation ticks: Bybit + OKX + Binance, USDT-margined perps.
-Rows: 7888 | Range (UTC): 2026-07-08 16:42:32 -> 2026-07-11 23:59:59
+Rows: 2782496 | Range (UTC): 2026-07-08 16:42:32 -> 2026-08-26 23:59:58
 
-- binance: 5 symbols, 2296 rows
-- bybit: 5 symbols, 3962 rows
-- okx: 5 symbols, 1630 rows
+- binance: 706 symbols, 1630998 rows
+- bybit: 671 symbols, 692569 rows
+- okx: 417 symbols, 458929 rows
 
-See coverage_20260712.csv for per-symbol, per-exchange first/last timestamps and row counts.
+See coverage_20260827.csv for per-symbol, per-exchange first/last timestamps and row counts.
 
-NOTE: OUR SYMBOL UNIVERSE WIDENED ON 2026-07-12 16:23 UTC — THIS BUILD PREDATES IT
+!! READ THIS FIRST: THE SYMBOL UNIVERSE CHANGED ON 2026-07-12 16:23 UTC
 ---------------------------------------------------------------
-Every row here is from the original 5-symbol era: SOLUSDT, BTCUSDT, ETHUSDT,
-XRPUSDT, DOGEUSDT. On 2026-07-12 16:23 UTC the collector widened to ~600 USDT perps across all
-three venues.
+Before that instant this build holds 5 symbols. After it, 821.
 
-Later builds will contain BOTH eras. When they do, plotting liquidation counts or volume
-across 2026-07-12 16:23 UTC will show a large jump that is OUR ARTIFACT, not a market event.
+IF YOU PLOT LIQUIDATION COUNTS OR VOLUME ACROSS THAT TIMESTAMP YOU WILL SEE A LARGE JUMP.
+IT IS AN ARTIFACT OF OUR COLLECTOR WIDENING, NOT A MARKET EVENT.
+
+For a continuous series: either filter to SOLUSDT/BTCUSDT/ETHUSDT/XRPUSDT/DOGEUSDT, or start
+your series after 2026-07-12 16:23 UTC.
 
 FEED COMPLETENESS — the venues are NOT equivalent
 --------------------------------------------------
@@ -70,10 +71,10 @@ KNOWN GAPS
   data.binance.vision is empty). Bybit never published one. OKX offers 7 rolling days.
   There is no public historical liquidation data for any major venue, at any price.
 - Some symbols list on only one or two of the three venues. A low venue count is usually
-  correct, not a gap. Check coverage_20260712.csv.
+  correct, not a gap. Check coverage_20260827.csv.
 - Inverse (coin-margined) contracts are excluded: their contract value is denominated in USD,
   so including them would mix USD figures into the coin-quantity column.
 
 LICENSE: free to use, including commercially. Redistribution permitted. Attribution required. No warranty.
-Real-time access for AI agents (full-universe cascade detection, ~600 perps):
+Real-time access for AI agents (full-universe cascade detection, 821 perps):
   https://x402.ochinimus.app   ·   MCP: https://x402.ochinimus.app/mcp

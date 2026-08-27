@@ -51,8 +51,8 @@ if [ "$SYM_AFTER" -eq 0 ]; then
 UNIVERSE_BLOCK="NOTE: OUR SYMBOL UNIVERSE WIDENED ON $UCHANGE_TXT — THIS BUILD PREDATES IT
 ---------------------------------------------------------------
 Every row here is from the original $SYM_BEFORE-symbol era: SOLUSDT, BTCUSDT, ETHUSDT,
-XRPUSDT, DOGEUSDT. On $UCHANGE_TXT the collector widened to ~600 USDT perps across all
-three venues.
+XRPUSDT, DOGEUSDT. On $UCHANGE_TXT the collector widened to the full USDT-perp
+universe across all three venues ($SYM_AFTER symbols in this build).
 
 Later builds will contain BOTH eras. When they do, plotting liquidation counts or volume
 across $UCHANGE_TXT will show a large jump that is OUR ARTIFACT, not a market event."
@@ -137,7 +137,7 @@ KNOWN GAPS
   so including them would mix USD figures into the coin-quantity column.
 
 LICENSE: free to use, including commercially. Redistribution permitted. Attribution required. No warranty.
-Real-time access for AI agents (full-universe cascade detection, ~600 perps):
+Real-time access for AI agents (full-universe cascade detection, $SYM_AFTER perps):
   https://x402.ochinimus.app   ·   MCP: https://x402.ochinimus.app/mcp
 RDME
 

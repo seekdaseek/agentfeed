@@ -245,18 +245,20 @@ function register(app) {
   r.get('/api/token-metadata/:mint', byMint('get_token_metadata', getTokenMetadata));
   r.get('/api/wallet-holdings', byWallet('get_wallet_holdings', getWalletHoldings));
   r.get('/api/wallet-holdings/:wallet', byWallet('get_wallet_holdings', getWalletHoldings));
-  // token-holders lives in expansion.js as a /:mint path route, so the bare
-  // query-param form is registered here to make it reachable from Telegraph.
-  r.get('/api/token-holders', plain('get_token_holders', 0, async (req) => {
-    const mint = arg(req, 'mint');
-    const ex = require('./expansion');
-    if (typeof ex.getTokenHolders === 'function') return ex.getTokenHolders(mint);
-    const { getTokenHolders } = require('./tools/onchain');
-    if (typeof getTokenHolders === 'function') return getTokenHolders(mint);
-    const e = new Error('token-holders handler not exported; call /api/token-holders/:mint');
-    e.missingParam = 'mint';
-    throw e;
-  }));
+  // token-holders. The implementation is tools/solana2.js getTokenHolders, and
+  // it takes an OPTIONS OBJECT ({ mint }), not a bare string - so it cannot use
+  // the byMint helper above, which passes the identifier positionally.
+  //
+  // Both forms of this route were failing on a REGISTERED Telegraph endpoint.
+  // The old fallback chain asked expansion.js, which exports only its wiring and
+  // no tool functions, then tools/onchain, which has no getTokenHolders at all,
+  // and then threw - so the query form 400d. The path form was never registered,
+  // so it 502d. A registered route that cannot answer is what costs the miner
+  // its registration, which is why both are wired here explicitly.
+  const { getTokenHolders } = require('./tools/solana2');
+  const holders = plain('get_token_holders', 0, (req) => getTokenHolders({ mint: arg(req, 'mint') }));
+  r.get('/api/token-holders', holders);
+  r.get('/api/token-holders/:mint', holders);
 
   r.get('/api/market-snapshot', plain('get_market_snapshot', 0, async () => {
     const [sol, btc, fundingSol, fundingBtc, fg] = await Promise.all([

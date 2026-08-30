@@ -21,7 +21,7 @@
 
 const express = require('express');
 
-const { getPrice } = require('./tools/prices');
+const { getPrice, getPriceQuotes } = require('./tools/prices');
 const { getFunding } = require('./tools/funding');
 const { getFearGreed } = require('./tools/feargreed');
 const { getWalletHoldings, getTokenMetadata } = require('./tools/onchain');
@@ -35,6 +35,7 @@ const { getCascadeAlert } = require('./tools/cascade');
 const { getPositioning } = require('./tools/positioning');
 const { getTradeContext } = require('./tools/tradecontext');
 const { getTokenRisk } = require('./tools/tokenrisk');
+const { getBaseGas, getBaseBalance } = require('./tools/base');
 const { shape } = require('./answer');
 
 // ---------------------------------------------------------------------------
@@ -55,7 +56,12 @@ const path = require('path');
 
 const LOG_PATH = process.env.TELEGRAPH_LOG || path.join(__dirname, 'telegraph-requests.log');
 const LOG_MAX_BYTES = 20 * 1024 * 1024;   // ~20MB, then rotate
-const SECRETISH = /key|token|secret|auth|passw|sig|bearer|cookie|session/i;
+// Query keys whose NAME suggests a credential. Deliberately NOT a bare /token/:
+// this is a blockchain data API, and ?token= carries a public ERC20 contract
+// address on /api/base-balance. Redacting that hid the most useful field on the
+// route while protecting nothing - a contract address is published on-chain.
+// Credential-shaped token names (api_token, access_token, auth_token) still go.
+const SECRETISH = /(^|_)(api)?key$|secret|passw|auth|bearer|cookie|session|signature|(^|_)sig$|(api|access|refresh|id|auth)[_-]?token/i;
 
 // Tracked in memory so the common path costs no stat(2). Seeded from disk on
 // first write, and re-seeded whenever a rotation happens.
@@ -226,8 +232,8 @@ function register(app) {
   );
 
   // ---- routes whose handlers are declared inline in server.js
-  r.get('/api/sol-price', plain('get_sol_price', 0, () => getPrice('SOL')));
-  r.get('/api/btc-price', plain('get_btc_price', 0, () => getPrice('BTC')));
+  r.get('/api/sol-price', plain('get_sol_price', 0, () => getPriceQuotes('SOL')));
+  r.get('/api/btc-price', plain('get_btc_price', 0, () => getPriceQuotes('BTC')));
   r.get('/api/fear-greed', plain('get_fear_greed', 0, () => getFearGreed()));
   r.get('/api/positioning', plain('get_positioning', 0, (req) => getPositioning(req)));
   r.get('/api/trade-context', plain('get_trade_context', 0, (req) => getTradeContext(req)));
@@ -259,6 +265,28 @@ function register(app) {
   const holders = plain('get_token_holders', 0, (req) => getTokenHolders({ mint: arg(req, 'mint') }));
   r.get('/api/token-holders', holders);
   r.get('/api/token-holders/:mint', holders);
+
+  // ---- THE THREE QUESTIONS ACTUALLY BEING ASKED ---------------------------
+  // Measured 2026-08-21 over 43 live Telegraph signal receipts: essentially all
+  // crypto demand on the network is "current price of ETH in USD", "ETH balance
+  // of 0x... on base", and "current gas price on Base". Every route above this
+  // line is Solana or perp microstructure, which is why this miner was routable,
+  // healthy, and still answering nobody. These three close that gap.
+  //
+  // They are declared HERE rather than in expansion.js because expansion.js is
+  // the PAID surface: everything it registers is mirrored into /telegraph AND
+  // priced into payments.js. These are mirror-only, so they add no paid route
+  // and change no price table.
+  // Multi-venue quotes: the CRYPTO_PRICE scorer is exact-match on the digits,
+  // so carrying every venue's quote is what turns a 0.0000 into ~1.0 when the
+  // ground truth follows a venue we would otherwise have missed.
+  r.get('/api/eth-price', plain('get_eth_price', 0, () => getPriceQuotes('ETH')));
+  r.get('/api/base-gas', plain('get_base_gas', 0, () => getBaseGas()));
+  r.get('/api/base-balance', plain('get_base_balance', 0, (req) => getBaseBalance(req)));
+  // Path-segment form too: the router fills parameters from the endpoint
+  // description, and a path-style example is the form it most often produces.
+  r.get('/api/base-balance/:address', plain('get_base_balance', 0, (req) =>
+    getBaseBalance({ query: { ...(req.query || {}), address: req.params.address } })));
 
   r.get('/api/market-snapshot', plain('get_market_snapshot', 0, async () => {
     const [sol, btc, fundingSol, fundingBtc, fg] = await Promise.all([

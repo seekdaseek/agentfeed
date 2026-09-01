@@ -38,6 +38,39 @@ const PRICES = {
 
 Object.assign(PRICES, require('./expansion').PRICES_ADD);
 
+// --- x402 challenge description bound -------------------------------------
+//
+// MEASURED 2026-09-01 by A/B/A against the live CDP facilitator, bisected over
+// seven redeploys on get_cascade_forecast:
+//
+//     desc 487 chars (challenge header 2268 B) -> settles
+//     desc 515 chars (challenge header 2308 B) -> facilitator /verify 400,
+//                                                 relayed to the client as 402
+//
+// A description past the bound makes the endpoint UNPAYABLE. The facilitator
+// rejects the paymentPayload, this server relays that as a fresh 402, and the
+// route's own handler is never reached. It is invisible from curl, which only
+// ever sees a correct-looking challenge, and it cost get_cascade_forecast every
+// sale it might have made.
+//
+// The bound is closed HERE, at the payment boundary, and nowhere else. `desc`
+// in the pricing table stays whole: GET /, /.well-known/x402.json, the landing
+// page and the MCP tool definitions all render the full text, because that is
+// what humans and LLM tool-selection read. Only the 402 challenge is trimmed.
+//
+// 256 is well under the measured 487 so that a longer route path or extra tags,
+// which also count toward the payload, cannot push a route over.
+const CHALLENGE_DESC_MAX = 256;
+
+/** Trim for the challenge only. Never mutates the pricing table. */
+function challengeDesc(desc) {
+  const d = String(desc || '');
+  if (d.length <= CHALLENGE_DESC_MAX) return d;
+  const cut = d.slice(0, CHALLENGE_DESC_MAX - 1);
+  const sp = cut.lastIndexOf(' ');
+  return (sp > CHALLENGE_DESC_MAX * 0.6 ? cut.slice(0, sp) : cut).trimEnd() + '\u2026';
+}
+
 function buildPaymentLayer() {
   const networkName = (process.env.X402_NETWORK || 'devnet').toLowerCase();
   const network = networkName === 'mainnet' ? SOLANA_MAINNET_CAIP2 : SOLANA_DEVNET_CAIP2;
@@ -92,7 +125,7 @@ function buildPaymentLayer() {
           payTo: payToEvm,
         }] : []),
       ],
-      description: p.desc,
+      description: challengeDesc(p.desc),   // challenge only; p.desc stays whole
       serviceName: 'AgentFeed',
       tags: TAGS[p.tool] || ['crypto','trading'],
       extensions: declareDiscoveryExtension({}),

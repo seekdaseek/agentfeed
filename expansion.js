@@ -14,6 +14,7 @@ const S = require('./tools/solana2');
 const F = require('./tools/defi');
 const P = require('./tools/peg');
 const CF = require('./tools/cascade-forecast');
+const OV = require('./tools/overhang');
 
 const sym = (d) => z.string().optional().describe(`USDT perp symbol e.g. SOLUSDT, BTCUSDT (default ${d})`);
 const symReq = z.string().describe('USDT perp symbol e.g. SOLUSDT');
@@ -170,6 +171,13 @@ const EXP = [
     tags: ['rwa','tokenized-stocks','peg','ranking','exclusive'],
     schema: { days: z.number().optional().describe('lookback 1-30, default 7'), min_liquidity_usd: z.number().optional().describe('filter out thinner pools') },
     run: (a) => P.getPegUniverse(a) },
+  // ---- overhang: exit liquidity on lending collateral (own tape, nobody else measures this) ----
+  { name: 'get_exit_quote', route: 'GET /api/exit-quote', usd: 0.02,
+    tags: ['collateral','lending','liquidations','exit-liquidity','solana','kamino','rwa','tokenized-stocks','risk','exclusive'],
+    desc: "EXIT LIQUIDITY on seized collateral: what a liquidator ACTUALLY realises selling a Kamino reserve into live routing, versus the oracle price the protocol marks it at. Returns max_exitable_usd (largest clip whose liquidator margin is still positive, found by bisection, with its resolution width), the exitable fraction, the conservative bound at the 2% penalty floor, and for the nearest clip actually probed: realised USD, haircut bps and liquidator margin bps. Distinguishes a router that REFUSES to quote a token (permissioning, not illiquidity) from a book with no route (a real liquidity finding) - they are different facts and were one status until this split. A terminal verdict requires six consecutive agreeing observations from the symbol's own tape, so a single bad quote cannot produce a finding; withheld verdicts fall back to the last corroborated measurement with its age rather than returning null. Zero bad debt today does not disprove any of this - it means nobody has been forced to test it at size. Method, corroboration rules and row counts are free via get_exit_method.",
+    schema: { symbol: z.string().describe('reserve symbol e.g. SPYx, cbBTC, FWDI, CRCLx (get_exit_method lists all covered)'),
+              size_usd: z.number().optional().describe('clip size in USD you would need to exit; the nearest MEASURED clip is returned, never interpolated') },
+    run: (a) => OV.getExitQuote({ query: a }) },
 ];
 
 // ---- derived exports ----

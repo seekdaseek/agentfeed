@@ -19,6 +19,7 @@ const { getCascadeForecast, getCascadeForecastFree, getForecastQuestion, getFore
 const { getPositioning } = require('./tools/positioning');
 const { getTradeContext } = require('./tools/tradecontext');
 const { getTokenRisk } = require('./tools/tokenrisk');
+const { getExitMethod } = require('./tools/overhang');
 
 const TOOL_DEFS = [
   { name: 'get_sol_price', usd: 0.001, desc: 'Live SOL/USD spot price (multi-source: Coinbase, Kraken, Pyth Hermes fallback). The confidence and publish_time fields are null unless Pyth Hermes served the request; Coinbase and Kraken publish neither.',
@@ -81,6 +82,8 @@ const TOOL_DEFS = [
   { name: 'get_token_risk', usd: 0.01, desc: 'SPL token rug-risk signals: mint/freeze authority status (revoked = safer), top-1/top-10 holder concentration, and risk flags. Not a honeypot/LP-lock checker.',
     schema: { mint: z.string().describe('SPL token mint address (base58)') },
     run: (a) => getTokenRisk(a.mint) },
+  { name: 'get_exit_method', usd: 0, desc: "FREE: how overhang measures exit liquidity on lending collateral, and the counts behind every paid answer - computed from the tape at request time, nothing hardcoded. Returns what is measured (the protocol's own live-refetched mark vs realisable value from sell-direction quotes at real clip sizes), the corroboration rule in plain terms (a terminal verdict needs six consecutive agreeing floor observations from the symbol's own tape; one sample is never enough; a contradicted floor buys a fresh probe rather than writing a hole), the full status vocabulary including why a router refusal and an empty book are different facts, the size-matched control design and its results, the gated sweep and row counts, covered symbols and markets, and the measured cadence. Read this before paying for get_exit_quote, and to check the claim rather than trust it.",
+    schema: {}, run: () => getExitMethod() },
 ];
 
 TOOL_DEFS.push(...require('./expansion').MCP_DEFS_ADD);

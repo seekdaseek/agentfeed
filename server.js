@@ -113,6 +113,12 @@ app.get('/api/liquidation-stats', tool('get_liquidation_stats', 0.004,
 app.get('/api/last-liquidation', tool('get_last_liquidation', 0,
   () => getLastLiquidation()));
 
+// overhang method disclosure. FREE, and deliberately absent from PRICES in payments.js
+// so the x402 middleware never sees a $0 route (same treatment as /api/last-liquidation).
+const { getExitMethod } = require('./tools/overhang');
+app.get('/api/exit-method', tool('get_exit_method', 0,
+  () => getExitMethod()));
+
 const { getCascadeAlert } = require('./tools/cascade');
 app.get('/api/cascade', tool('get_cascade_alert', 0.01,
   (req) => getCascadeAlert(req)));

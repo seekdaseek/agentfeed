@@ -108,10 +108,11 @@ Notional uses `filled_qty × avg_fill_price` — what actually executed — not 
 | get_peg_deviation | $0.02 | Tokenized-equity peg deviation vs the underlying last trade |
 | get_peg_sessions | $0.03 | Peg deviation by session: open, premarket, afterhours, overnight, weekend |
 | get_peg_universe | $0.05 | Tracked tokenized equities ranked by off-hours peg risk |
+| get_exit_quote | $0.02 | Exit liquidity on seized Kamino collateral: what a liquidator actually realises vs the oracle mark |
 
-## 50 tools (44 HTTP + MCP) & pricing
+## 52 tools (45 HTTP + MCP) & pricing
 
-**44 paid tools + 3 free tasters.** Every call is metered individually in USDC over x402 — no bundles, no minimums. Calling all 44 paid tools once costs **$0.74** — the entire market read for 74 cents.
+**45 paid tools + 7 free tools.** Every call is metered individually in USDC over x402 — no bundles, no minimums. Calling all 45 paid tools once costs **$0.76** — the entire market read for 76 cents.
 
 The flagship is [`get_squeeze_score`](#the-moat--our-own-liquidation-tape) — a 0-100 short-squeeze / long-flush composite built from funding, crowding, OI build and the liq-skew of our exclusive tape. One number, one dime, answers "is this trade crowded and about to hurt someone."
 
@@ -134,6 +135,13 @@ The flagship is [`get_squeeze_score`](#the-moat--our-own-liquidation-tape) — a
 | `get_peg_deviation` | $0.02 | `/api/peg-deviation` | Peg deviation for one tokenized equity: on-chain DEX price vs the underlying last real trade, in bps |
 
 Sampled every 5 minutes since 19 July 2026. Deviation is measured against the underlying's last real trade — outside US market hours that is the last print before the close, not a live quote. Dead pools are excluded rather than reported as perfect pegs.
+
+### The third moat — our own collateral exit-liquidity tape
+
+| Tool | Price | Route | What you get |
+|---|---|---|---|
+| `get_exit_quote` | $0.02 | `/api/exit-quote` | Exit liquidity on seized collateral: what a liquidator actually realises selling a Kamino reserve into live routing versus the oracle mark — max exitable USD, exitable fraction, haircut and liquidator margin in bps |
+| `get_exit_method` | free | `/api/exit-method` | How the measurement works and the row counts behind every paid answer, computed from the tape at request time |
 
 ### Live liquidations & cascades
 
@@ -206,6 +214,10 @@ Sampled every 5 minutes since 19 July 2026. Deviation is measured against the un
 |---|---|
 | `get_fear_greed` | `/api/fear-greed` |
 | `get_last_liquidation` | `/api/last-liquidation` (15-min delayed) |
+| `get_cascade_forecast_free` | MCP tool — full-quality SOL liquidation forecast, nothing withheld |
+| `get_forecast_question` | MCP tool — what the forecast answers and how to settle it yourself |
+| `get_forecast_record` | MCP tool — live settled track record with the raw rows |
+| `get_exit_method` | `/api/exit-method` |
 | `pricing` | MCP tool — lists everything with live prices |
 
 ## Use it from an elizaOS agent

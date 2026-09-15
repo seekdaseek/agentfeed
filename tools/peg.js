@@ -34,6 +34,11 @@ function db() {
   return _db;
 }
 
+// caller-input failures carry kind:'bad_request' so server.js logs them apart
+// from real service failures; an unmarked throw ('peg database unavailable')
+// stays status 'error'
+const badRequest = (msg) => Object.assign(new Error(msg), { kind: 'bad_request' });
+
 const r1 = (x) => (x == null || !Number.isFinite(x) ? null : Math.round(x * 10) / 10);
 const r2 = (x) => (x == null || !Number.isFinite(x) ? null : Math.round(x * 100) / 100);
 const nowSec = () => Math.floor(Date.now() / 1000);
@@ -59,13 +64,15 @@ function knownSymbols() {
 }
 
 function resolveSymbol(input) {
-  if (!input) throw new Error('symbol required');
+  if (!input) {
+    throw badRequest('missing required parameter: symbol — a tokenized equity symbol, e.g. symbol=CRCLx (get_peg_universe lists all tracked symbols)');
+  }
   const want = String(input).trim().toUpperCase();
   const all = knownSymbols();
   const hit = all.find((s) => s.toUpperCase() === want)
            || all.find((s) => s.toUpperCase() === want + 'X')
            || all.find((s) => s.toUpperCase().replace(/X$/, '') === want.replace(/X$/, ''));
-  if (!hit) throw new Error(`unknown symbol '${input}'. Available: ${all.join(', ')}`);
+  if (!hit) throw badRequest(`unknown symbol '${input}'. Available: ${all.join(', ')}`);
   return hit;
 }
 

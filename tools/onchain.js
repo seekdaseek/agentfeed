@@ -5,6 +5,10 @@ const HELIUS_URL = () =>
 
 const BASE58_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
+// caller-input failures carry kind:'bad_request' so server.js logs them apart
+// from real service failures; an unmarked throw stays status 'error'
+const badRequest = (msg) => Object.assign(new Error(msg), { kind: 'bad_request' });
+
 async function rpc(method, params) {
   const res = await fetch(HELIUS_URL(), {
     method: 'POST',
@@ -20,7 +24,10 @@ async function rpc(method, params) {
 
 // getAssetsByOwner — fungibles + NFTs summary for a wallet
 async function getWalletHoldings(wallet) {
-  if (!BASE58_RE.test(wallet)) throw new Error('invalid wallet address');
+  if (wallet == null || wallet === '') {
+    throw badRequest('missing required parameter: wallet — a Solana address (base58), e.g. wallet=4a8o45skRPcyjAdyR8yES215Swvh8uTpZD6KLarhxCJ7');
+  }
+  if (!BASE58_RE.test(wallet)) throw badRequest('invalid wallet address');
 
   const result = await rpc('getAssetsByOwner', {
     ownerAddress: wallet,
@@ -65,7 +72,10 @@ async function getWalletHoldings(wallet) {
 
 // getAsset — metadata for one mint
 async function getTokenMetadata(mint) {
-  if (!BASE58_RE.test(mint)) throw new Error('invalid mint address');
+  if (mint == null || mint === '') {
+    throw badRequest('missing required parameter: mint — an SPL mint address (base58), e.g. mint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v (USDC)');
+  }
+  if (!BASE58_RE.test(mint)) throw badRequest('invalid mint address');
 
   const a = await rpc('getAsset', { id: mint });
   const meta = a?.content?.metadata || {};

@@ -43,6 +43,27 @@ setInterval(() => {
 
 require('./telegraph').register(app);
 
+// ---- HEAD guard (must sit BEFORE the x402 layer)
+// @x402 route matching is verb-exact: a pattern 'GET /api/x' never matches a
+// HEAD request, while app.get() answers HEAD as well as GET — so a HEAD reached
+// every paid handler unmetered (856 crawler probes since 2026-07-21, all one
+// GCP IP). Still verb-exact in @x402/core 2.21.0 (checked 2026-09-15), so a
+// dependency bump alone would not close it. Protocol-correct alternative for
+// later: answer HEAD with the 402 challenge — x402 v2 carries it entirely in
+// the PAYMENT-REQUIRED response header, so a bodiless response can still quote.
+// 405 is the safe move today. Matches /api/* only: /health, /, /.well-known
+// and the deliberately unmetered /telegraph mirror are untouched.
+app.use((req, res, next) => {
+  if (req.method !== 'HEAD' || !req.path.startsWith('/api/')) return next();
+  logCall({
+    tool: 'head_probe', status: 'bad_request', ip: req.callerIp,
+    error_msg: 'HEAD rejected: paid surface is GET-only',
+    req_path: req.path, user_agent: req.headers['user-agent'], method: req.method,
+  });
+  res.set('Allow', 'GET');
+  res.status(405).end();
+});
+
 // ---- x402 payment layer (mounted BEFORE the /api routes)
 const paymentsOn = (process.env.X402_MODE || 'on').toLowerCase() !== 'off';
 let x402Network = 'off';
@@ -73,7 +94,22 @@ function tool(name, priceUsd, handler) {
       const data = await handler(req);
       res.json({ tool: name, data, paid: paymentsOn });
     } catch (e) {
-      logCall({ tool: name, status: 'error', latency_ms: Date.now() - t0, ip: req.callerIp });
+      // e.kind === 'bad_request' is set at the throw site by the tools' own
+      // input validation (missing/malformed caller parameter, thrown before any
+      // upstream call); an unmarked throw is a genuine service failure. Never
+      // classify by matching message text. /opt/afwatch/afwatch.js and the
+      // solwatch MCP x402_revenue tool both read this table, so the
+      // error/bad_request split changes what they report — by design.
+      logCall({
+        tool: name,
+        status: e.kind === 'bad_request' ? 'bad_request' : 'error',
+        latency_ms: Date.now() - t0,
+        ip: req.callerIp,
+        error_msg: e.message,
+        req_path: req.path,
+        user_agent: req.headers['user-agent'],
+        method: req.method,
+      });
       res.status(400).json({ tool: name, error: e.message });
     }
   };

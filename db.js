@@ -15,9 +15,14 @@ db.exec(`
     payer_wallet TEXT,
     tx_sig TEXT,
     amount_usdc REAL,
-    status TEXT NOT NULL,          -- ok | error | free
+    status TEXT NOT NULL,          -- paid | free | error | bad_request
     latency_ms INTEGER,
-    ip TEXT
+    ip TEXT,
+    error_msg TEXT,
+    req_host TEXT,
+    req_path TEXT,
+    user_agent TEXT,
+    method TEXT
   );
 
   CREATE TABLE IF NOT EXISTS free_tier (
@@ -30,13 +35,26 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_calls_tool ON calls(tool);
 `);
 
+// The live DB predates some of the columns above: CREATE IF NOT EXISTS is a
+// no-op there, so add whatever is missing. Additive only — existing rows get
+// NULL and history is never rewritten.
+const haveCols = new Set(db.prepare(`PRAGMA table_info(calls)`).all().map((c) => c.name));
+for (const col of ['error_msg', 'req_host', 'req_path', 'user_agent', 'method']) {
+  if (!haveCols.has(col)) db.exec(`ALTER TABLE calls ADD COLUMN ${col} TEXT`);
+}
+
 // batched async-ish logging: queue writes, flush every 2s — keeps the hot path clean
 const queue = [];
 const insertCall = db.prepare(`
-  INSERT INTO calls (ts, tool, payer_wallet, tx_sig, amount_usdc, status, latency_ms, ip)
-  VALUES (@ts, @tool, @payer_wallet, @tx_sig, @amount_usdc, @status, @latency_ms, @ip)
+  INSERT INTO calls (ts, tool, payer_wallet, tx_sig, amount_usdc, status, latency_ms, ip,
+                     error_msg, req_path, user_agent, method)
+  VALUES (@ts, @tool, @payer_wallet, @tx_sig, @amount_usdc, @status, @latency_ms, @ip,
+          @error_msg, @req_path, @user_agent, @method)
 `);
 const flushMany = db.transaction((rows) => rows.forEach((r) => insertCall.run(r)));
+
+// caps, not truth-shaping: a hostile User-Agent can be arbitrarily long
+const trunc = (v, n) => (v == null ? null : String(v).slice(0, n));
 
 function logCall(row) {
   queue.push({
@@ -48,6 +66,10 @@ function logCall(row) {
     status: row.status,
     latency_ms: row.latency_ms ?? null,
     ip: row.ip || null,
+    error_msg: trunc(row.error_msg, 500),
+    req_path: trunc(row.req_path, 500),
+    user_agent: trunc(row.user_agent, 400),
+    method: trunc(row.method, 10),
   });
 }
 

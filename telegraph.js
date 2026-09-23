@@ -47,8 +47,10 @@ const { shape } = require('./answer');
 // only lose a log line. It can never turn a 200 into a 502, which is the one
 // thing a logger on a scored miner must never do.
 //
-// WHAT IS DELIBERATELY NOT LOGGED. No headers, ever: the x402 settlement and
-// authorization headers ride there. Query VALUES are logged because the whole
+// WHAT IS DELIBERATELY NOT LOGGED. No headers except three named ones -- the
+// caller's address, its user-agent and Cloudflare's cf-ray presence -- none of
+// which can carry a credential. Everything else stays out: the x402 settlement
+// and authorization headers ride there. Query VALUES are logged because the whole
 // point is to see what symbol was asked for, but any key whose NAME looks like
 // a credential is redacted rather than trusted.
 const fs = require('fs');
@@ -213,6 +215,23 @@ function register(app) {
         path: req.path,
         query: safeQuery(req.query),
         status: res.statusCode,
+        // Caller identity. Narrow, deliberate exception to the "no headers"
+        // rule above: none of these three carry a credential, and without them
+        // this log cannot say WHO the traffic is -- which is the only question
+        // it is currently unable to answer.
+        //
+        // `ip` uses the same key the rate limiter settled on: CF-Connecting-IP
+        // when the request came through Cloudflare, otherwise the raw socket
+        // peer. Never req.ip -- `trust proxy` makes that derive from
+        // X-Forwarded-For, which the caller controls.
+        ip: req.headers['cf-connecting-ip'] || req.socket.remoteAddress,
+        ua: req.headers['user-agent'],
+        // The decisive pair. Through the tunnel, Cloudflare stamps cf-ray and
+        // the socket peer is localhost. Straight at :3006 there is no cf-ray
+        // and the peer is the caller's real address. Whether :3006 can be
+        // bound to 127.0.0.1 depends entirely on which of those this is.
+        via: req.headers['cf-ray'] ? 'tunnel' : 'direct',
+        peer: req.socket.remoteAddress,
         // null, not false: /ping and unmatched paths never call shape() at all,
         // which is a different fact from shape() having declined.
         shaped: t.shaped === undefined ? null : t.shaped,

@@ -15,6 +15,8 @@ const F = require('./tools/defi');
 const P = require('./tools/peg');
 const CF = require('./tools/cascade-forecast');
 const OV = require('./tools/overhang');
+const B = require('./tools/base');
+const PX = require('./tools/prices');
 
 const sym = (d) => z.string().optional().describe(`USDT perp symbol e.g. SOLUSDT, BTCUSDT (default ${d})`);
 const symReq = z.string().describe('USDT perp symbol e.g. SOLUSDT');
@@ -178,6 +180,30 @@ const EXP = [
     schema: { symbol: z.string().describe('reserve symbol e.g. SPYx, cbBTC, FWDI, CRCLx (get_exit_method lists all covered)'),
               size_usd: z.number().optional().describe('clip size in USD you would need to exit; the nearest MEASURED clip is returned, never interpolated') },
     run: (a) => OV.getExitQuote({ query: a }) },
+
+  // ---- Base / EVM reads over keyless public RPC ----
+  // These three answered the three questions that carry essentially all crypto
+  // demand measured on Telegraph (tools/base.js:4-8): the price of ETH, a
+  // wallet balance on Base, and the Base gas price. They lived only in
+  // telegraph.js and were never on the paid rail, so they are registered here
+  // rather than lost when that mirror is unmounted.
+  { name: 'get_eth_price', route: 'GET /api/eth-price', usd: 0.001,
+    desc: 'ETH spot price in USD, aggregated across seven independent venues (CoinGecko, Coinbase, Kraken, Binance, OKX, Gemini, DefiLlama). Returns the lead figure plus every venue quote that answered, so a caller can see the spread rather than trust one exchange. Venues are ranked in a fixed declared order, not completion order, so identical market state always returns the same lead price.',
+    tags: ['price', 'eth', 'ethereum', 'crypto', 'multi-venue'],
+    schema: {},
+    run: () => PX.getPriceQuotes('ETH') },
+  { name: 'get_base_gas', route: 'GET /api/base-gas', usd: 0.001,
+    desc: 'Current gas price on Base (chain 8453) in BOTH gwei and wei, with base fee, priority fee and block number when the node supplies them. Both units are returned because a caller asking in wei and a caller asking in gwei are asking the same question. Served from keyless public RPC with three-node fallback, so there is no API key to rotate or expire.',
+    tags: ['base', 'gas', 'l2', 'ethereum', 'evm'],
+    schema: {},
+    run: () => B.getBaseGas() },
+  { name: 'get_base_balance', route: 'GET /api/base-balance', usd: 0.002,
+    desc: 'Native ETH or any ERC20 balance for an address on Base or Ethereum mainnet. decimals() and symbol() are read from the contract at request time rather than assumed, because assuming 18 reports a USDC balance a trillion times too large. Accepts a 0x address or an ENS name; ENS is resolved through two independent resolvers and the answer is used only when they agree, so a wrong address can never produce a confident balance for the wrong wallet. An unsupported chain is refused rather than silently answered from the wrong one.',
+    tags: ['base', 'ethereum', 'wallet', 'balance', 'erc20', 'evm', 'ens'],
+    schema: { address: z.string().describe('0x address (40 hex) or an ENS name ending .eth'),
+              token: z.string().optional().describe('ERC20 contract address, or a known ticker: USDC, WETH, DAI, CBBTC, USDBC, CBETH, AERO, EURC. Omit for the native ETH balance'),
+              chain: z.string().optional().describe('base (default) or ethereum') },
+    run: (a) => B.getBaseBalance({ query: a }) },
 ];
 
 // ---- derived exports ----

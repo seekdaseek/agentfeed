@@ -310,7 +310,17 @@ app.get('/', (_req, res) => res.json({
   service: 'agentfeed',
   description: 'Live crypto market data for AI agents - liquidations, positioning, funding, prices, token risk. Paid per-call in USDC via x402 on Solana or Base. No API keys.',
   x402: { active: paymentsOn, network: x402Network, chains: ['solana:mainnet', 'eip155:8453'] },
-  free_tools: ['get_fear_greed', 'pricing'],
+  // The three routes that are genuinely unpriced over HTTP. This used to read
+  // ['get_fear_greed','pricing'], which missed two of them and listed `pricing`,
+  // an MCP-only tool with no HTTP route — so `/` told callers the wrong thing
+  // about what they could have for nothing. Nothing in this process models
+  // "free HTTP route", so the guard is tools/check-paymd-live.mjs, which probes
+  // every route on `/` against the live service.
+  free_tools: ['get_fear_greed', 'get_last_liquidation', 'get_exit_method'],
+  // Derived from the live liquidation tape, not restated. The studio card said
+  // 880+ while PAY.md and the README said ~600; publishing the measurement is
+  // what lets a checker settle that instead of a human guessing.
+  coverage: (() => { try { return require('./tools/liqdb').getPerpCoverage(); } catch { return null; } })(),
   links: {
     github: 'https://github.com/seekdaseek/agentfeed',
     elizaos_plugin: 'https://www.npmjs.com/package/@seekdaseek/plugin-agentfeed',

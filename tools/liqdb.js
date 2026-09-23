@@ -222,4 +222,29 @@ function getVenueLiqShare(p = {}) {
   };
 }
 
-module.exports = { getLiqHistory, getLiqHeatmap, getCascadeHistory, getSqueezeScore, getVenueLiqShare };
+// How many distinct perp markets the tape actually covers. Published so the
+// number in PAY.md, the README and the studio card can be ASSERTED against the
+// live tape instead of restated from memory — the card said 880+ while the docs
+// said ~600 and nothing could tell which was true.
+//
+// Cached for an hour: the query is ~143ms against idx_liq_ts over 4.3M rows,
+// which is fine occasionally and wasteful on every request to `/`.
+let coverageCache = { at: 0, value: null };
+function getPerpCoverage() {
+  const now = Date.now();
+  if (coverageCache.value && now - coverageCache.at < 3600_000) return coverageCache.value;
+  const d = getDb();
+  const since = now - 7 * 86400 * 1000;
+  const symbols7d = d.prepare('SELECT COUNT(DISTINCT symbol) n FROM liquidations WHERE ts > ?').get(since).n;
+  const venues = d.prepare('SELECT exchange, COUNT(DISTINCT symbol) n FROM liquidations WHERE ts > ? GROUP BY exchange ORDER BY n DESC').all(since);
+  const value = {
+    perp_markets_7d: symbols7d,
+    venues: venues.map((v) => ({ exchange: v.exchange, symbols: v.n })),
+    window_days: 7,
+    measured_at: new Date(now).toISOString(),
+  };
+  coverageCache = { at: now, value };
+  return value;
+}
+
+module.exports = { getLiqHistory, getLiqHeatmap, getCascadeHistory, getSqueezeScore, getVenueLiqShare, getPerpCoverage };

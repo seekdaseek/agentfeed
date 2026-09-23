@@ -318,7 +318,7 @@ app.get('/api/exit-method', tool('get_exit_method', 0,
 const { getCascadeAlert } = require('./tools/cascade');
 app.get('/api/cascade', tool('get_cascade_alert', 0.01,
   (req) => getCascadeAlert(req)));
-// full universe (~600 perps). same detector, scope forced to 'all'.
+// full universe (every perp in the tape). same detector, scope forced to 'all'.
 app.get('/api/cascade-scan', tool('get_cascade_scan', 0.05,
   (req) => getCascadeAlert({ query: { ...(req.query || {}), scope: 'all' } })));
 

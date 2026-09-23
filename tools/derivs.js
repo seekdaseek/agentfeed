@@ -51,7 +51,9 @@ async function okx(path) {
   return j.data;
 }
 
-// all Bybit linear tickers in one call — funding, OI value, 24h change for ~600 perps
+// all Bybit linear tickers in one call, filtered to USDT-quoted — funding, OI
+// value and 24h change for every Bybit USDT perp. No count here: the venue
+// lists 783 today (measured 2026-09-23) and it moves every week.
 const allTickers = () =>
   cached('bybit:tickers', 30_000, async () =>
     (await bybit('/v5/market/tickers?category=linear')).list.filter((t) => /USDT$/.test(t.symbol)));
@@ -87,7 +89,7 @@ async function getFundingCross(p = {}) {
   });
 }
 
-// ---- get_funding_extremes ($0.02) — most crowded trades across ~600 perps
+// ---- get_funding_extremes ($0.02) — most crowded trades across every Bybit USDT perp
 async function getFundingExtremes(p = {}) {
   const limit = Math.min(Math.max(parseInt(p.limit) || 10, 1), 25);
   const minTurn = Number(p.min_turnover_usd) || 1_000_000;

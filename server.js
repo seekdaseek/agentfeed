@@ -39,6 +39,10 @@ if (!process.env.HELIUS_API_KEY) {
 // one minute exceeded 60, and the second came back 429 -- which their prober
 // classifies as `not_paywalled`, so the endpoint reads as broken rather than
 // busy.
+//
+// The /telegraph mirror was removed on 2026-09-19, so there is no longer a
+// second, unmetered surface to meter separately: one limit, one bucket per
+// caller. telegraph.js stays on disk; only its mount is gone.
 const buckets = new Map();
 const LIMIT = 240;
 const WINDOW_MS = 60_000;
@@ -97,8 +101,6 @@ setInterval(() => {
   for (const [ip, b] of buckets) if (now - b.windowStart > WINDOW_MS * 2) buckets.delete(ip);
 }, 120_000).unref();
 
-require('./telegraph').register(app);
-
 // ---- HEAD guard (must sit BEFORE the x402 layer)
 // @x402 route matching is verb-exact: a pattern 'GET /api/x' never matches a
 // HEAD request, while app.get() answers HEAD as well as GET — so a HEAD reached
@@ -107,8 +109,8 @@ require('./telegraph').register(app);
 // dependency bump alone would not close it. Protocol-correct alternative for
 // later: answer HEAD with the 402 challenge — x402 v2 carries it entirely in
 // the PAYMENT-REQUIRED response header, so a bodiless response can still quote.
-// 405 is the safe move today. Matches /api/* only: /health, /, /.well-known
-// and the deliberately unmetered /telegraph mirror are untouched.
+// 405 is the safe move today. Matches /api/* only: /health, / and /.well-known
+// are untouched.
 app.use((req, res, next) => {
   if (req.method !== 'HEAD' || !req.path.startsWith('/api/')) return next();
   logCall({

@@ -60,3 +60,15 @@ test-upstream.js
 # Local dataset staging. liquidations_full_20260807.csv is 123MB, over
 # GitHub's 100MB hard per-file limit, so it can never be pushed from here.
 hf/
+exports/*.zip
+
+# ---- 2026-09-19: MPP layer ----
+# mpp/ ships its own nested node_modules (18,949 files) because mppx pins
+# express>=5 as a peerOptional and this service runs express 4. The mpp/*.js
+# sources ARE source and stay trackable; the vendor tree must never be one
+# `git add -A` away from a public repo.
+mpp/node_modules/
+
+# macOS AppleDouble sidecars, created by tar/scp from the Mac. `._server.js`
+# is a byte-carrying sidecar of a real file, so this is not cosmetic.
+._*

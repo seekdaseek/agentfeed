@@ -233,47 +233,10 @@ if (paymentsOn) {
   app.use(mppOn ? mpp.wrapX402(layer.middleware) : layer.middleware);
 }
 
-// ---- route wrapper: timing + audit (captures payer + tx sig from settlement header)
-function tool(name, priceUsd, handler) {
-  return async (req, res) => {
-    const t0 = Date.now();
-    res.on('finish', () => {
-      if (res.statusCode !== 200) return; // 402s/errors logged elsewhere or not billed
-      const s = (paymentsOn ? decodeSettlement(res) : null) || req.mppSettlement || null;
-      logCall({
-        tool: name,
-        status: s ? 'paid' : 'free',
-        payer_wallet: s?.payer || null,
-        tx_sig: s?.transaction || null,
-        amount_usdc: s ? priceUsd : null,
-        latency_ms: Date.now() - t0,
-        ip: req.callerIp,
-      });
-    });
-    try {
-      const data = await handler(req);
-      res.json({ tool: name, data, paid: paymentsOn });
-    } catch (e) {
-      // e.kind === 'bad_request' is set at the throw site by the tools' own
-      // input validation (missing/malformed caller parameter, thrown before any
-      // upstream call); an unmarked throw is a genuine service failure. Never
-      // classify by matching message text. /opt/afwatch/afwatch.js and the
-      // solwatch MCP x402_revenue tool both read this table, so the
-      // error/bad_request split changes what they report — by design.
-      logCall({
-        tool: name,
-        status: e.kind === 'bad_request' ? 'bad_request' : 'error',
-        latency_ms: Date.now() - t0,
-        ip: req.callerIp,
-        error_msg: e.message,
-        req_path: req.path,
-        user_agent: req.headers['user-agent'],
-        method: req.method,
-      });
-      res.status(400).json({ tool: name, error: e.message });
-    }
-  };
-}
+// ---- route wrapper: timing + audit, and the paid flag.
+// Lives in lib/tool.js so it can be unit-tested without booting this file.
+const { makeTool } = require('./lib/tool');
+const { tool } = makeTool({ paymentsOn, PRICES, decodeSettlement, logCall });
 
 // ---- routes (patterns must match PRICES keys in payments.js exactly)
 app.get('/api/sol-price', tool('get_sol_price', 0.001, () => getPrice('SOL')));

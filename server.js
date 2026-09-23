@@ -142,6 +142,46 @@ app.use((req, _res, next) => {
   next();
 });
 
+// ---- query-form canonicalisation for path-parameter routes
+//
+// Five paid routes take their argument as a path segment
+// (GET /api/token-risk/:mint). The x402 layer matches that exact pattern, so
+// /api/token-risk?mint=... matched nothing, sailed past the paywall and then
+// 404'd -- an agent following the published spec got "does not exist" where a
+// 402 belonged. That is lost revenue and it reads as a broken provider.
+//
+// Rewriting to the canonical path form BEFORE the paywall means the paywall,
+// the handler, the manifest and the audit row all still see one route. The
+// alternative -- registering a second route per shape -- would have grown the
+// advertised catalogue from 48 to 53 and listed the same product twice.
+//
+// The map is derived from PRICES, never hand-written, so it cannot drift from
+// the routes that are actually registered and priced.
+const QUERY_ALIASABLE = Object.keys(PRICES)
+  .filter((r) => r.startsWith('GET ') && r.includes('/:'))
+  .map((r) => {
+    const p = r.slice(4);
+    const i = p.indexOf('/:');
+    return { base: p.slice(0, i), param: p.slice(i + 2) };
+  });
+
+app.use((req, _res, next) => {
+  if (req.method !== 'GET') return next();
+  const hit = QUERY_ALIASABLE.find((r) => req.path === r.base);
+  if (hit) {
+    const value = req.query[hit.param];
+    if (typeof value === 'string' && value.length > 0) {
+      const rest = { ...req.query };
+      delete rest[hit.param];
+      const qs = new URLSearchParams(rest).toString();
+      // Express re-derives req.path from req.url, so everything downstream --
+      // including the x402 matcher -- sees the canonical form.
+      req.url = `${hit.base}/${encodeURIComponent(value)}${qs ? `?${qs}` : ''}`;
+    }
+  }
+  next();
+});
+
 // ---- x402 payment layer (mounted BEFORE the /api routes)
 const paymentsOn = (process.env.X402_MODE || 'on').toLowerCase() !== 'off';
 let x402Network = 'off';

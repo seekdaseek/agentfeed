@@ -1,0 +1,17 @@
+{
+  "name": "agentfeed-mpp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MPP solana/charge layer for AgentFeed. Isolated dependency tree: mppx pins express>=5 as peerOptional and AgentFeed runs express 4, so these deps must NOT be installed into the parent tree.",
+  "main": "index.js",
+  "scripts": {
+    "postinstall": "patch-package --error-on-fail",
+    "verify-patch": "node scripts/assert-patched.js"
+  },
+  "dependencies": {
+    "@solana/mpp": "0.7.0",
+    "mppx": "0.10.1",
+    "patch-package": "^8.0.1"
+  },
+  "//patch-package": "Production dependency, not dev: the postinstall applies the @solana/mpp preflightCommitment patch, and production installs with --omit=dev. As a devDependency the postinstall exits 127 and the install completes UNPATCHED."
+}

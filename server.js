@@ -2,7 +2,7 @@
 // /health and / stay free. X402_MODE=off in .env reverts to free mode.
 require('dotenv').config();
 const express = require('express');
-const { logCall } = require('./db');
+const { db, logCall } = require('./db');
 const { buildPaymentLayer, decodeSettlement, PRICES } = require('./payments');
 const { getPrice } = require('./tools/prices');
 const { getFunding } = require('./tools/funding');
@@ -182,13 +182,55 @@ app.use((req, _res, next) => {
   next();
 });
 
+// ---- MPP solana/charge layer (additive, MPP_ENABLED-gated)
+// Mounted BEFORE the x402 layer so that a 402 can carry both challenges: MPP's
+// in WWW-Authenticate, x402's in PAYMENT-REQUIRED. The reference payer reads
+// the two from disjoint header namespaces (solana-foundation/pay,
+// crates/core/src/client/mpp.rs:36-44 vs runner.rs:565-582), so existing x402
+// clients never see the new header. With MPP_ENABLED unset, mppOn is false:
+// no gate is mounted and wrapX402() returns the middleware unchanged.
+//
+// The module ships as a separate directory with its own node_modules, because
+// mppx pins express>=5 as a peerOptional and this service runs express 4. So
+// "mpp/ is not there yet" is a real deploy state, not a hypothetical, and a
+// bare require would turn it into a dead service. Load it defensively: absent
+// and unwanted is a logged no-op, absent but asked for is fatal and says so.
+let mpp = null;
+let mppLoadError = null;
+try {
+  mpp = require('./mpp');
+} catch (e) {
+  mppLoadError = e;
+}
+const mppWanted = (process.env.MPP_ENABLED || '').toLowerCase() === 'true';
+// FAIL SOFT. MPP is an additive second payment protocol; x402 is the revenue
+// rail. A broken MPP must never take x402 down with it. On 2026-09-19 a missing
+// MPP_SECRET_KEY made init throw, this exited 1, and pm2 looped to `errored`
+// with the paid surface dead. It is a loud no-op now instead: the service keeps
+// serving x402 on every route, and the cause is named on one line.
+if (mppWanted && !mpp) {
+  console.error('[mpp] DISABLED: MPP_ENABLED=true but ./mpp could not be loaded:', mppLoadError.message);
+  console.error('[mpp] DISABLED: continuing with x402 only; the paid surface is unaffected.');
+}
+if (!mppWanted && mppLoadError) {
+  console.log('[mpp] not loaded (MPP disabled):', mppLoadError.message);
+}
+const mppOn = Boolean(mpp && mpp.isEnabled());
+const MPP_ROUTES = ['GET /api/sol-price', 'GET /api/btc-price'];
+let mppReady = null;
+if (mppOn) {
+  mppReady = mpp.init({ db, prices: PRICES, routes: MPP_ROUTES });
+  app.get('/api/sol-price', mpp.gate('GET /api/sol-price'));
+  app.get('/api/btc-price', mpp.gate('GET /api/btc-price'));
+}
+
 // ---- x402 payment layer (mounted BEFORE the /api routes)
 const paymentsOn = (process.env.X402_MODE || 'on').toLowerCase() !== 'off';
 let x402Network = 'off';
 if (paymentsOn) {
   const layer = buildPaymentLayer();
   x402Network = layer.network;
-  app.use(layer.middleware);
+  app.use(mppOn ? mpp.wrapX402(layer.middleware) : layer.middleware);
 }
 
 // ---- route wrapper: timing + audit (captures payer + tx sig from settlement header)
@@ -197,7 +239,7 @@ function tool(name, priceUsd, handler) {
     const t0 = Date.now();
     res.on('finish', () => {
       if (res.statusCode !== 200) return; // 402s/errors logged elsewhere or not billed
-      const s = paymentsOn ? decodeSettlement(res) : null;
+      const s = (paymentsOn ? decodeSettlement(res) : null) || req.mppSettlement || null;
       logCall({
         tool: name,
         status: s ? 'paid' : 'free',
@@ -308,8 +350,10 @@ app.get('/', (req, res, next) => {
 
 app.get('/', (_req, res) => res.json({
   service: 'agentfeed',
-  description: 'Live crypto market data for AI agents - liquidations, positioning, funding, prices, token risk. Paid per-call in USDC via x402 on Solana or Base. No API keys.',
+  description: 'Live crypto market data for AI agents - liquidations, positioning, funding, prices, token risk. Paid per-call in USDC via x402 on Solana or Base; /api/sol-price and /api/btc-price also carry an MPP solana/charge challenge on the same 402. No API keys.',
   x402: { active: paymentsOn, network: x402Network, chains: ['solana:mainnet', 'eip155:8453'] },
+  // DERIVED, not restated: whatever is actually mounted is what is advertised.
+  mpp: { active: mppOn, intent: 'solana/charge', routes: mppOn ? MPP_ROUTES : [] },
   // The three routes that are genuinely unpriced over HTTP. This used to read
   // ['get_fear_greed','pricing'], which missed two of them and listed `pricing`,
   // an MCP-only tool with no HTTP route — so `/` told callers the wrong thing
@@ -343,8 +387,11 @@ app.get('/.well-known/glama.json', (_req, res) => res.json({
 app.get('/.well-known/x402.json', (_req, res) => res.json({
   x402Version: 2,
   service: 'agentfeed',
-  description: 'Crypto market, liquidations, and Solana on-chain data for AI agents. Pay per call in USDC via x402 on Solana or Base. No API keys.',
+  description: 'Crypto market, liquidations, and Solana on-chain data for AI agents. Pay per call in USDC via x402 on Solana or Base. /api/sol-price and /api/btc-price also carry an MPP solana/charge challenge on the same 402. No API keys.',
   website: 'https://x402.ochinimus.app',
+  // Derived from what is mounted, so the manifest cannot advertise a protocol
+  // the service is not actually speaking.
+  mpp: { active: mppOn, intent: 'solana/charge', routes: mppOn ? MPP_ROUTES : [] },
   mcp: 'https://x402.ochinimus.app/mcp',
   resources: Object.entries(PRICES).map(([route, p]) => ({
     resource: 'https://x402.ochinimus.app' + route.replace('GET ', ''),
@@ -364,6 +411,17 @@ app.get('/.well-known/x402.json', (_req, res) => res.json({
 const { initMcp } = require('./mcp');
 
 (async () => {
+  if (mppReady) {
+    try {
+      await mppReady;
+    } catch (e) {
+      // Same reasoning as the load guard above. The gate itself already falls
+      // through on a rejected init (mpp/index.js: `catch { return next(); }`),
+      // so the two gated routes keep answering the ordinary x402 challenge.
+      console.error('[mpp] DISABLED: layer init failed:', e.message);
+      console.error('[mpp] DISABLED: continuing with x402 only; the paid surface is unaffected.');
+    }
+  }
   if (paymentsOn) {
     try {
       await initMcp(app);

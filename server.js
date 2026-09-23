@@ -19,23 +19,79 @@ if (!process.env.HELIUS_API_KEY) {
   process.exit(1);
 }
 
-// ---- rate limit: 60 req/min per IP (wallet-based in Session 4)
+// ---- rate limit: fixed window, keyed on the Cloudflare-observed client
+//
+// NOT per-IP, despite what this comment used to say. The key below is the
+// LEFTMOST element of X-Forwarded-For, which is whatever the caller sent:
+// Cloudflare appends the observed client address rather than replacing the
+// header, so the leftmost value is attacker-controlled. Measured: rotating
+// that header returns 200 for every request at any limit, while a fixed value
+// throttles normally. A caller who rotates it is unthrottled today, and that
+// is true at 60 as it is at 240 -- this raise does not widen that hole, and
+// does not close it either. Fixing the key needs to know which of
+// CF-Connecting-IP / X-Forwarded-For / X-Real-IP actually survives the
+// cloudflared tunnel; guessing risks collapsing every caller into one bucket
+// and throttling the world together. That measurement ships first, then the
+// fix, as a separate deploy.
+//
+// Why 240: one `pay catalog check` probe is 45 requests (45 routes in the
+// manifest), and pay-skills CI probes on PR and again on merge. Two probes in
+// one minute exceeded 60, and the second came back 429 -- which their prober
+// classifies as `not_paywalled`, so the endpoint reads as broken rather than
+// busy.
 const buckets = new Map();
-const LIMIT = 60;
+const LIMIT = 240;
 const WINDOW_MS = 60_000;
 app.use((req, res, next) => {
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+  // Key on CF-Connecting-IP. Cloudflare sets it from the connection it
+  // terminated, a caller cannot forge it through the edge, and it is the only
+  // address header that survives the tunnel -- measured on this box:
+  //
+  //   cf-connecting-ip : present
+  //   x-forwarded-for  : present, but APPENDED to whatever the caller sent, so
+  //                      its leftmost element is attacker-controlled
+  //   x-real-ip        : absent
+  //
+  // Fallback is the raw socket peer, NOT req.ip: `trust proxy` makes req.ip
+  // derive from X-Forwarded-For, so req.ip is spoofable by exactly the header
+  // this stops trusting. Measured -- with a req.ip fallback, rotating
+  // X-Forwarded-For still won a fresh bucket every request.
+  const ip = req.headers['cf-connecting-ip'] || req.socket.remoteAddress || req.ip;
+  // Assigned before any early return: the HEAD guard and every logCall read
+  // req.callerIp, including on the throttled path.
   req.callerIp = ip;
   const now = Date.now();
   let b = buckets.get(ip);
   if (!b || now - b.windowStart > WINDOW_MS) {
-    b = { windowStart: now, count: 0 };
+    b = { windowStart: now, count: 0, throttleLogged: false };
     buckets.set(ip, b);
   }
   b.count++;
-  if (b.count > LIMIT) return res.status(429).json({ error: 'rate limit: 60 req/min' });
+  if (b.count > LIMIT) {
+    // Tell a well-behaved caller when to come back. Without this a prober has
+    // nothing to back off on and reads the 429 as a verdict about the endpoint
+    // rather than about its own pace.
+    const retryAfter = Math.max(1, Math.ceil((b.windowStart + WINDOW_MS - now) / 1000));
+    res.set('Retry-After', String(retryAfter));
+    // Throttling was invisible: the 429 returned before anything reached the
+    // database, so there was no record of how often callers get refused. Log
+    // ONCE per key per window -- a flood must not become a write storm. Same
+    // shape as the head_probe entry below, and it reuses the existing
+    // `bad_request` status rather than inventing a value this table's readers
+    // (afwatch, the solwatch MCP x402_revenue tool) do not know.
+    if (!b.throttleLogged) {
+      b.throttleLogged = true;
+      logCall({
+        tool: 'rate_limited', status: 'bad_request', ip,
+        error_msg: `rate limit: ${LIMIT} req/min exceeded (retry after ${retryAfter}s)`,
+        req_path: req.path, user_agent: req.headers['user-agent'], method: req.method,
+      });
+    }
+    return res.status(429).json({ error: `rate limit: ${LIMIT} req/min`, retry_after: retryAfter });
+  }
   next();
 });
+
 setInterval(() => {
   const now = Date.now();
   for (const [ip, b] of buckets) if (now - b.windowStart > WINDOW_MS * 2) buckets.delete(ip);
@@ -62,6 +118,26 @@ app.use((req, res, next) => {
   });
   res.set('Allow', 'GET');
   res.status(405).end();
+});
+
+// ---- the 402 challenge must always advertise https
+//
+// @x402/express builds the challenge's resource.url as
+// `${req.protocol}://${req.headers.host}${req.originalUrl}`
+// (node_modules/@x402/express/dist/cjs/index.js), and with `trust proxy` set,
+// req.protocol is whatever X-Forwarded-Proto says. A request that reaches this
+// process over plain http therefore gets a challenge whose resource.url is
+// http://, so payTo is quoted in a document naming an unauthenticated URL.
+//
+// Note what this does and does not fix. Through the edge it is belt and
+// braces: the zone 308s http to https, so X-Forwarded-Proto is already https.
+// It matters on the path that bypasses the edge entirely -- the origin answers
+// on :3006 directly -- and there it makes the challenge name https. That port
+// being reachable at all is the real exposure and is an infrastructure fix,
+// not this one.
+app.use((req, _res, next) => {
+  req.headers['x-forwarded-proto'] = 'https';
+  next();
 });
 
 // ---- x402 payment layer (mounted BEFORE the /api routes)

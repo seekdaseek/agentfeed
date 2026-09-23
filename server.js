@@ -343,7 +343,11 @@ app.get('/health', (_req, res) => res.json({ ok: true, service: 'agentfeed', x40
 const { renderLanding } = require('./tools/landing');
 app.get('/', (req, res, next) => {
   if ((req.headers.accept || '').includes('text/html')) {
-    return res.type('html').send(renderLanding(PRICES, x402Network));
+    // Same measurement `/` publishes as JSON, so the HTML and the JSON
+    // answer of one URL can never disagree. Cached an hour inside liqdb.
+    let coverage = null;
+    try { coverage = require('./tools/liqdb').getPerpCoverage(); } catch { coverage = null; }
+    return res.type('html').send(renderLanding(PRICES, x402Network, coverage));
   }
   next();
 });

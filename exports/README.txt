@@ -1,17 +1,17 @@
-AGENTFEED Liquidation Dataset — build 20260827
+AGENTFEED Liquidation Dataset — build 20260923
 =============================================
 Crypto perpetual liquidation ticks: Bybit + OKX + Binance, USDT-margined perps.
-Rows: 2782496 | Range (UTC): 2026-07-08 16:42:32 -> 2026-08-26 23:59:58
+Rows: 4567949 | Range (UTC): 2026-07-08 16:42:32 -> 2026-09-22 23:59:59
 
-- binance: 706 symbols, 1630998 rows
-- bybit: 671 symbols, 692569 rows
-- okx: 417 symbols, 458929 rows
+- binance: 735 symbols, 2683492 rows
+- bybit: 782 symbols, 1133349 rows
+- okx: 469 symbols, 751108 rows
 
-See coverage_20260827.csv for per-symbol, per-exchange first/last timestamps and row counts.
+See coverage_20260923.csv for per-symbol, per-exchange first/last timestamps and row counts.
 
 !! READ THIS FIRST: THE SYMBOL UNIVERSE CHANGED ON 2026-07-12 16:23 UTC
 ---------------------------------------------------------------
-Before that instant this build holds 5 symbols. After it, 821.
+Before that instant this build holds 5 symbols. After it, 906.
 
 IF YOU PLOT LIQUIDATION COUNTS OR VOLUME ACROSS THAT TIMESTAMP YOU WILL SEE A LARGE JUMP.
 IT IS AN ARTIFACT OF OUR COLLECTOR WIDENING, NOT A MARKET EVENT.
@@ -71,10 +71,10 @@ KNOWN GAPS
   data.binance.vision is empty). Bybit never published one. OKX offers 7 rolling days.
   There is no public historical liquidation data for any major venue, at any price.
 - Some symbols list on only one or two of the three venues. A low venue count is usually
-  correct, not a gap. Check coverage_20260827.csv.
+  correct, not a gap. Check coverage_20260923.csv.
 - Inverse (coin-margined) contracts are excluded: their contract value is denominated in USD,
   so including them would mix USD figures into the coin-quantity column.
 
 LICENSE: free to use, including commercially. Redistribution permitted. Attribution required. No warranty.
-Real-time access for AI agents (full-universe cascade detection, 821 perps):
+Real-time access for AI agents (full-universe cascade detection, 906 perps):
   https://x402.ochinimus.app   ·   MCP: https://x402.ochinimus.app/mcp

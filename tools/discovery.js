@@ -20,6 +20,11 @@
 
 const ORIGIN = 'https://x402.ochinimus.app';
 
+// Mirrors server.js. Named here so llms.txt, SKILL.md and openapi.json all
+// state the same two numbers, and so a change there is a one-line change here.
+const LIMIT_GET = 240;
+const LIMIT_OTHER = 2400;
+
 // ---- shared helpers ------------------------------------------------------
 
 /** `/api/token-risk/:mint` -> `{ template: '/api/token-risk/{mint}', names: ['mint'] }` */
@@ -68,33 +73,117 @@ function schemaFor(prop) {
   return out;
 }
 
+// The question a caller actually has, per route. Prose, not numbers: nothing
+// here can go stale when a price or a count changes. A route missing from this
+// map falls back to its own description, so a new route is never dropped from
+// the table -- it just gets a rougher question until someone writes one.
+const QUESTIONS = {
+  get_exit_quote: 'What can this seized collateral actually be sold for, at size?',
+  get_peg_deviation: 'How far is a tokenized stock trading from its underlying?',
+  get_peg_sessions: 'When in the trading day does the peg break worst?',
+  get_peg_universe: 'Which tokenized stocks carry the worst off-hours peg risk?',
+  get_liq_pulse: 'What is being liquidated right now?',
+  get_liq_history: 'How much was liquidated, bucketed over time?',
+  get_liq_heatmap: 'At which price levels did leverage actually get flushed?',
+  get_cascade_history: 'Which liquidation cascades already happened?',
+  get_cascade_forecast: 'How likely is a liquidation spike in the next 15 minutes?',
+  get_squeeze_score: 'Is this trade crowded and about to hurt someone?',
+  get_recent_liquidations: 'Which liquidations just printed?',
+  get_cascade_alert: 'Is a cascade running on the majors right now?',
+  get_cascade_scan: 'Is a cascade running on any perp right now?',
+  get_liquidation_leaders: 'Which symbols are blowing up right now?',
+  get_liquidation_stats: 'How much was liquidated in the last 1h and 24h?',
+  get_venue_liq_share: 'Which exchange is doing the liquidating?',
+  get_perp: 'What is this perp doing right now, in one call?',
+  get_funding_pulse: 'Where is funding most extreme right now?',
+  get_funding_cross: 'What is funding for this perp across venues?',
+  get_funding_extremes: 'Which trades are most crowded by funding?',
+  get_funding_history: 'What has the carry on this perp actually been?',
+  get_funding_rate: 'What is funding on SOL and BTC?',
+  get_open_interest: 'How much open interest sits on this perp?',
+  get_oi_spike_scan: 'Where is new leverage piling in?',
+  get_long_short: 'How crowded is retail on this perp?',
+  get_basis: 'Is this perp trading above or below spot?',
+  get_volatility: 'How volatile has this perp been?',
+  get_top_movers: 'What moved most in the last 24 hours?',
+  get_orderbook_imbalance: 'Which side of the book holds more resting liquidity?',
+  get_orderbook_walls: 'Where are the big resting orders?',
+  get_whale_trades: 'Are whales buying or selling this perp?',
+  get_spread_arb: 'Is there a cross-exchange spread worth arbing?',
+  get_spot: 'What is the spot price, without picking a venue?',
+  get_sol_price: 'What is SOL worth?',
+  get_btc_price: 'What is BTC worth?',
+  get_eth_price: 'What is ETH worth?',
+  get_market_snapshot: 'What is the market doing, in one call?',
+  get_positioning: 'How is the market positioned on SOL and BTC?',
+  get_trade_context: 'What do I need to know before placing a trade?',
+  get_wallet_holdings: 'What does this Solana wallet hold?',
+  get_wallet_activity: 'What has this Solana wallet been doing?',
+  get_token_metadata: 'What is this SPL token?',
+  get_token_risk: 'Is this SPL token a rug?',
+  get_token_holders: 'Who holds this SPL token?',
+  get_priority_fees: 'What priority fee will land my Solana transaction?',
+  get_jito_tips: 'What tip will land my Jito bundle?',
+  get_sol_network: 'Is the Solana network healthy right now?',
+  get_dex_quote: 'What will this swap actually execute at?',
+  get_base_gas: 'What is gas on Base?',
+  get_base_balance: 'What does this EVM address hold?',
+  get_tvl: 'How much TVL does this protocol have?',
+  get_stablecoin_flows: 'Is stablecoin supply growing or shrinking?',
+  get_fear_greed: 'What is the crypto Fear and Greed index?',
+  get_last_liquidation: 'What was the last liquidation on each major?',
+  get_exit_method: 'How is exit liquidity measured, and on how many rows?',
+  get_forecast_record: 'How accurate has the cascade forecast actually been?',
+};
+
+/** The question for a route, or one derived from its own description. */
+function questionFor(tool, desc) {
+  if (QUESTIONS[tool]) return QUESTIONS[tool];
+  const d = String(desc || '');
+  const m = d.match(/^Use when an agent needs ([^.]+)\./);
+  if (m) return m[1].charAt(0).toUpperCase() + m[1].slice(1) + '?';
+  return d.split(/[.:(]/)[0].trim() + '?';
+}
+
 /** A free tool's HTTP path. Same derivation the openapi generator has always used. */
 const freePath = (tool) => '/api/' + tool.replace(/^get_/, '').replace(/_/g, '-');
 
 // ---- catalogue grouping --------------------------------------------------
 // Ordered: first matching group wins, so the specific families are listed
 // before the general ones. Matched on the route's real tags, never on its name.
+// Ordered: first match wins. Each entry is [title, anyOfTheseTags, requiredTag?].
+//
+// The three "our own tape" sections are what a curation reviewer is looking
+// for, so they lead. They are derived, not hand-listed: every tool built on a
+// tape we record carries the `exclusive` tag, and the topical tag then says
+// which tape. exit-quote has to be tested before the liquidation tape because
+// it carries `liquidations` too.
 const GROUPS = [
-  // exit-quote also carries 'liquidations', 'rwa' and 'risk', so its own group
-  // has to be tested before those or it lands in someone else's section and the
-  // words an agent searches for -- exit liquidity, collateral -- never appear.
-  ['Prices and market state', ['price', 'market-data', 'multi-venue', 'snapshot']],
-  ['Collateral and exit liquidity', ['collateral', 'exit-liquidity', 'lending']],
-  ['Liquidations, cascades and squeeze', ['liquidations', 'cascade', 'squeeze', 'heatmap']],
-  ['Tokenized stocks and peg (RWA)', ['rwa', 'peg', 'tokenized-stocks']],
-  ['Funding, open interest and positioning', ['funding', 'open-interest', 'positioning', 'long-short', 'basis', 'carry', 'crowding']],
+  ['Our own collateral exit-liquidity tape', ['collateral', 'exit-liquidity'], 'exclusive'],
+  ['Our own tokenized-equity peg tape', ['rwa', 'peg', 'tokenized-stocks'], 'exclusive'],
+  ['Our own liquidation tape', ['liquidations', 'cascade', 'squeeze', 'heatmap'], 'exclusive'],
+  // Prices before liquidations: get_trade_context is a whole-market composite
+  // tagged `liquidations` as well, and it belongs with market state.
+  ['Market and positioning', ['price', 'market-data', 'multi-venue', 'snapshot', 'positioning']],
+  ['Collateral and lending', ['collateral', 'exit-liquidity', 'lending']],
+  ['Live liquidations and cascades', ['liquidations', 'cascade', 'squeeze', 'heatmap']],
+  ['Tokenized stocks and peg', ['rwa', 'peg', 'tokenized-stocks']],
+  ['Derivatives', ['funding', 'open-interest', 'long-short', 'basis', 'carry', 'crowding', 'perps']],
   // 'risk' was in this list and it stole get_token_risk, whose tags are
   // solana/tokens/risk/rug-check/security, out of the Solana section. It is too
   // generic to key a group on: get_volatility still lands here via 'volatility'.
-  ['Orderbook, flow and screeners', ['orderbook', 'whales', 'trades', 'flow', 'arbitrage', 'spread', 'movers', 'volatility', 'screener', 'anomaly']],
-  ['Solana on-chain', ['solana', 'jito', 'mev', 'network', 'onchain', 'tps']],
+  ['Microstructure and screeners', ['orderbook', 'whales', 'trades', 'flow', 'arbitrage', 'spread', 'movers', 'volatility', 'screener', 'anomaly']],
+  ['Solana on-chain', ['solana', 'jito', 'mev', 'network', 'onchain', 'tps', 'dex', 'jupiter', 'swap']],
   ['Base and EVM', ['base', 'evm', 'ethereum', 'l2', 'gas', 'erc20', 'ens']],
-  ['DeFi and macro', ['defi', 'tvl', 'protocols', 'stablecoins', 'macro', 'dex', 'jupiter', 'swap']],
+  ['DeFi and macro', ['defi', 'tvl', 'protocols', 'stablecoins', 'macro']],
 ];
 
 function groupOf(tags) {
   const t = new Set(tags || []);
-  for (const [title, keys] of GROUPS) if (keys.some((k) => t.has(k))) return title;
+  for (const [title, keys, requires] of GROUPS) {
+    if (requires && !t.has(requires)) continue;
+    if (keys.some((k) => t.has(k))) return title;
+  }
   return 'Other';
 }
 
@@ -257,9 +346,10 @@ function buildOpenApi({ PRICES, META, FREE_TOOLS, mpp }) {
         'Before paying, GET /api/sample/<route> for that route\'s real captured response, free. GET /api/sample lists them.',
         'Start cheap: /api/perp, /api/liq-pulse, /api/funding-pulse and /api/price are $0.001 each and cover most questions. The premium routes are the liquidation tape, cascade detection and the tokenized-equity peg tape.',
         'A route that cannot answer returns 200 with a decline field naming the reason; it never returns fabricated or zero-filled data.',
-        'Limits: GET only on /api/* (HEAD answers 405), 240 requests per minute per caller, and a 429 carries Retry-After.',
+        `Limits: GET only on /api/* (HEAD answers 405); per caller per minute ${LIMIT_GET} GET or POST /mcp and ${LIMIT_OTHER} of any other method; a 429 carries Retry-After.`,
       ].join(' '),
     },
+    externalDocs: { description: 'AgentFeed agent skill: when to use each route, what it answers and what it costs', url: `${ORIGIN}/SKILL.md` },
     servers: [{ url: ORIGIN }],
     paths,
     components: {},
@@ -341,6 +431,7 @@ function buildLlmsTxt({ PRICES, TAGS, META, FREE_TOOLS, mpp, network }) {
     `- ${ORIGIN}/mcp — the same tools over MCP (POST, streamable HTTP)`,
     `- ${ORIGIN}/api/sample/<route> — a real captured response for any paid route, free`,
     `- ${ORIGIN}/api/forecast-record — the settled cascade-forecast track record, free`,
+    `- ${ORIGIN}/SKILL.md — the agent skill: when to use each route, what it answers, what it costs`,
     '',
     '## Free routes',
     '',
@@ -353,7 +444,7 @@ function buildLlmsTxt({ PRICES, TAGS, META, FREE_TOOLS, mpp, network }) {
     '',
     '- Path-parameter routes also accept the parameter as a query string: /api/token-risk?mint=<mint> is rewritten to the canonical path form before the paywall.',
     '- HEAD is not served on /api/*; it answers 405. The paid surface is GET-only.',
-    '- Rate limit: 240 requests per minute per caller. A 429 carries Retry-After.',
+    `- Rate limit, per caller per minute: ${LIMIT_GET} for GET and POST /mcp, ${LIMIT_OTHER} for every other method. A 429 carries Retry-After.`,
     '- A route that cannot reach its upstream returns an error rather than a stale or invented value.',
     '',
   ];
@@ -361,50 +452,108 @@ function buildLlmsTxt({ PRICES, TAGS, META, FREE_TOOLS, mpp, network }) {
 }
 
 function buildSkillMd({ PRICES, TAGS, META, FREE_TOOLS, mpp, network }) {
-  const total = Object.values(PRICES).reduce((n, p) => n + p.usd, 0);
+  const routes = Object.entries(PRICES);
+  const total = routes.reduce((n, [, p]) => n + p.usd, 0);
+  const cheapest = Math.min(...routes.map(([, p]) => p.usd));
+  const entry = routes.filter(([, p]) => p.usd === cheapest).map(([r]) => r.replace('GET ', ''));
+  const solana = network === 'mainnet' ? 'Solana mainnet' : `Solana ${network}`;
+  const freeCount = FREE_TOOLS.length + 2;
+
+  const table = [];
+  for (const [group, rs] of grouped({ PRICES, TAGS })) {
+    table.push('', `### ${group}`, '', '| Question | Route | Price |', '|---|---|---|');
+    for (const r of rs) {
+      const m = META[r.pattern] || {};
+      const args = [
+        ...Object.keys((m.pathParamsSchema && m.pathParamsSchema.properties) || {}).map((k) => `:${k}`),
+        ...Object.keys((m.inputSchema && m.inputSchema.properties) || {}),
+      ];
+      const q = questionFor(r.tool, r.desc).replace(/\|/g, '\\|');
+      table.push(`| ${q} | \`GET ${r.path}\`${args.length ? ` <br>params: ${args.join(', ')}` : ''} | $${r.usd} |`);
+    }
+  }
+
   return [
     '---',
     'name: agentfeed',
-    'description: Live crypto market data, liquidations, tokenized-equity peg data and Solana on-chain data over x402. Use when an agent needs perp funding, open interest, liquidation history, cascade detection, orderbook depth, tokenized-stock peg deviation, lending-collateral exit liquidity, Solana priority fees or token risk, paid per call in USDC with no API key.',
+    `description: Live crypto market data paid per call in USDC over x402, no API key. Use when an agent needs perp funding, open interest, a liquidation tape, cascade detection or forecasting, orderbook depth, tokenized-stock peg deviation, lending-collateral exit liquidity, Solana on-chain reads or a spot price. ${routes.length} paid routes and ${freeCount} free ones at ${ORIGIN}.`,
     '---',
     '',
     '# AgentFeed',
     '',
-    `${Object.keys(PRICES).length} paid GET routes and ${FREE_TOOLS.length} free ones at ${ORIGIN}. JSON in, JSON out, paid per call in USDC over x402 v2. No API key, no account, no signup.`,
+    `${routes.length} paid GET routes and ${freeCount} free ones at ${ORIGIN}. JSON in, JSON out. No API key, no account, no signup: payment happens per request.`,
     '',
-    '## Paying for a call',
+    '## When to use AgentFeed',
     '',
-    'Request the route. Unpaid it returns 402 with the challenge base64-encoded in the **PAYMENT-REQUIRED response header** — not in the body. Decode that header, pay it, and repeat the request with an `X-PAYMENT` header.',
+    'Reach for it when the answer has to come from live market state rather than from memory or a web page:',
     '',
-    `Rails: USDC on Solana ${network === 'mainnet' ? 'mainnet' : network}, or USDC on Base (eip155:8453). Both are offered on every paid route.`,
-    ...(mpp && mpp.active ? ['', `MPP \`solana/charge\` is offered alongside x402 on ${mpp.routes.join(' and ')}, in the WWW-Authenticate header.`] : []),
+    '- A perp\'s funding, open interest, long/short crowding or realised volatility.',
+    '- What is being liquidated right now, what was liquidated earlier, and at which price levels.',
+    '- Whether a liquidation cascade is running, and how likely one is in the next 15 minutes.',
+    '- How far a tokenized US equity has drifted from its underlying, and when in the day it drifts worst.',
+    '- What seized lending collateral would actually realise if it had to be sold at size.',
+    '- Solana reads: wallet holdings and activity, SPL token metadata and rug signals, priority fees, Jito tips, a Jupiter quote.',
+    '- Base reads: gas, and any ERC20 or native balance.',
     '',
-    'Every 200 has the shape:',
+    `Do not reach for it for anything a free source answers well. Start with the free routes below, and with the ${entry.length} routes at $${cheapest} (${entry.join(', ')}) before paying for the premium tapes.`,
+    '',
+    '## How to pay',
+    '',
+    'Call the route. Unpaid, it answers **402** with the challenge base64-encoded in the **`PAYMENT-REQUIRED` response header** — not in the body. Decode it, pay it, and repeat the request with an `X-PAYMENT` header.',
+    '',
+    `Two rails are accepted on every paid route: **USDC on ${solana}** and **USDC on Base** (\`eip155:8453\`).`,
+    ...(mpp && mpp.active
+      ? ['', `**MPP** (\`solana/charge\`) is offered alongside x402 on ${mpp.routes.map((r) => `\`${r.replace('GET ', '')}\``).join(' and ')}, carried in the \`WWW-Authenticate\` header of the same 402. Clients that speak only x402 never see it.`]
+      : []),
+    '',
+    'Every 200 has the same envelope:',
     '',
     '```json',
     '{ "tool": "get_sol_price", "data": { }, "paid": true }',
     '```',
     '',
-    '## Before you pay',
+    '## Read the spec before you guess',
     '',
-    `- \`${ORIGIN}/openapi.json\` lists every route with its parameters, its price and a real captured response example. Read it instead of guessing a shape.`,
-    `- \`${ORIGIN}/api/sample/<route>\` returns that route's real captured response, free, before you pay for it.`,
-    `- \`${ORIGIN}/api/forecast-record\` is the settled record behind the cascade forecast: every row written before its window opened and settled from the exchange public feed.`,
-    `- The free routes below cost nothing and are the same code path as the paid ones.`,
+    '| Endpoint | What it gives you |',
+    '|---|---|',
+    `| \`GET ${ORIGIN}/openapi.json\` | Every route with its parameters, price and a real captured response example |`,
+    `| \`GET ${ORIGIN}/.well-known/x402.json\` | The manifest every number on this page is generated from |`,
+    `| \`GET ${ORIGIN}/.well-known/x402\` | The resource list, one concrete URL per route |`,
+    `| \`GET ${ORIGIN}/api/sample/<route>\` | A real response for one route, free, before you pay for it |`,
     '',
-    '## Free routes',
+    `## Free routes (${freeCount})`,
     '',
-    ...FREE_TOOLS.map((t) => `- \`GET ${freePath(t)}\``),
+    'No payment, no key. Same code path as the paid routes.',
     '',
-    `## Paid routes (${Object.keys(PRICES).length}, $${total.toFixed(3)} for one call of each)`,
-    ...catalogueLines({ PRICES, TAGS, META, bullet: { heading: '###', item: '- ', indent: '  ' } }),
+    '| Route | What you get |',
+    '|---|---|',
+    ...FREE_TOOLS.map((t) => `| \`GET ${freePath(t)}\` | ${questionFor(t, '')} |`),
+    `| \`GET /api/sample\` | Which paid routes have a stored sample response |`,
+    `| \`GET /api/sample/<route>\` | One paid route's real captured response, with its price and input schema |`,
     '',
-    '## Limits and behaviour',
+    `## Paid routes (${routes.length})`,
     '',
-    '- `HEAD` on `/api/*` returns 405. The paid surface is GET-only.',
-    '- 240 requests per minute per caller; a 429 carries `Retry-After`.',
-    '- A path parameter may be sent as a query parameter instead (`/api/token-risk?mint=...`); it is rewritten before the paywall.',
-    '- An upstream failure returns an error. Nothing is invented and nothing stale is served silently.',
+    `One call of every paid route costs $${total.toFixed(3)}. Prices are per call; there are no bundles, minimums or subscriptions.`,
+    ...table,
+    '',
+    '## Limits and error codes',
+    '',
+    '| Code | Means | What to do |',
+    '|---|---|---|',
+    '| `200` | Paid and served | Read `data`; `paid` tells you whether the route was priced |',
+    '| `402` | Payment required | Decode the `PAYMENT-REQUIRED` header, pay, retry with `X-PAYMENT` |',
+    '| `400` | Your parameter is missing or malformed | The body names the parameter; fix and retry. Nothing was charged |',
+    '| `405` | You used `HEAD` on `/api/*` | The paid surface is GET-only |',
+    '| `429` | Rate limited | Wait the seconds in `Retry-After` |',
+    '| `502` | An upstream failed | Retry later. Nothing is invented and nothing stale is served silently |',
+    '',
+    `- **Rate limit**, per caller per minute: ${LIMIT_GET} for \`GET\` and \`POST /mcp\`, ${LIMIT_OTHER} for every other method. A 429 carries \`Retry-After\`.`,
+    '- A path parameter may also be sent as a query parameter (`/api/token-risk?mint=...`); it is rewritten to the canonical form before the paywall.',
+    '- A route that cannot answer returns 200 with a `decline` field naming the reason. It never returns fabricated or zero-filled data.',
+    '',
+    '## Also available over MCP',
+    '',
+    `The same tools are an MCP server at \`${ORIGIN}/mcp\` (Streamable HTTP). Paid tools answer with an x402 payment request; the free ones just answer.`,
     '',
   ].join('\n');
 }

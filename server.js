@@ -36,17 +36,39 @@ if (!process.env.HELIUS_API_KEY) {
 // and throttling the world together. That measurement ships first, then the
 // fix, as a separate deploy.
 //
-// Why 240: one `pay catalog check` probe is 45 requests (45 routes in the
-// manifest), and pay-skills CI probes on PR and again on merge. Two probes in
-// one minute exceeded 60, and the second came back 429 -- which their prober
-// classifies as `not_paywalled`, so the endpoint reads as broken rather than
-// busy.
+// TWO BUCKETS, BECAUSE A DISCOVERY PROBER IS NOT A CUSTOMER.
+//
+// Why 240 on the metered bucket: one `pay catalog check` probe is one request
+// per manifest route, and pay-skills CI probes on PR and again on merge. Two
+// probes in one minute exceeded 60, and the second came back 429 -- which their
+// prober classifies as `not_paywalled`, so the endpoint reads as broken rather
+// than busy.
+//
+// Why a SECOND bucket: a registry prober walks every route across every verb.
+// Measured on 2026-09-25, x402scan's register prober from 18.207.201.85 and
+// 100.61.166.111 (UA "node") fanned out over GET, HEAD, OPTIONS, DELETE and the
+// rest in two to three seconds. Only the HEADs left a row -- a 402 never
+// reaches a handler, so an unpaid GET writes nothing -- but the bucket counted
+// every one of them, and the run tripped the limit on `DELETE
+// /api/orderbook-walls`. x402scan then recorded every route it had not reached
+// yet as "did not return a 402", which is why it registered 30 of the 52 paid
+// routes and skipped orderbook-walls onward, liq-pulse, perp, funding-pulse and
+// price among them.
+//
+// A verb sweep is cheap for us and valuable to us: HEAD is answered by a 405
+// before any handler, and OPTIONS, PUT, PATCH and DELETE match no route at all.
+// None of them can reach a paid tool or an upstream. So they get their own,
+// much wider bucket, and the narrow one guards only what actually costs
+// something to serve: GET, which is the whole paid surface, and POST /mcp,
+// which is the MCP rail. Both still 429 with Retry-After, and both still log
+// once per window rather than turning a flood into a write storm.
 //
 // The /telegraph mirror was removed on 2026-09-19, so there is no longer a
-// second, unmetered surface to meter separately: one limit, one bucket per
-// caller. telegraph.js stays on disk; only its mount is gone.
+// second, unmetered surface to meter separately. telegraph.js stays on disk;
+// only its mount is gone.
 const buckets = new Map();
-const LIMIT = 240;
+const LIMIT = 240;           // GET, and POST /mcp: the surface that costs us work
+const OTHER_LIMIT = 2400;    // HEAD/OPTIONS/PUT/PATCH/DELETE: cannot reach a handler
 const WINDOW_MS = 60_000;
 app.use((req, res, next) => {
   // Key on CF-Connecting-IP. Cloudflare sets it from the connection it
@@ -69,11 +91,19 @@ app.use((req, res, next) => {
   const now = Date.now();
   let b = buckets.get(ip);
   if (!b || now - b.windowStart > WINDOW_MS) {
-    b = { windowStart: now, count: 0, throttleLogged: false };
+    b = { windowStart: now, metered: 0, other: 0, meteredLogged: false, otherLogged: false, headLogged: false };
     buckets.set(ip, b);
   }
-  b.count++;
-  if (b.count > LIMIT) {
+  // The HEAD guard below logs once per window off this same bucket.
+  req.rateBucket = b;
+  // GET is the entire paid surface; POST /mcp is the MCP rail. Everything else
+  // is answered before any handler and is counted separately.
+  const metered = req.method === 'GET' || (req.method === 'POST' && req.path === '/mcp');
+  const field = metered ? 'metered' : 'other';
+  const limit = metered ? LIMIT : OTHER_LIMIT;
+  const loggedFlag = metered ? 'meteredLogged' : 'otherLogged';
+  b[field]++;
+  if (b[field] > limit) {
     // Tell a well-behaved caller when to come back. Without this a prober has
     // nothing to back off on and reads the 429 as a verdict about the endpoint
     // rather than about its own pace.
@@ -85,15 +115,15 @@ app.use((req, res, next) => {
     // shape as the head_probe entry below, and it reuses the existing
     // `bad_request` status rather than inventing a value this table's readers
     // (afwatch, the solwatch MCP x402_revenue tool) do not know.
-    if (!b.throttleLogged) {
-      b.throttleLogged = true;
+    if (!b[loggedFlag]) {
+      b[loggedFlag] = true;
       logCall({
         tool: 'rate_limited', status: 'bad_request', ip,
-        error_msg: `rate limit: ${LIMIT} req/min exceeded (retry after ${retryAfter}s)`,
+        error_msg: `rate limit: ${limit} req/min exceeded on the ${metered ? 'GET + POST /mcp' : 'other-method'} bucket (retry after ${retryAfter}s)`,
         req_path: req.path, user_agent: req.headers['user-agent'], method: req.method,
       });
     }
-    return res.status(429).json({ error: `rate limit: ${LIMIT} req/min`, retry_after: retryAfter });
+    return res.status(429).json({ error: `rate limit: ${limit} req/min`, retry_after: retryAfter });
   }
   next();
 });
@@ -115,11 +145,20 @@ setInterval(() => {
 // are untouched.
 app.use((req, res, next) => {
   if (req.method !== 'HEAD' || !req.path.startsWith('/api/')) return next();
-  logCall({
-    tool: 'head_probe', status: 'bad_request', ip: req.callerIp,
-    error_msg: 'HEAD rejected: paid surface is GET-only',
-    req_path: req.path, user_agent: req.headers['user-agent'], method: req.method,
-  });
+  // ONE ROW PER CALLER PER WINDOW. HEAD used to be inside the 240 bucket, so a
+  // sweep was throttled long before it could flood this table. Now that HEAD
+  // has 2400 of its own, an unthrottled sweep would write a row per request --
+  // 233 rows in a day from nine callers before this change, and that was with
+  // the sweeps being cut short. Same log-once shape as rate_limited above.
+  const b = req.rateBucket;
+  if (b && !b.headLogged) {
+    b.headLogged = true;
+    logCall({
+      tool: 'head_probe', status: 'bad_request', ip: req.callerIp,
+      error_msg: 'HEAD rejected: paid surface is GET-only',
+      req_path: req.path, user_agent: req.headers['user-agent'], method: req.method,
+    });
+  }
   res.set('Allow', 'GET');
   res.status(405).end();
 });

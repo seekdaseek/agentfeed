@@ -11,6 +11,8 @@
 
 const { DatabaseSync } = require('node:sqlite');
 const fs = require('node:fs');
+const path = require('node:path');
+const { Worker } = require('node:worker_threads');
 
 const CALIPER_DIR = process.env.CALIPER_DIR || '/opt/caliper';
 const MODEL_PATH = process.env.CALIPER_MODEL || `${CALIPER_DIR}/model.json`;
@@ -116,6 +118,103 @@ async function getCascadeForecastFree() {
   return getCascadeForecast({ query: { symbol: FREE_SYMBOL } });
 }
 
+// ---- the track record, cached and off the main thread -----------------------
+//
+// Three properties, in the order they matter:
+//
+//   never on the main thread   the read is a 4.7 s synchronous scan of a 260 MB
+//                              database. See tools/forecast-record-worker.js for
+//                              the measurement and why a free route makes it a
+//                              denial-of-service rather than a slow endpoint.
+//   at most one worker at a time
+//                              a worker peaks around 130 MB and the cache key is
+//                              caller-controlled (symbol x rows), so "one worker
+//                              per key" would be a memory exhaustion bug wearing
+//                              a cache's clothes: 40 made-up symbols, 40 workers.
+//                              A global gate of one bounds the cost no matter
+//                              what a caller asks for.
+//   one computation per key    twenty simultaneous callers share one worker and
+//                              one answer, so a cold cache cannot be stampeded.
+//
+// The first caller waits for the worker. Nothing else waits behind it, which is
+// the entire point: the event loop stays free for the whole 4.7 s.
+//
+// An {error} result is deliberately NOT cached. Pinning "caliper unavailable"
+// for ten minutes would turn a one-second blip into a ten-minute outage.
+const RECORD_TTL_MS = Number(process.env.CALIPER_RECORD_TTL_MS || 10 * 60 * 1000);
+const RECORD_WORKER = path.join(__dirname, 'forecast-record-worker.js');
+const RECORD_TIMEOUT_MS = 120_000;
+const RECORD_CACHE_MAX = 64;
+const RECORD_QUEUE_MAX = 32;
+const RECORD_HOW_TO_CHECK =
+  'every row was written before its window opened and settled from the exchange public feed afterwards; sum liquidation USD for the symbol between window start and end and compare to thresholdUsd';
+
+const recordCache = new Map(); // key -> { computedAt, value: { summary, rows } }
+const recordInflight = new Map(); // key -> Promise, one per key
+const recordQueue = []; // callers waiting for the single worker slot
+let recordBusy = false;
+
+function recordGate() {
+  if (!recordBusy) {
+    recordBusy = true;
+    return Promise.resolve();
+  }
+  if (recordQueue.length >= RECORD_QUEUE_MAX) {
+    // Bounded on purpose: an unbounded queue of pending promises is the same
+    // memory problem one step removed.
+    const e = new Error('forecast record is busy, retry in a few seconds');
+    e.kind = 'bad_request';
+    return Promise.reject(e);
+  }
+  return new Promise((resolve) => recordQueue.push(resolve));
+}
+
+function recordRelease() {
+  const next = recordQueue.shift();
+  if (next) next();
+  else recordBusy = false;
+}
+
+function runRecordWorker(symbol, limit) {
+  return new Promise((resolve, reject) => {
+    let done = false;
+    const w = new Worker(RECORD_WORKER, {
+      workerData: { caliperDir: CALIPER_DIR, recordDb: RECORD_DB, symbol, limit },
+    });
+    // 'exit' fires after a successful message too, so every path goes through
+    // finish() and the first one wins.
+    const finish = (fn, arg) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      w.terminate();
+      fn(arg);
+    };
+    const timer = setTimeout(
+      () => finish(reject, new Error('forecast record read timed out')),
+      RECORD_TIMEOUT_MS,
+    );
+    w.on('message', (m) => {
+      if (m.kind === 'ok') finish(resolve, { summary: m.summary, rows: m.rows });
+      else if (m.kind === 'return') finish(resolve, m.value);
+      else finish(reject, new Error(m.message));
+    });
+    w.on('error', (err) => finish(reject, err));
+    w.on('exit', (code) => finish(reject, new Error(`record worker exited with ${code}`)));
+  });
+}
+
+function recordPayload(entry) {
+  // Field order is the pre-worker order with computedAt appended, so a client
+  // diffing the serialized payload sees exactly one added key.
+  return {
+    howToCheck: RECORD_HOW_TO_CHECK,
+    summary: entry.value.summary,
+    rows: entry.value.rows,
+    computedAt: new Date(entry.computedAt).toISOString(),
+  };
+}
+
 /**
  * The live track record.
  *
@@ -125,41 +224,44 @@ async function getCascadeForecastFree() {
  * the score on trust.
  */
 async function getForecastRecord({ query = {} } = {}) {
-  let rec;
-  try {
-    rec = await import(`file://${CALIPER_DIR}/lib/record.mjs`);
-  } catch (err) {
-    return { error: `record unavailable: ${err.message}` };
+  const symbol = query.symbol ? String(query.symbol).toUpperCase() : '';
+  const limit = Math.min(Number(query.rows) || 50, 500);
+  const key = `${symbol}|${limit}`;
+
+  const hit = recordCache.get(key);
+  if (hit && Date.now() - hit.computedAt < RECORD_TTL_MS) return recordPayload(hit);
+
+  let flight = recordInflight.get(key);
+  if (!flight) {
+    flight = (async () => {
+      await recordGate();
+      try {
+        // A caller that queued behind the gate may find its answer already
+        // computed by whoever was in front of it.
+        const fresh = recordCache.get(key);
+        if (fresh && Date.now() - fresh.computedAt < RECORD_TTL_MS) return fresh;
+        const t0 = Date.now();
+        const res = await runRecordWorker(symbol, limit);
+        if (res.error) return res;
+        const entry = { computedAt: Date.now(), value: res };
+        recordCache.set(key, entry);
+        // Insertion-ordered, so the first key is the oldest.
+        while (recordCache.size > RECORD_CACHE_MAX) {
+          recordCache.delete(recordCache.keys().next().value);
+        }
+        console.log(
+          `[record] computed ${symbol || '(all symbols)'} rows=${limit} in ${Date.now() - t0}ms`,
+        );
+        return entry;
+      } finally {
+        recordRelease();
+      }
+    })().finally(() => recordInflight.delete(key));
+    recordInflight.set(key, flight);
   }
-  let log;
-  try {
-    log = new DatabaseSync(RECORD_DB, { readOnly: true });
-  } catch (err) {
-    return { error: `no record yet: ${err.message}` };
-  }
-  try {
-    const limit = Math.min(Number(query.rows) || 50, 500);
-    const summary = rec.tally(log, query.symbol ? { symbol: String(query.symbol).toUpperCase() } : {});
-    const rows = rec.exportRows(log, limit).map((r) => ({
-      symbol: r.symbol,
-      window: new Date(r.window_start).toISOString(),
-      madeAt: new Date(r.made_at).toISOString(),
-      thresholdUsd: r.threshold_usd,
-      p: r.p,
-      evidence: r.evidence,
-      observedUsd: r.observed_usd,
-      outcome: r.outcome,
-      settled: r.settled_at !== null,
-    }));
-    return {
-      howToCheck:
-        'every row was written before its window opened and settled from the exchange public feed afterwards; sum liquidation USD for the symbol between window start and end and compare to thresholdUsd',
-      summary,
-      rows,
-    };
-  } finally {
-    log.close();
-  }
+
+  const entry = await flight;
+  return entry.error ? entry : recordPayload(entry);
 }
 
 /** The published question contract, so an app never has to read this file. */

@@ -2,7 +2,18 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 
-const db = new Database(path.join(__dirname, 'agentfeed.db'));
+// AGENTFEED_DB exists so a scratch instance cannot write to the live audit
+// table, the way tools/liqdb.js and tools/entry.js already take LIQ_DB.
+// Unset in production, where the join below is the answer.
+//
+// The join alone is not enough, and the reason is worth keeping: a scratch tree
+// that SYMLINKS this file gets __dirname = /opt/agentfeed, because node resolves
+// a module's realpath before running it. On Sep 25 2026 that put 37 rows from
+// scratch boots on ports 3999/4099/4199 into the production calls table --
+// including loopback head_probe and rate_limited rows that read as real traffic
+// -- while the boot script's `rm -f agentfeed.db` deleted a file nothing opened.
+// An env var is the only override that survives being symlinked.
+const db = new Database(process.env.AGENTFEED_DB || path.join(__dirname, 'agentfeed.db'));
 db.pragma('journal_mode = WAL');
 
 // calls: audit trail. payment columns stay NULL in Session 1 (free mode),

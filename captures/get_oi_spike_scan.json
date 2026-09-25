@@ -1,0 +1,76 @@
+{
+ "source": "bybit_linear_universe",
+ "baseline_min_ago": 30,
+ "spikes": [
+  {
+   "symbol": "SAGAUSDT",
+   "oi_usd": 4036255,
+   "oi_change_pct": 7.4,
+   "funding_rate_8h": 0.00005,
+   "price_24h_pct": -11.3
+  },
+  {
+   "symbol": "SOXLUSDT",
+   "oi_usd": 51958235,
+   "oi_change_pct": 7.23,
+   "funding_rate_8h": 0.00002971,
+   "price_24h_pct": 11.57
+  },
+  {
+   "symbol": "RENDERUSDT",
+   "oi_usd": 13248249,
+   "oi_change_pct": 5.57,
+   "funding_rate_8h": 0.00005,
+   "price_24h_pct": 10.65
+  },
+  {
+   "symbol": "ARUSDT",
+   "oi_usd": 5579837,
+   "oi_change_pct": 3.88,
+   "funding_rate_8h": 0.0001,
+   "price_24h_pct": 12.88
+  },
+  {
+   "symbol": "AXSUSDT",
+   "oi_usd": 4195972,
+   "oi_change_pct": -3.82,
+   "funding_rate_8h": 0.0001,
+   "price_24h_pct": 13.31
+  },
+  {
+   "symbol": "BROCCOLIUSDT",
+   "oi_usd": 4704496,
+   "oi_change_pct": 3.06,
+   "funding_rate_8h": 0.00005,
+   "price_24h_pct": 25.28
+  },
+  {
+   "symbol": "INJUSDT",
+   "oi_usd": 23867871,
+   "oi_change_pct": -2.93,
+   "funding_rate_8h": 0.00008225,
+   "price_24h_pct": 2.86
+  },
+  {
+   "symbol": "STRKUSDT",
+   "oi_usd": 11930666,
+   "oi_change_pct": 2.88,
+   "funding_rate_8h": 0.00005,
+   "price_24h_pct": 5.64
+  },
+  {
+   "symbol": "BRUSDT",
+   "oi_usd": 8146803,
+   "oi_change_pct": 2.52,
+   "funding_rate_8h": 0.00005,
+   "price_24h_pct": -3.56
+  },
+  {
+   "symbol": "ICPUSDT",
+   "oi_usd": 20322208,
+   "oi_change_pct": 2.35,
+   "funding_rate_8h": 0.0001,
+   "price_24h_pct": 10.96
+  }
+ ]
+}

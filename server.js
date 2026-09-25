@@ -1,6 +1,8 @@
 // agentfeed server.js — Session 2: x402 PAYMENTS ACTIVE on all /api routes.
 // /health and / stay free. X402_MODE=off in .env reverts to free mode.
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const { db, logCall } = require('./db');
 const { buildPaymentLayer, decodeSettlement, PRICES } = require('./payments');
@@ -224,6 +226,80 @@ if (mppOn) {
   app.get('/api/btc-price', mpp.gate('GET /api/btc-price'));
 }
 
+// ---- free discovery surface (mounted BEFORE the payment layer)
+//
+// /openapi.json, /.well-known/x402, /llms.txt and /SKILL.md. Measured
+// 2026-09-25: `npx @agentcash/discovery x402.ochinimus.app -v` reported
+// OPENAPI_NOT_FOUND, and x402scan treats a route with no input schema as
+// non-invocable -- 48 paid routes were unreadable to both.
+//
+// Mounted HERE, above app.use(paymentMiddleware), so these can never be
+// paywalled by accident: the middleware is not on the stack yet when they
+// match. They are also deliberately absent from PRICES, like /api/fear-greed.
+//
+// The documents are DERIVED from PRICES, TAGS and bazaar-examples.json, so a
+// route added or repriced cannot show up in one surface and not another. They
+// are built once, on the first request that needs them, rather than at module
+// load: x402Network and mppOn are only settled below, and a per-request rebuild
+// would burn CPU on every crawl.
+//
+// FREE_TOOLS is the single list of unpriced HTTP routes. `/` publishes it and
+// the discovery documents consume it, so the two cannot disagree -- this used
+// to be a literal inside the `/` handler that had already gone wrong once.
+const FREE_TOOLS = ['get_fear_greed', 'get_last_liquidation', 'get_exit_method'];
+const discovery = require('./tools/discovery');
+const { TAGS, BAZAAR_META } = require('./payments');
+
+let _docs = null;
+function docs() {
+  if (_docs) return _docs;
+  const ctx = {
+    PRICES,
+    TAGS,
+    META: BAZAAR_META,
+    FREE_TOOLS,
+    mpp: { active: mppOn, routes: mppOn ? MPP_ROUTES : [] },
+    network: x402Network,
+  };
+  _docs = {
+    openapi: discovery.buildOpenApi(ctx),
+    wellKnown: discovery.buildWellKnown(ctx),
+    llms: discovery.buildLlmsTxt(ctx),
+    skill: discovery.buildSkillMd(ctx),
+  };
+  return _docs;
+}
+
+app.get('/openapi.json', (_req, res) => res.json(docs().openapi));
+app.get('/.well-known/x402', (_req, res) => res.json(docs().wellKnown));
+app.get('/llms.txt', (_req, res) => res.type('text/plain; charset=utf-8').send(docs().llms));
+app.get('/SKILL.md', (_req, res) => res.type('text/markdown; charset=utf-8').send(docs().skill));
+
+// The Bazaar reads iconUrl off each route's resource object; payments.js points
+// every route at this path. Read once at boot -- a 256x256 PNG is 8 KB and
+// re-reading it per crawl is pointless. A missing file 404s rather than
+// throwing, because no icon must never take the paid surface down.
+let ICON = null;
+try {
+  ICON = fs.readFileSync(path.join(__dirname, 'icon.png'));
+} catch (e) {
+  console.warn('[discovery] icon.png not readable, /icon.png will 404:', e.message);
+}
+function sendIcon(res, type) {
+  if (!ICON) return res.status(404).json({ error: 'icon not available' });
+  res.type(type).set('Cache-Control', 'public, max-age=86400').send(ICON);
+}
+app.get('/icon.png', (_req, res) => sendIcon(res, 'image/png'));
+
+// Same buffer at /favicon.ico. Measured 2026-09-25: `npx @agentcash/discovery
+// x402.ochinimus.app -v` reported FAVICON_MISSING alongside OPENAPI_NOT_FOUND,
+// and its hint is "serve /favicon.ico, .png, or .svg at your root". The bytes
+// are PNG, not ICO, so the declared type is image/png rather than a lie about
+// the container -- every browser and the crawler accept a PNG served here, and
+// /favicon.ico is the path they both request without being told to.
+app.get('/favicon.ico', (_req, res) => sendIcon(res, 'image/png'));
+app.get('/favicon.png', (_req, res) => sendIcon(res, 'image/png'));
+
 // ---- x402 payment layer (mounted BEFORE the /api routes)
 const paymentsOn = (process.env.X402_MODE || 'on').toLowerCase() !== 'off';
 let x402Network = 'off';
@@ -327,11 +403,19 @@ app.get('/', (_req, res) => res.json({
   // about what they could have for nothing. Nothing in this process models
   // "free HTTP route", so the guard is tools/check-paymd-live.mjs, which probes
   // every route on `/` against the live service.
-  free_tools: ['get_fear_greed', 'get_last_liquidation', 'get_exit_method'],
+  free_tools: FREE_TOOLS,
   // Derived from the live liquidation tape, not restated. The studio card said
   // 880+ while PAY.md and the README said ~600; publishing the measurement is
   // what lets a checker settle that instead of a human guessing.
   coverage: (() => { try { return require('./tools/liqdb').getPerpCoverage(); } catch { return null; } })(),
+  discovery: {
+    openapi: 'https://x402.ochinimus.app/openapi.json',
+    well_known: 'https://x402.ochinimus.app/.well-known/x402',
+    manifest: 'https://x402.ochinimus.app/.well-known/x402.json',
+    llms_txt: 'https://x402.ochinimus.app/llms.txt',
+    skill_md: 'https://x402.ochinimus.app/SKILL.md',
+    icon: 'https://x402.ochinimus.app/icon.png',
+  },
   links: {
     github: 'https://github.com/seekdaseek/agentfeed',
     elizaos_plugin: 'https://www.npmjs.com/package/@seekdaseek/plugin-agentfeed',

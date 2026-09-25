@@ -20,6 +20,13 @@ const { getPositioning } = require('./tools/positioning');
 const { getTradeContext } = require('./tools/tradecontext');
 const { getTokenRisk } = require('./tools/tokenrisk');
 const { getExitMethod } = require('./tools/overhang');
+// challengeDesc and ICON_URL are already exported by payments.js; this only
+// reads them. Requiring it adds no side effect -- payments.js's module scope is
+// const/function declarations, one Object.assign into PRICES and one try/catch
+// that reads bazaar-examples.json -- and server.js already requires it before
+// this file loads. No cycle: nothing payments.js pulls requires ./mcp.
+const { challengeDesc, ICON_URL } = require('./payments');
+const SERVER_VERSION = (() => { try { return require('./server.json').version; } catch { return '1.0.0'; } })();
 
 const TOOL_DEFS = [
   { name: 'get_sol_price', usd: 0.001, desc: 'Live SOL/USD spot price (multi-source: Coinbase, Kraken, Pyth Hermes fallback). The confidence and publish_time fields are null unless Pyth Hermes served the request; Coinbase and Kraken publish neither.',
@@ -87,6 +94,56 @@ const TOOL_DEFS = [
 ];
 
 TOOL_DEFS.push(...require('./expansion').MCP_DEFS_ADD);
+
+// Human titles, two to five words, taken from what each description already
+// says. TITLES ONLY -- nothing was renamed. Tool names are the public MCP
+// surface and the elizaOS plugin depends on them.
+const TOOL_TITLES = {
+  get_sol_price: 'SOL spot price', get_btc_price: 'BTC spot price', get_eth_price: 'ETH spot price',
+  get_spot: 'Spot price', get_funding_rate: 'SOL and BTC funding', get_fear_greed: 'Fear and Greed index',
+  get_market_snapshot: 'Market snapshot', get_trade_context: 'Trade context', get_positioning: 'SOL and BTC positioning',
+  get_perp: 'Perp snapshot', get_liq_pulse: 'Liquidation pulse', get_funding_pulse: 'Funding pulse',
+  get_wallet_holdings: 'Solana wallet holdings', get_wallet_activity: 'Solana wallet activity',
+  get_token_metadata: 'SPL token metadata', get_token_risk: 'Token rug check', get_token_holders: 'Top token holders',
+  get_recent_liquidations: 'Recent liquidations', get_last_liquidation: 'Last liquidation',
+  get_liquidation_stats: 'Liquidation stats', get_liquidation_leaders: 'Liquidation leaderboard',
+  get_liq_history: 'Liquidation history', get_liq_heatmap: 'Liquidation heatmap',
+  get_venue_liq_share: 'Liquidations by venue', get_cascade_alert: 'Liquidation cascade alert',
+  get_cascade_scan: 'Full universe cascade scan', get_cascade_history: 'Cascade history',
+  get_cascade_forecast: 'Liquidation cascade forecast', get_cascade_forecast_free: 'Free cascade forecast',
+  get_forecast_question: 'Forecast question spec', get_forecast_record: 'Forecast track record',
+  get_squeeze_score: 'Squeeze score', get_funding_cross: 'Cross venue funding',
+  get_funding_extremes: 'Funding extremes', get_funding_history: 'Funding history',
+  get_open_interest: 'Open interest', get_oi_spike_scan: 'Open interest spikes',
+  get_long_short: 'Long short ratio', get_basis: 'Perp spot basis', get_volatility: 'Realized volatility',
+  get_top_movers: 'Top movers', get_orderbook_imbalance: 'Orderbook imbalance',
+  get_orderbook_walls: 'Orderbook walls', get_whale_trades: 'Whale trades', get_spread_arb: 'Cross exchange spread',
+  get_priority_fees: 'Solana priority fees', get_jito_tips: 'Jito tip floor', get_sol_network: 'Solana network health',
+  get_tvl: 'Protocol TVL', get_stablecoin_flows: 'Stablecoin flows', get_dex_quote: 'Jupiter DEX quote',
+  get_peg_deviation: 'Tokenized stock peg', get_peg_sessions: 'Peg by session', get_peg_universe: 'Tokenized stock rankings',
+  get_exit_quote: 'Collateral exit liquidity', get_exit_method: 'Exit liquidity method',
+  get_base_gas: 'Base gas price', get_base_balance: 'Base wallet balance',
+  pricing: 'Price list',
+};
+
+// tools/list order IS registration order, and that is the order Smithery shows.
+// It used to open on three price feeds and a sentiment index; these lead now --
+// the tape, the entry tier, the forecast. TOOL_DEFS itself is NOT reordered, so
+// probe-tools, the manifest, GET / and the pricing tool keep their order.
+const DISPLAY_FIRST = [
+  'get_liq_pulse', 'get_perp', 'get_funding_pulse', 'get_liquidation_leaders',
+  'get_cascade_scan', 'get_liq_heatmap', 'get_squeeze_score', 'get_cascade_forecast_free',
+  'get_forecast_record', 'get_cascade_forecast', 'get_open_interest', 'get_funding_cross',
+];
+
+// Shown by a client before any tool call. Kept short on purpose.
+const INSTRUCTIONS = [
+  'AgentFeed serves live crypto market data: a complete Bybit, OKX and Binance liquidation tape, tokenized-equity peg data and Solana on-chain reads.',
+  'Free, start here: get_fear_greed, get_last_liquidation, get_cascade_forecast_free, get_forecast_question, get_forecast_record, get_exit_method, pricing.',
+  'Cheapest paid calls at $0.001: get_perp, get_liq_pulse, get_funding_pulse, get_spot. Call pricing for the full price list.',
+  'A paid tool answers with an x402 payment request, payable in USDC on Solana or Base. No API key.',
+  'Same tools as HTTPS endpoints at https://x402.ochinimus.app; see /openapi.json.',
+].join(' ');
 
 // ---- MCP tool metadata (Smithery capability checks) ----------------------
 //
@@ -162,6 +219,18 @@ async function initMcp(app) {
     }
     wrappers[def.name] = createPaymentWrapper(rs, {
       accepts,
+      // Without this the wrapper falls back to "paid_tool": index.js:762 derives
+      // the tool name by stripping "mcp://tool/" off resource.url, so every MCP
+      // payment request advertised mcp://tool/paid_tool described as
+      // "Tool: paid_tool". serviceName and iconUrl are declared on this config
+      // in 2.17.0's index.d.ts and copied by buildToolResourceInfo() at runtime.
+      resource: {
+        url: `mcp://tool/${def.name}`,
+        description: challengeDesc(def.desc),
+        mimeType: 'application/json',
+        serviceName: 'AgentFeed',
+        iconUrl: ICON_URL,
+      },
       hooks: {
         onAfterSettlement: async ({ toolName, settlement, paymentPayload }) => {
           logCall({
@@ -175,13 +244,32 @@ async function initMcp(app) {
     });
   }
 
+  // Built from the rails registered on THIS resource server above: Solana
+  // always, Base only when PAY_TO_EVM is set. An unpaid tools/call really does
+  // return accepts for both, so naming only Solana understated the server to
+  // every agent reading tools/list.
+  const RAILS = ['Solana' + (networkName === 'mainnet' ? '' : ' ' + networkName)]
+    .concat(payToEvm ? ['Base'] : []);
+  const RAILS_TEXT = '(x402, USDC on ' + RAILS.join(' or ') + ')';
+
   function buildServer() {
-    const s = new McpServer({ name: 'agentfeed', version: '1.0.0' });
-    for (const def of TOOL_DEFS) {
+    const s = new McpServer({
+      name: 'agentfeed',
+      title: 'AgentFeed',
+      version: SERVER_VERSION,
+      description: 'Live crypto market data, a complete Bybit/OKX/Binance liquidation tape, tokenized-equity peg data and Solana on-chain reads. Paid per call in USDC over x402, no API key.',
+      websiteUrl: 'https://x402.ochinimus.app',
+      icons: [{ src: ICON_URL, mimeType: 'image/png' }],
+    }, { instructions: INSTRUCTIONS });
+
+    const ordered = DISPLAY_FIRST.map((n) => TOOL_DEFS.find((d) => d.name === n)).filter(Boolean)
+      .concat(TOOL_DEFS.filter((d) => !DISPLAY_FIRST.includes(d.name)));
+    for (const def of ordered) {
       s.registerTool(
         def.name,
         {
-          description: def.usd ? `${def.desc} Costs ${def.usd} USDC per call (x402, Solana ${networkName}).` : `${def.desc} Free.`,
+          title: TOOL_TITLES[def.name],
+          description: def.usd ? `${def.desc} Costs ${def.usd} USDC per call ${RAILS_TEXT}.` : `${def.desc} Free.`,
           inputSchema: def.schema,
           outputSchema: outputSchemaFor(def),
           annotations: TOOL_ANNOTATIONS,
@@ -196,6 +284,7 @@ async function initMcp(app) {
       );
     }
     s.registerTool('pricing', {
+      title: TOOL_TITLES.pricing,
       description: 'Use when an agent needs the price list before calling anything. Returns every agentfeed tool with its USDC price and description. Free.',
       inputSchema: {},
       outputSchema: {

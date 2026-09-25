@@ -484,7 +484,7 @@ app.get('/', (_req, res) => res.json({
   links: {
     github: 'https://github.com/seekdaseek/agentfeed',
     elizaos_plugin: 'https://www.npmjs.com/package/@seekdaseek/plugin-agentfeed',
-    smithery: 'https://smithery.ai/server/ochinimus/agentfeed',
+    smithery: 'https://smithery.ai/servers/ochinimus/agentfeed',
     dataset: 'https://ochinimuse.gumroad.com/l/liqdata',
     studio: 'https://ochinimus.app',
   },

@@ -1,6 +1,8 @@
 <!-- mcp-name: io.github.seekdaseek/agentfeed -->
 # AgentFeed
 
+[![smithery badge](https://smithery.ai/badge/ochinimus/agentfeed)](https://smithery.ai/servers/ochinimus/agentfeed)
+
 **Crypto liquidations, cascade detection, positioning and market data for AI agents. Pay per call in USDC. No API keys, no accounts, no subscriptions.**
 
 AgentFeed sells live trading data through the [x402 payment protocol](https://solana.com/x402) on Solana and Base. An agent hits an endpoint, gets a `402 Payment Required` with the price, pays a fraction of a cent in USDC from its own wallet, and receives the data — in about two seconds, gas sponsored by the facilitator.
@@ -495,6 +497,6 @@ Read `DATASET_QUALITY.md` before you use it. It tells you exactly where the data
 ## Links
 
 [MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=agentfeed) ·
-[Smithery](https://smithery.ai/server/ochinimus/agentfeed) ·
+[Smithery](https://smithery.ai/servers/ochinimus/agentfeed) ·
 [x402 manifest](https://x402.ochinimus.app/.well-known/x402.json) ·
 [ochinimus](https://ochinimus.app)

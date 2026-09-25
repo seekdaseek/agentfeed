@@ -70,6 +70,7 @@ const SYMBOL_FOR = {
   get_peg_sessions: 'CRCLx',
   get_exit_quote: 'SPYx',        // a covered Kamino reserve with a `partial` verdict
   get_cascade_forecast: 'SOL',   // this tool takes the bare asset, not the perp
+  get_spot: 'SOL',               // the spot route serves bare assets (SOL/BTC/ETH), not perps
 };
 
 // Extra call arguments for routes whose default parameters return a real but

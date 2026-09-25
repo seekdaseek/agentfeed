@@ -110,6 +110,21 @@ function grouped({ PRICES, TAGS }) {
   return order.filter((g) => buckets.has(g)).map((g) => [g, buckets.get(g).sort((a, b) => a.path.localeCompare(b.path))]);
 }
 
+/**
+ * Payment protocols for one route, in the object form both readers accept.
+ * MPP's method/intent are copied from the WWW-Authenticate header this service
+ * actually sends (method="solana", intent="charge"), and its currency is the
+ * USDC mint carried in that challenge -- read off the wire, not assumed.
+ */
+const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+function protocolsFor(pattern, mpp) {
+  const out = [{ x402: {} }];
+  if (mpp && mpp.active && (mpp.routes || []).includes(pattern)) {
+    out.push({ mpp: { method: 'solana', intent: 'charge', currency: USDC_MINT } });
+  }
+  return out;
+}
+
 // ---- /openapi.json -------------------------------------------------------
 function buildOpenApi({ PRICES, META, FREE_TOOLS, mpp }) {
   const paths = {};
@@ -160,13 +175,55 @@ function buildOpenApi({ PRICES, META, FREE_TOOLS, mpp }) {
         'x-price-usd': p.usd,
         // x402scan format (docs/DISCOVERY.md): a paid operation must declare
         // x-payment-info with protocols and valid pricing metadata.
+        // x402scan's DISCOVERY.md asks for x-payment-info.protocols and a
+        // fixed price object. @agentcash/discovery reads the same field with a
+        // schema, and its PaymentProtocolSchema is `record(string, unknown)`
+        // (checked against @agentcash/discovery@1.7.5 dist): a bare "x402"
+        // STRING fails the parse, the whole block falls through to the legacy
+        // path where an object price cannot be read either, and BOTH the price
+        // and the protocols come out empty -- which is exactly why the CLI
+        // reported L2_PRICE_MISSING_ON_PAID and L2_PROTOCOLS_MISSING_ON_PAID on
+        // all 48 routes while the price sat right there in the document.
+        // The object form satisfies both: the key is present and names x402.
         'x-payment-info': {
-          protocols: ['x402'],
+          protocols: protocolsFor(pattern, mpp),
           price: { mode: 'fixed', currency: 'USD', amount: String(p.usd) },
         },
       },
     };
   }
+
+  // The free sample surface. One templated operation, not one per route: the
+  // catalogue already trips the crawler's route-count warning and 50 more
+  // near-identical paths would cost agents tokens for no new information.
+  paths['/api/sample'] = {
+    get: {
+      description: 'Free. Lists every paid route that has a stored sample response.',
+      operationId: 'list_samples',
+      responses: { 200: { content: { 'application/json': { schema: { type: 'object' } } }, description: 'Free response. This endpoint is not payment-gated.' } },
+      security: [],
+      summary: 'List the free sample responses',
+      tags: ['agentfeed', 'free'],
+    },
+  };
+  paths['/api/sample/{route}'] = {
+    get: {
+      description: 'Free. Returns the real captured response for one paid route, with its price, input schema and paid URL. The same example the Bazaar listing carries.',
+      operationId: 'get_sample',
+      parameters: [{
+        in: 'path', name: 'route', required: true,
+        description: 'A paid route slug or tool name, e.g. liq-pulse, perp, or get_liq_pulse. GET /api/sample lists them.',
+        schema: { type: 'string', enum: [...new Set(Object.keys(PRICES).map((k) => k.replace('GET /api/', '').replace(/\/:.*$/, '')))].sort() },
+      }],
+      responses: {
+        200: { content: { 'application/json': { schema: { type: 'object' } } }, description: 'Free response. This endpoint is not payment-gated.' },
+        404: { description: 'No such paid route.' },
+      },
+      security: [],
+      summary: 'Fetch a free sample response',
+      tags: ['agentfeed', 'free'],
+    },
+  };
 
   // The paid manifest cannot see the free routes, and a catalogue that omits
   // them tells an agent to pay for something it can have for nothing.
@@ -178,6 +235,7 @@ function buildOpenApi({ PRICES, META, FREE_TOOLS, mpp }) {
         description: `Free. ${humanize(tool)}.`,
         operationId: tool,
         responses: { 200: { content: { 'application/json': { schema: { type: 'object' } } }, description: 'Free response. This endpoint is not payment-gated.' } },
+        security: [],
         summary: summaryFor(tool, `${humanize(tool)} from the AgentFeed API`),
         tags: ['agentfeed', 'free'],
       },
@@ -191,6 +249,16 @@ function buildOpenApi({ PRICES, META, FREE_TOOLS, mpp }) {
       version: '1.0.0',
       description: 'Live crypto market, liquidation, tokenized-equity and Solana on-chain data for AI agents. Paid per call in USDC over x402 on Solana or Base. No API keys, no accounts.',
       'x-generated-from': 'payments.PRICES + bazaar-examples.json, at boot',
+      contact: { name: 'seekdaseek', url: 'https://github.com/seekdaseek/agentfeed' },
+      'x-guidance': [
+        'Every route is a GET that returns JSON. There are no API keys and no accounts.',
+        'Paid routes answer 402 with the challenge base64-encoded in the PAYMENT-REQUIRED response header (x402 v2, not the body). Pay it and repeat the request with an X-PAYMENT header. USDC on Solana mainnet or Base.',
+        'Response shape is always { "tool": "<name>", "data": { ... }, "paid": true }.',
+        'Before paying, GET /api/sample/<route> for that route\'s real captured response, free. GET /api/sample lists them.',
+        'Start cheap: /api/perp, /api/liq-pulse, /api/funding-pulse and /api/price are $0.001 each and cover most questions. The premium routes are the liquidation tape, cascade detection and the tokenized-equity peg tape.',
+        'A route that cannot answer returns 200 with a decline field naming the reason; it never returns fabricated or zero-filled data.',
+        'Limits: GET only on /api/* (HEAD answers 405), 240 requests per minute per caller, and a 429 carries Retry-After.',
+      ].join(' '),
     },
     servers: [{ url: ORIGIN }],
     paths,
@@ -271,6 +339,8 @@ function buildLlmsTxt({ PRICES, TAGS, META, FREE_TOOLS, mpp, network }) {
     `- ${ORIGIN}/.well-known/x402 — the resource list`,
     `- ${ORIGIN}/.well-known/x402.json — the full manifest with prices and accepted rails`,
     `- ${ORIGIN}/mcp — the same tools over MCP (POST, streamable HTTP)`,
+    `- ${ORIGIN}/api/sample/<route> — a real captured response for any paid route, free`,
+    `- ${ORIGIN}/api/forecast-record — the settled cascade-forecast track record, free`,
     '',
     '## Free routes',
     '',
@@ -318,6 +388,8 @@ function buildSkillMd({ PRICES, TAGS, META, FREE_TOOLS, mpp, network }) {
     '## Before you pay',
     '',
     `- \`${ORIGIN}/openapi.json\` lists every route with its parameters, its price and a real captured response example. Read it instead of guessing a shape.`,
+    `- \`${ORIGIN}/api/sample/<route>\` returns that route's real captured response, free, before you pay for it.`,
+    `- \`${ORIGIN}/api/forecast-record\` is the settled record behind the cascade forecast: every row written before its window opened and settled from the exchange public feed.`,
     `- The free routes below cost nothing and are the same code path as the paid ones.`,
     '',
     '## Free routes',

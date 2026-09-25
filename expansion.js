@@ -17,13 +17,14 @@ const CF = require('./tools/cascade-forecast');
 const OV = require('./tools/overhang');
 const B = require('./tools/base');
 const PX = require('./tools/prices');
+const EN = require('./tools/entry');
 
 const sym = (d) => z.string().optional().describe(`USDT perp symbol e.g. SOLUSDT, BTCUSDT (default ${d})`);
 const symReq = z.string().describe('USDT perp symbol e.g. SOLUSDT');
 
 const EXP = [
   { name: 'get_cascade_forecast', route: 'GET /api/cascade-forecast', usd: 0.02,
-    tags: ['forecast','liquidations','cascade','prediction','exclusive'], desc: 'Liquidation forecast, FORWARD-LOOKING and not a description of what already happened. Returns the probability that a symbol will liquidate more in the NEXT 15 minutes than its own 90th-percentile 15-minute window. Calibrated on a 28-day tape of 1.4M Bybit liquidations across 799 symbols, which cannot be reconstructed by anyone starting today because no exchange publishes liquidation history. Every answer carries the exact question, the threshold in USD, the window it read, the number of historical occurrences behind the number, and instructions for settling it yourself from the public feed. When a state has too little history the tool DECLINES rather than guessing, and says why.',
+    tags: ['forecast','liquidations','cascade','prediction','exclusive'], desc: 'Liquidation forecast, FORWARD-LOOKING and not a description of what already happened. Returns the probability that a symbol will liquidate more in the NEXT 15 minutes than its own 90th-percentile 15-minute window. Calibrated on a 28-day tape of 1.4M Bybit liquidations across 799 symbols, which cannot be reconstructed by anyone starting today because no exchange publishes liquidation history. Every answer carries the exact question, the threshold in USD, the window it read, the number of historical occurrences behind the number, and instructions for settling it yourself from the public feed. When a state has too little history the tool DECLINES rather than guessing, and says why. The settled record is free at /api/forecast-record.',
     schema: { symbol: z.string().optional().describe('SOL, BTC, ETH or any USDT perp e.g. SXTUSDT (default SOL)'),
               symbols: z.string().optional().describe('comma separated for a batch, max 20, e.g. SOL,BTC,ETH') },
     run: (a) => CF.getCascadeForecast({ query: a }) },
@@ -41,7 +42,7 @@ const EXP = [
   { name: 'get_cascade_history', route: 'GET /api/cascade-history', usd: 0.03,
     desc: 'Liquidation cascade history: past clustered same-side flush events reconstructed from our own tape, with start and end, prints, USD total and peak print, up to 72h back. /api/cascade tells you what is happening NOW; this tells you what already happened.',
     tags: ['liquidations', 'cascade', 'history', 'trading', 'exclusive'],
-    schema: { symbol: sym('SOLUSDT'), scope: z.enum(['symbol', 'all']).optional(), hours: z.number().optional().describe('1-72, default 24'), min_usd: z.number().optional().describe('min event USD, default 100k (250k for scope=all)'), gap_s: z.number().optional().describe('max gap seconds within an event, default 60') },
+    schema: { symbol: sym('SOLUSDT'), scope: z.enum(['symbol', 'all']).optional().describe('symbol = just this symbol (default), all = every recorded USDT perp'), hours: z.number().optional().describe('1-72, default 24'), min_usd: z.number().optional().describe('min event USD, default 100k (250k for scope=all)'), gap_s: z.number().optional().describe('max gap seconds within an event, default 60') },
     run: (a) => L.getCascadeHistory(a) },
   { name: 'get_squeeze_score', route: 'GET /api/squeeze-score', usd: 0.10,
     desc: 'Short squeeze score and long flush score, 0-100, for any USDT perp. Composite of the funding rate, long/short crowding, 24h open-interest build, and liquidation skew from our own tape. One number for whether a trade is crowded and about to hurt someone.',
@@ -204,6 +205,34 @@ const EXP = [
               token: z.string().optional().describe('ERC20 contract address, or a known ticker: USDC, WETH, DAI, CBBTC, USDBC, CBETH, AERO, EURC. Omit for the native ETH balance'),
               chain: z.string().optional().describe('base (default) or ethereum') },
     run: (a) => B.getBaseBalance({ query: a }) },
+
+  // ---- ENTRY TIER: four $0.001 routes, composed from functions above ----
+  // The niche's six best-selling routes are all $0.001 and the single
+  // most-bought is a universal primitive. These are the cheap front door;
+  // the premium tape tools above keep their prices.
+  { name: 'get_perp', route: 'GET /api/perp', usd: 0.001,
+    tags: ['perps', 'funding', 'open-interest', 'liquidations', 'crypto', 'trading'],
+    desc: 'Use when an agent needs one perp market in a single call. Returns cross-venue funding (Bybit, OKX, Hyperliquid), open interest with 1h/24h change, long/short ratio, and 24h liquidations with long/short split and biggest print from our own tape.',
+    schema: { symbol: z.string().optional().describe('USDT perp symbol e.g. SOLUSDT, BTCUSDT (default SOLUSDT)') },
+    run: (a) => EN.getPerp(a) },
+
+  { name: 'get_liq_pulse', route: 'GET /api/liq-pulse', usd: 0.001,
+    tags: ['liquidations', 'realtime', 'crypto', 'trading', 'exclusive'],
+    desc: 'Use when an agent needs to know what is being liquidated right now. Returns the last 60 minutes across every USDT perp we record: total USD, long/short split, prints and the top 5 symbols. Declines with the tape age if our recording is stale.',
+    schema: {},
+    run: () => EN.getLiqPulse() },
+
+  { name: 'get_funding_pulse', route: 'GET /api/funding-pulse', usd: 0.001,
+    tags: ['funding', 'perps', 'screener', 'crowding', 'trading'],
+    desc: 'Use when an agent needs the most extreme funding rates right now. Returns the 5 largest absolute annualised rates across the whole Bybit USDT perp universe, each with venue, 8h rate, open interest and 24h price move. One call, not a full screen.',
+    schema: {},
+    run: () => EN.getFundingPulse() },
+
+  { name: 'get_spot', route: 'GET /api/price', usd: 0.001,
+    tags: ['price', 'spot', 'crypto', 'multi-venue'],
+    desc: 'Use when an agent needs a spot price without choosing a venue. Returns the price, the venue that actually served it, and a Pyth confidence when Pyth served. Coinbase, then Kraken, then Pyth Hermes. Serves SOL, BTC and ETH; anything else is declined.',
+    schema: { symbol: z.string().optional().describe('SOL, BTC or ETH (default SOL). Anything else is declined with the supported list') },
+    run: (a) => EN.getSpot(a) },
 ];
 
 // ---- derived exports ----

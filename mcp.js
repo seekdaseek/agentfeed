@@ -88,6 +88,49 @@ const TOOL_DEFS = [
 
 TOOL_DEFS.push(...require('./expansion').MCP_DEFS_ADD);
 
+// ---- MCP tool metadata (Smithery capability checks) ----------------------
+//
+// Smithery scored this server 82/100 on 2026-09-25, losing every point on
+// output schemas (0/14) and annotations (0/14). Both are cheap and true here:
+// every tool is a read-only market-data read.
+//
+// ANNOTATIONS. Identical for all of them, and each flag is a fact about this
+// service, not a default copied from a template:
+//   readOnlyHint    nothing a tool does mutates state; the only writes are the
+//                   audit rows the HTTP layer makes, never the tool itself
+//   destructiveHint false, for the same reason
+//   idempotentHint  calling twice returns the same answer for the same market
+//                   state and charges the same; there is no create-or-append
+//   openWorldHint   answers come from live exchanges and chains, not a closed
+//                   fixed corpus
+const TOOL_ANNOTATIONS = Object.freeze({
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
+});
+
+// OUTPUT SCHEMAS. MCP 2025-06-18: a tool that declares outputSchema MUST return
+// structuredContent conforming to it, and this SDK ENFORCES that -- mcp.js
+// validateToolOutput() throws McpError when the payload does not parse. That
+// makes a too-tight schema a live failure on a rail real buyers pay for, so the
+// declared shape is the envelope, which cannot drift: `tool` is the name and
+// `data` is an object. Every one of the 48 Phase 1 captures has an object
+// there (measured, not assumed). The per-field detail an agent needs is in the
+// input schema, the description and the free sample at /api/sample/<route>.
+const BAZAAR_META = (() => { try { return require('./bazaar-examples.json').routes || {}; } catch { return {}; } })();
+const METfByTool = new Map(Object.values(BAZAAR_META).map((m) => [m.tool, m]));
+function outputSchemaFor(def) {
+  return {
+    tool: z.literal(def.name).describe('the tool that produced this payload'),
+    data: z.record(z.string(), z.unknown()).describe(
+      METfByTool.has(def.name)
+        ? `the ${def.name} payload; a real captured example is free at https://x402.ochinimus.app/api/sample/${def.name}`
+        : `the ${def.name} payload`,
+    ),
+  };
+}
+
 async function initMcp(app) {
   const networkName = (process.env.X402_NETWORK || 'devnet').toLowerCase();
   const network = networkName === 'mainnet' ? SOLANA_MAINNET_CAIP2 : SOLANA_DEVNET_CAIP2;
@@ -135,21 +178,35 @@ async function initMcp(app) {
   function buildServer() {
     const s = new McpServer({ name: 'agentfeed', version: '1.0.0' });
     for (const def of TOOL_DEFS) {
-      s.tool(
+      s.registerTool(
         def.name,
-        def.usd ? `${def.desc} Costs $${def.usd} USDC per call (x402, Solana ${networkName}).` : `${def.desc} Free.`,
-        def.schema,
+        {
+          description: def.usd ? `${def.desc} Costs ${def.usd} USDC per call (x402, Solana ${networkName}).` : `${def.desc} Free.`,
+          inputSchema: def.schema,
+          outputSchema: outputSchemaFor(def),
+          annotations: TOOL_ANNOTATIONS,
+        },
         (def.usd ? wrappers[def.name] : ((h) => h))(async (args) => {
           const data = await def.run(args || {});
-          return { content: [{ type: 'text', text: JSON.stringify({ tool: def.name, data }) }] };
+          const payload = { tool: def.name, data };
+          // Both, as the spec requires: text for clients that only read content,
+          // structuredContent for the declared outputSchema.
+          return { content: [{ type: 'text', text: JSON.stringify(payload) }], structuredContent: payload };
         })
       );
     }
-    s.tool('pricing', 'Free: list all agentfeed tools with USDC prices.', {}, async () => ({
-      content: [{ type: 'text', text: JSON.stringify(
-        TOOL_DEFS.map((d) => ({ tool: d.name, price_usdc: d.usd, description: d.desc }))
-      ) }],
-    }));
+    s.registerTool('pricing', {
+      description: 'Use when an agent needs the price list before calling anything. Returns every agentfeed tool with its USDC price and description. Free.',
+      inputSchema: {},
+      outputSchema: {
+        tool: z.literal('pricing').describe('the tool that produced this payload'),
+        data: z.record(z.string(), z.unknown()).describe('tools: the full price list'),
+      },
+      annotations: TOOL_ANNOTATIONS,
+    }, async () => {
+      const payload = { tool: 'pricing', data: { tools: TOOL_DEFS.map((d) => ({ tool: d.name, price_usdc: d.usd, description: d.desc })) } };
+      return { content: [{ type: 'text', text: JSON.stringify(payload.data.tools) }], structuredContent: payload };
+    });
     return s;
   }
 

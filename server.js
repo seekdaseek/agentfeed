@@ -246,7 +246,7 @@ if (mppOn) {
 // FREE_TOOLS is the single list of unpriced HTTP routes. `/` publishes it and
 // the discovery documents consume it, so the two cannot disagree -- this used
 // to be a literal inside the `/` handler that had already gone wrong once.
-const FREE_TOOLS = ['get_fear_greed', 'get_last_liquidation', 'get_exit_method'];
+const FREE_TOOLS = ['get_fear_greed', 'get_last_liquidation', 'get_exit_method', 'get_forecast_record'];
 const discovery = require('./tools/discovery');
 const { TAGS, BAZAAR_META } = require('./payments');
 
@@ -269,6 +269,69 @@ function docs() {
   };
   return _docs;
 }
+
+// ---- free sample responses (conversion surface)
+//
+// A buyer cannot see what a paid route returns before paying, which is the
+// single biggest reason a listing is skipped. Kronos publishes a sample per
+// route and is the best-selling seller in this niche that does. These are the
+// SAME stored examples the Bazaar listing carries -- served from
+// bazaar-examples.json, not a second hand-written copy that could drift.
+//
+// One templated path rather than 52 separate ones: the catalogue is already at
+// the size where a crawler warns about agent token budgets, and 52 more
+// near-identical operations would make that worse for no information gained.
+const SAMPLE_META = (() => { try { return require('./bazaar-examples.json').routes || {}; } catch { return {}; } })();
+const sampleIndex = new Map();
+for (const [pattern, m] of Object.entries(SAMPLE_META)) {
+  const path = pattern.replace('GET ', '');
+  const slug = path.replace(/^\/api\//, '').replace(/\/:.*$/, '');
+  sampleIndex.set(slug, { pattern, path, meta: m });
+  if (m.tool) sampleIndex.set(m.tool, { pattern, path, meta: m });
+}
+app.get('/api/sample', (_req, res) => res.json({
+  service: 'agentfeed',
+  what: 'A real captured response for any paid route, free. The same example the Bazaar listing carries.',
+  usage: 'GET /api/sample/<route>  e.g. /api/sample/liq-pulse or /api/sample/get_liq_pulse',
+  routes: [...new Set([...sampleIndex.values()].map((v) => v.path))].sort(),
+}));
+app.get('/api/sample/:route', (req, res) => {
+  const hit = sampleIndex.get(String(req.params.route || '').toLowerCase()) || sampleIndex.get(String(req.params.route || ''));
+  if (!hit) {
+    return res.status(404).json({ error: 'no such paid route',
+      requested: req.params.route,
+      hint: 'GET /api/sample lists every route that has a sample' });
+  }
+  const m = hit.meta;
+  res.json({
+    route: hit.path,
+    tool: m.tool,
+    price_usd: m.price_usd,
+    paid_url: 'https://x402.ochinimus.app' + hit.path,
+    how_to_pay: 'GET the paid_url; the 402 carries the challenge in the PAYMENT-REQUIRED response header (x402 v2).',
+    input_example: m.input || {},
+    ...(m.pathParams ? { path_params_example: m.pathParams } : {}),
+    input_schema: m.inputSchema || { properties: {} },
+    sample_response: m.output ? m.output.example : null,
+    captured: 'a real response from this service, trimmed; field names and types are exactly what the paid route returns',
+  });
+});
+
+// ---- free public track record
+//
+// "Verifiable accuracy is the moat" is the line the best-selling forecaster in
+// this niche sells on. This is the SAME function the free MCP tool
+// get_forecast_record serves, not a second implementation: every row was
+// written before its window opened and settled afterwards from the exchange
+// public feed. caliper owns record.db and this only ever reads it.
+const { getForecastRecord } = require('./tools/cascade-forecast');
+app.get('/api/forecast-record', async (req, res) => {
+  try {
+    res.json({ tool: 'get_forecast_record', data: await getForecastRecord({ query: req.query || {} }), paid: false });
+  } catch (e) {
+    res.status(502).json({ tool: 'get_forecast_record', error: e.message });
+  }
+});
 
 app.get('/openapi.json', (_req, res) => res.json(docs().openapi));
 app.get('/.well-known/x402', (_req, res) => res.json(docs().wellKnown));
@@ -415,6 +478,8 @@ app.get('/', (_req, res) => res.json({
     llms_txt: 'https://x402.ochinimus.app/llms.txt',
     skill_md: 'https://x402.ochinimus.app/SKILL.md',
     icon: 'https://x402.ochinimus.app/icon.png',
+    samples: 'https://x402.ochinimus.app/api/sample',
+    forecast_record: 'https://x402.ochinimus.app/api/forecast-record',
   },
   links: {
     github: 'https://github.com/seekdaseek/agentfeed',

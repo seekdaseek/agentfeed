@@ -83,9 +83,9 @@ Notional uses `filled_qty × avg_fill_price` — what actually executed — not 
 
 Every paid route, cheapest question last. Generated from
 [`/.well-known/x402.json`](https://x402.ochinimus.app/.well-known/x402.json),
-read 2026-09-23 — names, prices and routes are the manifest's, not a copy kept
+read 2026-09-25 — names, prices and routes are the manifest's, not a copy kept
 in sync by hand. What each one returns is under
-[55 tools](#55-tools-48-paid-http-routes--7-free--pricing), word for word as
+[59 tools](#59-tools-52-paid-http-routes--7-free--pricing), word for word as
 the service publishes it.
 
 | Tool | Price | Route |
@@ -205,12 +205,12 @@ The pay-kit fix ships here as `mpp/patches/@solana+mpp+0.7.0.patch`, applied by
 dependency, not a dev one, because a `--omit=dev` install would otherwise complete silently
 *unpatched*.
 
-## 55 tools (48 paid HTTP routes + 7 free) & pricing
+## 59 tools (52 paid HTTP routes + 7 free) & pricing
 
-**48 paid + 7 free**, 55 total on the MCP rail. Every call is metered individually in USDC over
-x402 — no bundles, no minimums. Calling all 48 paid tools once costs **$0.765** — the entire
+**52 paid + 7 free**, 59 total on the MCP rail. Every call is metered individually in USDC over
+x402 — no bundles, no minimums. Calling all 52 paid tools once costs **$0.769** — the entire
 market read for 77 cents. Counts and prices are summed from
-[the live manifest](https://x402.ochinimus.app/.well-known/x402.json), read 2026-09-23.
+[the live manifest](https://x402.ochinimus.app/.well-known/x402.json), read 2026-09-25.
 
 The flagship is [`get_squeeze_score`](#the-moat--our-own-liquidation-tape) — a 0-100 short-squeeze / long-flush composite built from funding, crowding, OI build and the liq-skew of our exclusive tape. One number, one dime, answers "is this trade crowded and about to hurt someone."
 
@@ -251,6 +251,7 @@ Sampled every 5 minutes since 19 July 2026. Deviation is measured against the un
 | `get_cascade_scan` | $0.05 | `/api/cascade-scan` | FULL-UNIVERSE cascade scan: every USDT perp we record across Bybit+OKX+Binance. Bybit is the only complete unthrottled liquidation tape in crypto and no exchange publishes history of it |
 | `get_liquidation_leaders` | $0.02 | `/api/liquidation-leaders` | What is blowing up right now: top symbols by liquidation USD across every USDT perp we record, with long/short split, biggest print and venue count |
 | `get_liquidation_stats` | $0.004 | `/api/liquidation-stats` | 1h/24h liquidation totals for the 5 majors (SOL/BTC/ETH/XRP/DOGE), long/short split, biggest print, per-exchange breakdown |
+| `get_liq_pulse` | $0.001 | `/api/liq-pulse` | Use when an agent needs to know what is being liquidated right now. Returns the last 60 minutes across every USDT perp we record: total USD, long/short split, prints and the top 5 symbols. Declines with the tape age if our recording is stale. |
 
 ### Derivatives
 
@@ -265,6 +266,8 @@ Sampled every 5 minutes since 19 July 2026. Deviation is measured against the un
 | `get_volatility` | $0.01 | `/api/volatility` | Realized volatility for any USDT perp: 7d and 30d annualized from daily closes, plus today's range. Position-sizing input. |
 | `get_funding_history` | $0.005 | `/api/funding-history` | Funding-rate history for any USDT perp (up to 200 intervals): average, annualized, share of positive intervals — what the carry has actually been. |
 | `get_top_movers` | $0.01 | `/api/top-movers` | 24h top gainers and losers across every Bybit USDT perp with a liquidity floor, funding attached. The "what moved" screener. |
+| `get_perp` | $0.001 | `/api/perp` | Use when an agent needs one perp market in a single call. Returns cross-venue funding (Bybit, OKX, Hyperliquid), open interest with 1h/24h change, long/short ratio, and 24h liquidations with long/short split and biggest print from our own tape. |
+| `get_funding_pulse` | $0.001 | `/api/funding-pulse` | Use when an agent needs the most extreme funding rates right now. Returns the 5 largest absolute annualised rates across the whole Bybit USDT perp universe, each with venue, 8h rate, open interest and 24h price move. One call, not a full screen. |
 
 ### Microstructure
 
@@ -279,6 +282,7 @@ Sampled every 5 minutes since 19 July 2026. Deviation is measured against the un
 
 | Tool | Price | Route | What you get |
 |---|---|---|---|
+| `get_spot` | $0.001 | `/api/price` | Use when an agent needs a spot price without choosing a venue. Returns the price, the venue that actually served it, and a Pyth confidence when Pyth served. Coinbase, then Kraken, then Pyth Hermes. Serves SOL, BTC and ETH; anything else is declined. |
 | `get_sol_price` | $0.001 | `/api/sol-price` | SOL spot price (multi-source: Coinbase, Kraken, Pyth Hermes fallback) |
 | `get_btc_price` | $0.001 | `/api/btc-price` | BTC spot price (multi-source: Coinbase, Kraken, Pyth Hermes fallback) |
 | `get_eth_price` | $0.001 | `/api/eth-price` | ETH spot price in USD, aggregated across seven independent venues (CoinGecko, Coinbase, Kraken, Binance, OKX, Gemini, DefiLlama). Returns the lead figure plus every venue quote that answered, so a caller can see the spread rather than trust one exchange. Venues are ranked in a fixed declared order, not completion order, so identical market state always returns the same lead price. |
@@ -316,8 +320,8 @@ Sampled every 5 minutes since 19 July 2026. Deviation is measured against the un
 | `get_dex_quote` | $0.005 | `/api/dex-quote` | Live Jupiter swap quote for any SPL pair: output amount, price impact, route. The real executable price on Solana, not an index price. |
 ### Free tasters
 
-Seven, of which three have an HTTP route — those three are the ones published at `/` under
-`free_tools`. The other four are MCP-only and have no paid HTTP equivalent to undercut.
+Seven, of which four have an HTTP route — those four are the ones published at `/` under
+`free_tools`. The other three are MCP-only and have no paid HTTP equivalent to undercut.
 
 | Tool | Route |
 |---|---|
@@ -326,8 +330,16 @@ Seven, of which three have an HTTP route — those three are the ones published 
 | `get_exit_method` | `/api/exit-method` |
 | `get_cascade_forecast_free` | MCP only — full-quality SOL liquidation forecast, nothing withheld |
 | `get_forecast_question` | MCP only — what the forecast answers and how to settle it yourself |
-| `get_forecast_record` | MCP only — live settled track record with the raw rows |
+| `get_forecast_record` | `/api/forecast-record` — live settled track record with the raw rows |
 | `pricing` | MCP only — lists everything with live prices |
+
+Three more free HTTP endpoints carry no tool of their own:
+
+| Endpoint | What you get |
+|---|---|
+| `GET /api/sample` | Lists every paid route that has a stored sample response |
+| `GET /api/sample/<route>` | The real captured response for one of the 52 paid routes — the same example its Bazaar listing carries — with its price, input schema and paid URL. See what a route returns before paying for it. |
+| `GET /api/forecast-record` | Every settled cascade forecast with its question, probability and outcome, plus the summary score |
 
 A free route answers `"paid": false`, and a paid one `"paid": true`, because that field is
 per-request: it reports whether the route you called is priced. `curl`ing any of the three

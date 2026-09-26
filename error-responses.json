@@ -1,0 +1,419 @@
+{
+  "generatedAt": "2026-09-26T06:24:02.249Z",
+  "limits": {
+    "get": 240,
+    "other": 2400,
+    "windowSeconds": 60
+  },
+  "shared": [
+    {
+      "status": 402,
+      "name": "Payment Required",
+      "when": "No payment presented, or the payment did not settle.",
+      "body": {
+        "x402Version": 2,
+        "error": "Payment required"
+      },
+      "note": "The full challenge is base64 in the PAYMENT-REQUIRED response header, not in the body. Read it from the header."
+    },
+    {
+      "status": 400,
+      "name": "Bad Request",
+      "when": "The handler threw: a missing or malformed caller parameter, or an upstream data source failed.",
+      "body": {
+        "tool": "<tool name>",
+        "error": "<human-readable reason>"
+      }
+    },
+    {
+      "status": 429,
+      "name": "Too Many Requests",
+      "when": "More than 240 GET (or POST /mcp) requests from one IP in 60s. Other HTTP methods have a separate 2400/60s allowance.",
+      "body": {
+        "error": "rate limit: 240 req/min",
+        "retry_after": "<seconds>"
+      },
+      "note": "Retry-After is also set as a response header."
+    },
+    {
+      "status": 405,
+      "name": "Method Not Allowed",
+      "when": "Any method other than GET on a paid route. The response has an Allow: GET header and an empty body.",
+      "body": null
+    }
+  ],
+  "routes": {
+    "GET /api/sol-price": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/btc-price": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/funding-rate": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/market-snapshot": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/wallet-holdings/:wallet": {
+      "requiredInputs": [
+        "wallet"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "path param wallet = not-a-valid-address",
+        "body": {
+          "tool": "get_wallet_holdings",
+          "error": "invalid wallet address"
+        }
+      }
+    },
+    "GET /api/token-metadata/:mint": {
+      "requiredInputs": [
+        "mint"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "path param mint = not-a-valid-address",
+        "body": {
+          "tool": "get_token_metadata",
+          "error": "invalid mint address"
+        }
+      }
+    },
+    "GET /api/liquidations": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/cascade": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/cascade-scan": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/liquidation-leaders": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/liquidation-stats": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/positioning": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/trade-context": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/token-risk/:mint": {
+      "requiredInputs": [
+        "mint"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "path param mint = not-a-valid-address",
+        "body": {
+          "tool": "get_token_risk",
+          "error": "invalid mint address"
+        }
+      }
+    },
+    "GET /api/cascade-forecast": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/liq-history": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/liq-heatmap": {
+      "requiredInputs": [
+        "symbol"
+      ],
+      "callerError": null,
+      "probe": {
+        "violated": "required query param symbol omitted",
+        "observedStatus": 200
+      }
+    },
+    "GET /api/cascade-history": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/squeeze-score": {
+      "requiredInputs": [
+        "symbol"
+      ],
+      "callerError": null,
+      "probe": {
+        "violated": "required query param symbol omitted",
+        "observedStatus": 200
+      }
+    },
+    "GET /api/venue-liq-share": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/funding-cross": {
+      "requiredInputs": [
+        "symbol"
+      ],
+      "callerError": null,
+      "probe": {
+        "violated": "required query param symbol omitted",
+        "observedStatus": 200
+      }
+    },
+    "GET /api/funding-extremes": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/open-interest": {
+      "requiredInputs": [
+        "symbol"
+      ],
+      "callerError": null,
+      "probe": {
+        "violated": "required query param symbol omitted",
+        "observedStatus": 200
+      }
+    },
+    "GET /api/oi-spike-scan": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/long-short": {
+      "requiredInputs": [
+        "symbol"
+      ],
+      "callerError": null,
+      "probe": {
+        "violated": "required query param symbol omitted",
+        "observedStatus": 200
+      }
+    },
+    "GET /api/basis": {
+      "requiredInputs": [
+        "symbol"
+      ],
+      "callerError": null,
+      "probe": {
+        "violated": "required query param symbol omitted",
+        "observedStatus": 200
+      }
+    },
+    "GET /api/volatility": {
+      "requiredInputs": [
+        "symbol"
+      ],
+      "callerError": null,
+      "probe": {
+        "violated": "required query param symbol omitted",
+        "observedStatus": 200
+      }
+    },
+    "GET /api/funding-history": {
+      "requiredInputs": [
+        "symbol"
+      ],
+      "callerError": null,
+      "probe": {
+        "violated": "required query param symbol omitted",
+        "observedStatus": 200
+      }
+    },
+    "GET /api/top-movers": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/orderbook-imbalance": {
+      "requiredInputs": [
+        "symbol"
+      ],
+      "callerError": null,
+      "probe": {
+        "violated": "required query param symbol omitted",
+        "observedStatus": 200
+      }
+    },
+    "GET /api/orderbook-walls": {
+      "requiredInputs": [
+        "symbol"
+      ],
+      "callerError": null,
+      "probe": {
+        "violated": "required query param symbol omitted",
+        "observedStatus": 200
+      }
+    },
+    "GET /api/whale-trades": {
+      "requiredInputs": [
+        "symbol"
+      ],
+      "callerError": null,
+      "probe": {
+        "violated": "required query param symbol omitted",
+        "observedStatus": 200
+      }
+    },
+    "GET /api/spread-arb": {
+      "requiredInputs": [
+        "symbol"
+      ],
+      "callerError": null,
+      "probe": {
+        "violated": "required query param symbol omitted",
+        "observedStatus": 200
+      }
+    },
+    "GET /api/token-holders/:mint": {
+      "requiredInputs": [
+        "mint"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "path param mint = not-a-valid-address",
+        "body": {
+          "tool": "get_token_holders",
+          "error": "invalid mint address"
+        }
+      }
+    },
+    "GET /api/wallet-activity/:wallet": {
+      "requiredInputs": [
+        "wallet"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "path param wallet = not-a-valid-address",
+        "body": {
+          "tool": "get_wallet_activity",
+          "error": "invalid wallet address"
+        }
+      }
+    },
+    "GET /api/priority-fees": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/jito-tips": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/sol-network": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/tvl": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/stablecoin-flows": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/dex-quote": {
+      "requiredInputs": [
+        "input_mint",
+        "output_mint",
+        "amount"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param input_mint omitted",
+        "body": {
+          "tool": "get_dex_quote",
+          "error": "invalid input_mint or output_mint"
+        }
+      }
+    },
+    "GET /api/peg-deviation": {
+      "requiredInputs": [
+        "symbol"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param symbol omitted",
+        "body": {
+          "tool": "get_peg_deviation",
+          "error": "missing required parameter: symbol — a tokenized equity symbol, e.g. symbol=CRCLx (get_peg_universe lists all tracked symbols)"
+        }
+      }
+    },
+    "GET /api/peg-sessions": {
+      "requiredInputs": [
+        "symbol"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param symbol omitted",
+        "body": {
+          "tool": "get_peg_sessions",
+          "error": "missing required parameter: symbol — a tokenized equity symbol, e.g. symbol=CRCLx (get_peg_universe lists all tracked symbols)"
+        }
+      }
+    },
+    "GET /api/peg-universe": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/exit-quote": {
+      "requiredInputs": [
+        "symbol"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param symbol omitted",
+        "body": {
+          "tool": "get_exit_quote",
+          "error": "symbol is required (e.g. SPYx, cbBTC, FWDI). Call get_exit_method (free) for the covered list."
+        }
+      }
+    },
+    "GET /api/eth-price": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/base-gas": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/base-balance": {
+      "requiredInputs": [
+        "address"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param address omitted",
+        "body": {
+          "tool": "get_base_balance",
+          "error": "missing required parameter: address (a 0x… Base address)"
+        }
+      }
+    },
+    "GET /api/perp": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/liq-pulse": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/funding-pulse": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/price": {
+      "requiredInputs": [],
+      "callerError": null
+    }
+  }
+}

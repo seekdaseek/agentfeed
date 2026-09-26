@@ -58,6 +58,8 @@ Object.assign(PRICES, require('./expansion').PRICES_ADD);
 // service. A missing or corrupt metadata file must degrade to the old empty
 // declaration -- which is exactly what shipped until today -- and never stop the
 // paid surface from serving.
+const { questionFor } = require('./tools/questions');
+
 let BAZAAR_META = {};
 try {
   BAZAAR_META = require('./bazaar-examples.json').routes || {};
@@ -89,9 +91,32 @@ const ICON_URL = 'https://x402.ochinimus.app/icon.png';
 // page and the MCP tool definitions all render the full text, because that is
 // what humans and LLM tool-selection read. Only the 402 challenge is trimmed.
 //
-// 256 is well under the measured 487 so that a longer route path or extra tags,
-// which also count toward the payload, cannot push a route over.
-const CHALLENGE_DESC_MAX = 256;
+// 400 is 87 chars under the measured-good 487 and 115 under the known-bad 515,
+// so a longer route path or extra tags -- which also count toward the payload --
+// cannot push a route over. It was 256 until CDP's curation bar required the
+// description to say WHEN to use the endpoint: the when-to-use sentence is
+// prepended, which costs 18-62 chars, and at 256 that was silently eating the
+// tail of 29 of the 52 routes. At 400 exactly 4 are trimmed, and because the
+// when-to-use sentence LEADS, the trim only ever costs the tail of the prose --
+// never the sentence CDP curates on.
+const CHALLENGE_DESC_MAX = 400;
+
+/**
+ * The challenge description, led by when to use the route.
+ *
+ * CDP's curation bar (docs.cdp.coinbase.com/x402/seller/get-discovered) asks for
+ * "a description that tells an agent WHEN to use the endpoint". Ours said what
+ * comes back. The sentence is built from tools/questions.js -- the same map
+ * SKILL.md renders -- so the two are the same string by construction and cannot
+ * drift apart the next time one of them is edited.
+ */
+function whenToUse(p) {
+  const d = String(p.desc || '');
+  // The four entry routes already open with "Use when an agent needs ...", which
+  // IS the when-to-use sentence. Prefixing those would say it twice.
+  if (/^Use when/i.test(d)) return d;
+  return `Use when you need to answer: ${questionFor(p.tool, d)} ${d}`;
+}
 
 /** Trim for the challenge only. Never mutates the pricing table. */
 function challengeDesc(desc) {
@@ -182,7 +207,14 @@ function buildPaymentLayer() {
           payTo: payToEvm,
         }] : []),
       ],
-      description: challengeDesc(p.desc),   // challenge only; p.desc stays whole
+      description: challengeDesc(whenToUse(p)), // challenge only; p.desc stays whole
+      // NO errors key. MEASURED 2026-09-26: @x402/extensions strips unknown keys
+      // from the discovery extension config, and sanitizeResourceServiceMetadata
+      // keeps only serviceName, tags and iconUrl, so an `errors` field on this
+      // object never reaches the challenge -- the decoded resource carries exactly
+      // url, description, mimeType, serviceName, tags, iconUrl and nothing else.
+      // Error responses are published in openapi.json and /.well-known/x402,
+      // where CDP's crawler and a spec-following agent can actually read them.
       serviceName: 'AgentFeed',
       tags: TAGS[p.tool] || ['crypto','trading'],
       mimeType: 'application/json',

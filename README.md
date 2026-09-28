@@ -21,14 +21,14 @@ Two rails, same data:
 We run our own liquidation collector across **Bybit, OKX and Binance** — every USDT-margined
 perpetual on all three, recorded continuously since 2026-07-08.
 
-The size of that tape is not a claim, it is a query. Measured **2026-09-23 10:31 UTC**:
+The size of that tape is not a claim, it is a query. Measured **2026-09-28 06:56 UTC**:
 
 | | |
 |---|---|
-| Rows | **4,597,868** |
-| Distinct perp markets, whole tape | **906** |
-| Distinct perp markets, last 7 days | **874** — binance 727 · bybit 711 · okx 468 |
-| Range (UTC) | 2026-07-08 16:42:32 → 2026-09-23 10:31:44 |
+| Rows | **4,924,729** |
+| Distinct perp markets, whole tape | **907** |
+| Distinct perp markets, last 7 days | **861** — binance 728 · bybit 693 · okx 454 |
+| Range (UTC) | 2026-07-08 16:42:32 → 2026-09-28 06:56:17 |
 
 It grows while you read this: the row count above and the one you get from the
 same query five minutes later will not match.
@@ -83,7 +83,7 @@ Notional uses `filled_qty × avg_fill_price` — what actually executed — not 
 
 Every paid route, cheapest question last. Generated from
 [`/.well-known/x402.json`](https://x402.ochinimus.app/.well-known/x402.json),
-read 2026-09-25 — names, prices and routes are the manifest's, not a copy kept
+read 2026-09-28 — names, prices and routes are the manifest's, not a copy kept
 in sync by hand. What each one returns is under
 [59 tools](#59-tools-52-paid-http-routes--7-free--pricing), word for word as
 the service publishes it.
@@ -137,7 +137,11 @@ the service publishes it.
 | `get_base_gas` | $0.001 | `/api/base-gas` |
 | `get_btc_price` | $0.001 | `/api/btc-price` |
 | `get_eth_price` | $0.001 | `/api/eth-price` |
+| `get_funding_pulse` | $0.001 | `/api/funding-pulse` |
+| `get_liq_pulse` | $0.001 | `/api/liq-pulse` |
+| `get_perp` | $0.001 | `/api/perp` |
 | `get_sol_price` | $0.001 | `/api/sol-price` |
+| `get_spot` | $0.001 | `/api/price` |
 
 ## Two payment protocols on one 402
 
@@ -333,22 +337,21 @@ Seven, of which four have an HTTP route — those four are the ones published at
 | `get_forecast_record` | `/api/forecast-record` — live settled track record with the raw rows |
 | `pricing` | MCP only — lists everything with live prices |
 
-Three more free HTTP endpoints carry no tool of their own:
+Two more free HTTP endpoints carry no tool of their own:
 
 | Endpoint | What you get |
 |---|---|
 | `GET /api/sample` | Lists every paid route that has a stored sample response |
 | `GET /api/sample/<route>` | The real captured response for one of the 52 paid routes — the same example its Bazaar listing carries — with its price, input schema and paid URL. See what a route returns before paying for it. |
-| `GET /api/forecast-record` | Every settled cascade forecast with its question, probability and outcome, plus the summary score |
 
 A free route answers `"paid": false`, and a paid one `"paid": true`, because that field is
-per-request: it reports whether the route you called is priced. `curl`ing any of the three
+per-request: it reports whether the route you called is priced. `curl`ing either of the two
 above costs nothing and says so.
 
 ## Use it from an elizaOS agent
 
 ```bash
-npm i @seekdaseek/plugin-agentfeed   # v0.5.0 (npm latest, 2026-09-23)
+npm i @seekdaseek/plugin-agentfeed   # v0.5.1 (npm latest, 2026-09-23)
 ```
 
 Set `AGENTFEED_PRIVATE_KEY` to a funded Solana wallet and the agent pays per call automatically. Default spend cap $0.50/call (`AGENTFEED_MAX_SPEND_PER_CALL` to change).

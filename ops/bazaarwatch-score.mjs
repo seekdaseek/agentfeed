@@ -12,8 +12,10 @@
 //
 // usage: node score.mjs            daily row + uptime probe
 //        node score.mjs --summary  also send the Telegram summary now
+//        node score.mjs --no-send  never send Telegram, even on a Monday (manual runs)
 'use strict';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 
 const DB = '/opt/bazaarwatch/score.db';
@@ -30,7 +32,17 @@ const MERCHANTS = [
   { name: 'kronos', rail: 'base', payTo: '0x36038e1d712c5e39f35952164ec58ec2b96caee7' },
   { name: 'oblique', rail: 'base', payTo: '0x970007590aCC5C938cd51345B17AF51B1B40D3Ab' },
 ];
-const QUERIES = ['crypto liquidations', 'funding rate perps', 'open interest', 'perp market data', 'tokenized stock peg', 'solana priority fees'];
+const VALIDATE = 'https://api.cdp.coinbase.com/platform/v2/x402/validate';
+
+// The original six stay (their history is in the ranks table), plus the ten the
+// Sep 26 audit baselined. Three of the ten were already here; a Set keeps each
+// query once, so the daily run asks 13 questions, not 16. "funding rate perps"
+// and "funding rates perps" are different strings to CDP's search and both stay.
+const QUERIES = [...new Set([
+  'crypto liquidations', 'funding rate perps', 'open interest', 'perp market data', 'tokenized stock peg', 'solana priority fees',
+  'crypto liquidations', 'liquidation heatmap', 'short squeeze', 'funding rate', 'funding rates perps',
+  'liquidation history', 'open interest', 'cascade liquidation forecast', 'tokenized stock peg', 'bitcoin price',
+])];
 
 const db = new DatabaseSync(DB);
 db.exec(`
@@ -45,6 +57,15 @@ db.exec(`
     ts INTEGER NOT NULL, ok INTEGER NOT NULL, status INTEGER, ms INTEGER, path TEXT);
   CREATE TABLE IF NOT EXISTS wallet (
     ts INTEGER NOT NULL, day TEXT NOT NULL PRIMARY KEY, usdc REAL);
+  -- One row per AgentFeed route per day: what CDP's INDEX holds, next to what
+  -- the route serves LIVE. The index only refreshes when a client that fetched
+  -- a fresh 402 settles, so this is how the catalog refresh is tracked without
+  -- spending anything. desc_hash is sha256 of the indexed description (16 hex).
+  CREATE TABLE IF NOT EXISTS catalog (
+    ts INTEGER NOT NULL, day TEXT NOT NULL, resource TEXT NOT NULL,
+    last_updated TEXT, last_crawled_at TEXT, index_active INTEGER,
+    desc_hash TEXT, desc_len INTEGER, opens_with_when INTEGER, matches_live INTEGER,
+    PRIMARY KEY (day, resource));
 `);
 
 const now = Date.now();
@@ -124,6 +145,68 @@ async function rankRows() {
   return out;
 }
 
+/**
+ * The first sentence of a when-to-use description: "Use when you need to
+ * answer: <question>?" or "Use when an agent needs <x>." -- whichever the live
+ * route opens with. Taken from the LIVE challenge, so it follows tools/questions.js
+ * without this file needing a copy of the question map.
+ */
+function whenSentence(desc) {
+  const d = String(desc || '');
+  if (!/^Use when/.test(d)) return null;
+  const q = d.indexOf('?');
+  const dot = d.indexOf('. ');
+  const cut = [q, dot].filter((i) => i > 0).sort((a, b) => a - b)[0];
+  return cut ? d.slice(0, cut + 1) : null;
+}
+
+async function catalogRows() {
+  const ins = db.prepare(`INSERT OR REPLACE INTO catalog
+    (ts,day,resource,last_updated,last_crawled_at,index_active,desc_hash,desc_len,opens_with_when,matches_live)
+    VALUES (?,?,?,?,?,?,?,?,?,?)`);
+  let rows;
+  try { rows = (await j(`${CDP}/merchant?payTo=${MERCHANTS[0].payTo}&limit=100&offset=0`)).resources || []; }
+  catch (e) { console.log(`  catalog: merchant lookup failed (${e.message})`); return null; }
+
+  let fresh = 0, known = 0, live = 0;
+  const stale = [];
+  for (const r of rows) {
+    const indexed = String(r.description || '');
+    // /validate is the only place CDP exposes index.lastCrawledAt, and it also
+    // hands back the live challenge as CDP fetched it. It SIMULATES; it never
+    // settles, so it cannot refresh the index or cost anything. Measured Sep 26:
+    // liq-history and token-risk were validated and their index text stayed old.
+    let v = null;
+    try {
+      const res = await fetch(VALIDATE, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ resource: r.resource, method: 'GET' }),
+        signal: AbortSignal.timeout(25000),
+      });
+      if (res.ok) v = await res.json();
+    } catch { v = null; }
+    const liveDesc = v?.paymentRequirements?.resource?.description ?? null;
+    const sentence = whenSentence(liveDesc);
+    // With the live sentence, "new" means the index opens with EXACTLY what the
+    // route leads with today. If /validate failed, fall back to /^Use when/:
+    // no pre-3571ce9 description opened that way except the four entry routes,
+    // whose text did not change, so the two tests agree on every current route.
+    const opens = sentence ? indexed.startsWith(sentence) : /^Use when/.test(indexed);
+    const matches = liveDesc === null ? null : indexed === liveDesc;
+    if (liveDesc !== null) live++;
+    if (opens) fresh++; else stale.push(r.resource.replace(ORIGIN, ''));
+    known++;
+    ins.run(now, day, r.resource, r.lastUpdated ?? null, v?.index?.lastCrawledAt ?? null,
+      v?.index ? (v.index.active ? 1 : 0) : null,
+      crypto.createHash('sha256').update(indexed).digest('hex').slice(0, 16), indexed.length,
+      opens ? 1 : 0, matches === null ? null : (matches ? 1 : 0));
+    await new Promise((res) => setTimeout(res, 300));
+  }
+  console.log(`  catalog: ${fresh} of ${known} indexed descriptions open with the live when-to-use sentence (${live} checked against /validate)`);
+  if (stale.length) console.log(`  catalog: still the old text on ${stale.length}: ${stale.join(', ')}`);
+  return { fresh, known, stale };
+}
+
 async function gack9() {
   const key = (fs.readFileSync('/opt/agentfeed/.env', 'utf8').match(/^HELIUS_API_KEY=(.*)$/m) || [])[1];
   if (!key) return null;
@@ -157,6 +240,7 @@ function tg(text) {
   console.log(`  origin /health: ${p.status} (${p.ok ? 'up' : 'DOWN'})`);
   const totals = await merchantRows();
   const ranks = await rankRows();
+  const cat = await catalogRows();
   const bal = await gack9();
   const up = uptime30d();
   const wd = watchdogUptime();
@@ -164,6 +248,7 @@ function tg(text) {
   if (wd) console.log(`  uptime, watchdog 15-min probes: /health ${wd.health}% | paid /api/tvl ${wd.paid}% over ${wd.runs} runs`);
   console.log(`  Gack9 USDC: ${bal === null ? 'unreadable' : bal.toFixed(3)}`);
 
+  if (process.argv.includes('--no-send')) { console.log('  (--no-send: Telegram skipped)'); return; }
   const weekly = process.argv.includes('--summary') || new Date(now).getUTCDay() === 1;
   if (!weekly) { console.log('  (summary sends on Mondays; --summary forces it)'); return; }
   // AgentFeed's two payTo addresses are two rails on the SAME routes, so the
@@ -179,6 +264,9 @@ function tg(text) {
     `AgentFeed: ${sum('routes')} listed routes, ${sum('payers')} payer-slots/30d, ${sum('calls')} calls/30d`,
     `<i>payer-slots = each route's unique payers, summed across routes (same basis for everyone below)</i>`,
     line('otto/base'), line('kronos/base'), line('oblique/base'),
+    ``,
+    `<b>Bazaar catalog</b>`,
+    cat ? `${cat.fresh} of ${cat.known} indexed descriptions are the current when-to-use text` : 'catalog: lookup failed',
     ``,
     `<b>Search rank</b>`,
     ...ranks.map((r) => `${r.q}: ${r.rank ? '#' + r.rank : 'absent'} of ${r.results}`),

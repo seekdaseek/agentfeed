@@ -35,7 +35,7 @@ const QUESTIONS = {
   get_funding_cross: 'What is funding for this perp across venues?',
   get_funding_extremes: 'Which trades are most crowded by funding?',
   get_funding_history: 'What has the carry on this perp actually been?',
-  get_funding_rate: 'What is funding on SOL and BTC?',
+  get_funding_rate: 'What is the funding rate on this perp?',
   get_open_interest: 'How much open interest sits on this perp?',
   get_oi_spike_scan: 'Where is new leverage piling in?',
   get_long_short: 'How crowded is retail on this perp?',

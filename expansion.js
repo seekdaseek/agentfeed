@@ -65,7 +65,7 @@ const EXP = [
 
   // ---- derivatives suite ----
   { name: 'get_funding_cross', route: 'GET /api/funding-cross', usd: 0.01,
-    desc: 'Funding rate for ANY USDT perp across Bybit, OKX and Hyperliquid in one call, with the cross-venue spread and a crowding read. /api/funding-rate covers SOL and BTC only.',
+    desc: 'Funding rate for ANY USDT perp across Bybit, OKX and Hyperliquid in one call, with the cross-venue spread and a crowding read.',
     tags: ['funding', 'perps', 'cross-exchange', 'trading'],
     schema: { symbol: symDefault }, run: (a) => D.getFundingCross(a) },
   { name: 'get_funding_extremes', route: 'GET /api/funding-extremes', usd: 0.02,

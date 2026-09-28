@@ -8,6 +8,9 @@
 //         schemas and KEEP the captured output examples. A schema fix must not
 //         drag 52 fresh output captures into the 402 challenges with it, or the
 //         diff can no longer show that only the intended routes changed.
+//   or:   node --env-file=.env gen-bazaar-meta.js --recapture=get_a,get_b
+//         a fresh output example for the named tools only; every other byte of
+//         the file is kept, for the same reason.
 //
 // Nothing here is hand-written per route. Three existing tables are the source:
 //
@@ -76,6 +79,7 @@ const SYMBOL_FOR = {
   get_exit_quote: 'SPYx',        // a covered Kamino reserve with a `partial` verdict
   get_cascade_forecast: 'SOL',   // this tool takes the bare asset, not the perp
   get_spot: 'SOL',               // the spot route serves bare assets (SOL/BTC/ETH), not perps
+  get_funding_rate: 'ETHUSDT',   // shows the symbol mode on a perp that is not the no-symbol pair
 };
 
 // Extra call arguments for routes whose default parameters return a real but
@@ -233,7 +237,7 @@ const { EXP } = require('./expansion');
 const { TOOL_DEFS } = require('./mcp');
 
 const { getPrice } = require('./tools/prices');
-const { getFunding } = require('./tools/funding');
+const { getFunding, getFundingRate } = require('./tools/funding');
 const { getFearGreed } = require('./tools/feargreed');
 const { getWalletHoldings, getTokenMetadata } = require('./tools/onchain');
 const { getRecentLiquidations, getLiquidationStats, getLiquidationLeaders } = require('./tools/liquidations');
@@ -250,7 +254,7 @@ const { getTokenRisk } = require('./tools/tokenrisk');
 const BASE_RUN = {
   get_sol_price: () => getPrice('SOL'),
   get_btc_price: () => getPrice('BTC'),
-  get_funding_rate: async () => ({ sol: await getFunding('SOL'), btc: await getFunding('BTC') }),
+  get_funding_rate: (a) => getFundingRate(a),
   get_market_snapshot: async () => {
     const [sol, btc, fundingSol, fundingBtc, fg] = await Promise.all([
       getPrice('SOL'), getPrice('BTC'), getFunding('SOL'), getFunding('BTC'), getFearGreed(),
@@ -342,8 +346,75 @@ function schemasOnly() {
   for (const p of changed) console.log(`  changed: ${p}`);
 }
 
+// The output half of one route's declaration: the real answer to the published
+// input example (or the response in captures/), in the envelope, trimmed to the
+// budget. Shared by the full run and --recapture.
+async function captureExample(r, callArgs) {
+  const capture = path.join(CAPTURE_DIR, `${r.tool}.json`);
+  let status = 'OK';
+  let note = '';
+  let example = null;
+  let plan = null;
+  try {
+    let data;
+    if (fs.existsSync(capture)) {
+      data = JSON.parse(fs.readFileSync(capture, 'utf8'));
+      note = 'from captures/';
+    } else {
+      data = await Promise.race([
+        Promise.resolve(r.run(callArgs)),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout 30000ms')), 30000)),
+      ]);
+    }
+    if (data === null || data === undefined) { status = 'EMPTY'; note = 'null'; }
+    else if (Array.isArray(data) && data.length === 0) { status = 'EMPTY'; note = 'array[0]'; }
+    else if (typeof data === 'object' && Object.keys(data).length === 0) { status = 'EMPTY'; note = '{}'; }
+    if (data && data.error) { status = 'ERROR'; note = String(data.error).slice(0, 60); }
+    const envelope = { tool: r.tool, data, paid: true };
+    const fit = fitExample(envelope, EXAMPLE_BUDGET);
+    example = fit.example;
+    plan = fit.plan;
+    if (fit.over) note = (note ? note + '; ' : '') + `OVER BUDGET (${bytes(example)}B)`;
+    const hollow = hollowPaths(envelope, example);
+    if (hollow.length) { status = 'HOLLOW'; note = (note ? note + '; ' : '') + `emptied: ${hollow.slice(0, 4).join(', ')}`; }
+  } catch (e) {
+    status = String(e.message).includes('timeout') ? 'SLOW' : 'ERROR';
+    note = String(e.message).slice(0, 70);
+  }
+  return { status, note, example, plan };
+}
+
+/**
+ * --recapture=get_a,get_b: a fresh output example for the named tools, every
+ * other byte of the file kept, the output-half twin of --schemas-only. Each entry
+ * is rebuilt on top of the existing one, so its key order stays put. Nothing is
+ * written unless every named route captured cleanly.
+ */
+async function recapture(tools) {
+  const rows = buildRoutes().filter((r) => tools.includes(r.tool));
+  const unknown = tools.filter((t) => !rows.some((r) => r.tool === t));
+  if (unknown.length) { console.error(`FATAL: no paid route for ${unknown.join(', ')}`); process.exit(1); }
+  const prev = JSON.parse(fs.readFileSync(OUT_FILE, 'utf8'));
+  const next = [];
+  for (const r of rows) {
+    const old = prev.routes[r.pattern];
+    if (!old) { console.error(`FATAL: ${r.pattern} has no existing entry; run the full generator`); process.exit(1); }
+    const { input, pathParams } = splitSchema(r.zodSchema, r.pathParamKeys, r.tool);
+    const c = await captureExample(r, { ...input, ...pathParams });
+    process.stdout.write(`  ${c.status.padEnd(5)} ${r.pattern.replace('GET ', '').padEnd(30)} ex=${String(c.example ? bytes(c.example) : 0).padStart(4)}B  ${c.note}\n`);
+    if (c.status !== 'OK' || !c.example) { console.error(`FATAL: ${r.pattern} did not capture cleanly; nothing written`); process.exit(1); }
+    next.push([r.pattern, { ...old, output: { example: c.example, schema: schemaOf(c.example) } }]);
+  }
+  for (const [pattern, entry] of next) prev.routes[pattern] = entry;
+  prev._outputs_recaptured_at = new Date().toISOString();
+  fs.writeFileSync(OUT_FILE, JSON.stringify(prev, null, 1) + '\n');
+  console.log(`recapture: ${next.length} route outputs replaced, the other ${Object.keys(prev.routes).length - next.length} untouched`);
+}
+
 async function main() {
   if (process.argv.includes('--schemas-only')) return schemasOnly();
+  const only = process.argv.find((a) => a.startsWith('--recapture='));
+  if (only) return recapture(only.slice('--recapture='.length).split(',').filter(Boolean));
   const rows = buildRoutes();
   const missing = rows.filter((r) => typeof r.run !== 'function');
   if (missing.length) {
@@ -357,38 +428,8 @@ async function main() {
   for (const r of rows) {
     const { query, pathP, input, pathParams } = splitSchema(r.zodSchema, r.pathParamKeys, r.tool);
     const callArgs = { ...input, ...pathParams };
-    const capture = path.join(CAPTURE_DIR, `${r.tool}.json`);
-    let status = 'OK';
-    let note = '';
-    let example = null;
-    let plan = null;
     const t0 = Date.now();
-    try {
-      let data;
-      if (fs.existsSync(capture)) {
-        data = JSON.parse(fs.readFileSync(capture, 'utf8'));
-        note = 'from captures/';
-      } else {
-        data = await Promise.race([
-          Promise.resolve(r.run(callArgs)),
-          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout 30000ms')), 30000)),
-        ]);
-      }
-      if (data === null || data === undefined) { status = 'EMPTY'; note = 'null'; }
-      else if (Array.isArray(data) && data.length === 0) { status = 'EMPTY'; note = 'array[0]'; }
-      else if (typeof data === 'object' && Object.keys(data).length === 0) { status = 'EMPTY'; note = '{}'; }
-      if (data && data.error) { status = 'ERROR'; note = String(data.error).slice(0, 60); }
-      const envelope = { tool: r.tool, data, paid: true };
-      const fit = fitExample(envelope, EXAMPLE_BUDGET);
-      example = fit.example;
-      plan = fit.plan;
-      if (fit.over) note = (note ? note + '; ' : '') + `OVER BUDGET (${bytes(example)}B)`;
-      const hollow = hollowPaths(envelope, example);
-      if (hollow.length) { status = 'HOLLOW'; note = (note ? note + '; ' : '') + `emptied: ${hollow.slice(0, 4).join(', ')}`; }
-    } catch (e) {
-      status = String(e.message).includes('timeout') ? 'SLOW' : 'ERROR';
-      note = String(e.message).slice(0, 70);
-    }
+    const { status, note, example, plan } = await captureExample(r, callArgs);
 
     const entry = {
       tool: r.tool,

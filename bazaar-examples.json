@@ -104,33 +104,51 @@
   "GET /api/funding-rate": {
    "tool": "get_funding_rate",
    "price_usd": 0.002,
-   "input": {},
+   "input": {
+    "symbol": "ETHUSDT"
+   },
    "inputSchema": {
-    "properties": {},
+    "properties": {
+     "symbol": {
+      "description": "USDT perp symbol e.g. ETHUSDT, ONDOUSDT (omit for SOL and BTC from Hyperliquid)",
+      "type": "string"
+     }
+    },
     "required": []
    },
    "output": {
     "example": {
      "tool": "get_funding_rate",
      "data": {
-      "sol": {
-       "symbol": "SOL",
-       "funding_rate_hourly": 0.0000125,
-       "funding_rate_8h_equiv": 0.0001,
-       "funding_rate_pct_hourly": 0.00125,
-       "mark_price": 121.42,
-       "open_interest": 6103405.560000007,
-       "source": "hyperliquid"
+      "symbol": "ETHUSDT",
+      "venues": {
+       "bybit": {
+        "funding_rate_raw": -0.0000658,
+        "funding_interval_hours": 8,
+        "funding_rate_8h": -0.0000658,
+        "annualized_pct": -7.21,
+        "next_funding_time": 1790611200000,
+        "mark_price": 2649.08
+       },
+       "okx": {
+        "funding_rate_raw": -0.0000219362088511,
+        "funding_interval_hours": 8,
+        "funding_rate_8h": -0.0000219362088511,
+        "annualized_pct": -2.4,
+        "next_funding_time": 1790611200000,
+        "mark_price": 2648.8
+       },
+       "hyperliquid": {
+        "funding_rate_raw": 0.0000125,
+        "funding_interval_hours": 1,
+        "funding_rate_8h": 0.0001,
+        "annualized_pct": 10.95,
+        "next_funding_time": 1790593200000,
+        "mark_price": 2650.7
+       }
       },
-      "btc": {
-       "symbol": "BTC",
-       "funding_rate_hourly": 0.0000125,
-       "funding_rate_8h_equiv": 0.0001,
-       "funding_rate_pct_hourly": 0.00125,
-       "mark_price": 83875,
-       "open_interest": 39511.1646,
-       "source": "hyperliquid"
-      }
+      "note": "Each rate is quoted for its own interval: funding_rate_8h = raw x 8 / funding_interval_hours, annualized_pct = raw x 24 / funding_interval_hours x 365 x 100. /api/funding-cross adds the cross-venue spread and a crowding read.",
+      "source": "bybit+okx+hyperliquid public funding"
      },
      "paid": true
     },
@@ -143,11 +161,17 @@
       "data": {
        "type": "object",
        "properties": {
-        "sol": {
+        "symbol": {
+         "type": "string"
+        },
+        "venues": {
          "type": "object"
         },
-        "btc": {
-         "type": "object"
+        "note": {
+         "type": "string"
+        },
+        "source": {
+         "type": "string"
         }
        }
       },
@@ -1755,14 +1779,16 @@
      "data": {
       "symbol": "SOLUSDT",
       "short_squeeze_score": 0,
-      "long_flush_score": 62,
+      "long_flush_score": 7,
       "inputs": {
-       "funding_rate_8h": 0.0001,
-       "oi_change_24h_pct": 9.93,
-       "long_account_pct": 68.86,
+       "funding_rate_8h": 0.00008784,
+       "funding_rate_raw": 0.00008784,
+       "funding_interval_hours": 8,
+       "oi_change_24h_pct": -4.74,
+       "long_account_pct": 68.82,
        "liq_24h": {
-        "longs_usd": 3920645,
-        "shorts_usd": 12209052
+        "longs_usd": 10578855,
+        "shorts_usd": 1792016
        }
       },
       "read": "no extreme setup",
@@ -1920,21 +1946,28 @@
       "symbol": "SOLUSDT",
       "venues": {
        "bybit": {
-        "funding_rate_8h": 0.0001,
-        "next_funding_time": 1790380800000,
-        "mark_price": 121.419
+        "funding_rate_8h": 0.00008784,
+        "funding_rate_raw": 0.00008784,
+        "funding_interval_hours": 8,
+        "next_funding_time": 1790611200000,
+        "mark_price": 118.209
        },
        "okx": {
-        "funding_rate_8h": 0.0001,
-        "next_funding_time": 1790409600000
+        "funding_rate_8h": 0.0000384889726373,
+        "funding_rate_raw": 0.0000384889726373,
+        "funding_interval_hours": 8,
+        "next_funding_time": 1790611200000,
+        "mark_price": 118.19
        },
        "hyperliquid": {
         "funding_rate_1h": 0.0000125,
         "funding_rate_8h_equiv": 0.0001,
-        "mark_price": 121.42
+        "funding_rate_raw": 0.0000125,
+        "funding_interval_hours": 1,
+        "mark_price": 118.31
        }
       },
-      "spread_8h": 0,
+      "spread_8h": 0.00006151,
       "crowding": "longs_pay_everywhere"
      },
      "paid": true
@@ -1991,52 +2024,46 @@
      "tool": "get_funding_extremes",
      "data": {
       "source": "bybit_linear_universe",
-      "universe_size": 290,
+      "universe_size": 299,
       "min_turnover_usd": 1000000,
       "most_positive": [
        {
-        "symbol": "RAVEUSDT",
-        "funding_rate_8h": 0.0027543,
-        "annualized_pct": 301.6,
-        "price_24h_pct": -2.56,
-        "oi_usd": 2489059
+        "symbol": "ARKUSDT",
+        "funding_rate_8h": 0.00158998,
+        "funding_rate_raw": 0.00079499,
+        "funding_interval_hours": 4,
+        "annualized_pct": 174.1,
+        "price_24h_pct": -10.18,
+        "oi_usd": 2773871
        },
        {
-        "symbol": "USUSDT",
-        "funding_rate_8h": 0.00121524,
-        "annualized_pct": 133.07,
-        "price_24h_pct": 9.9,
-        "oi_usd": 5739469
-       },
-       {
-        "symbol": "TMXUSDT",
-        "funding_rate_8h": 0.00116627,
-        "annualized_pct": 127.71,
-        "price_24h_pct": -26.14,
-        "oi_usd": 959862
+        "symbol": "LONGXIAUSDT",
+        "funding_rate_8h": 0.00149958,
+        "funding_rate_raw": 0.00074979,
+        "funding_interval_hours": 4,
+        "annualized_pct": 164.2,
+        "price_24h_pct": -32.3,
+        "oi_usd": 1449504
        }
       ],
       "most_negative": [
        {
-        "symbol": "RAREUSDT",
-        "funding_rate_8h": -0.00495278,
-        "annualized_pct": -542.33,
-        "price_24h_pct": 23.09,
-        "oi_usd": 833574
+        "symbol": "SAGAUSDT",
+        "funding_rate_8h": -0.0053745,
+        "funding_rate_raw": -0.00268725,
+        "funding_interval_hours": 4,
+        "annualized_pct": -588.51,
+        "price_24h_pct": -4.43,
+        "oi_usd": 3283608
        },
        {
-        "symbol": "FLOCKUSDT",
-        "funding_rate_8h": -0.00286719,
-        "annualized_pct": -313.96,
-        "price_24h_pct": 4.19,
-        "oi_usd": 3637520
-       },
-       {
-        "symbol": "STEEMUSDT",
-        "funding_rate_8h": -0.00152602,
-        "annualized_pct": -167.1,
-        "price_24h_pct": 2.28,
-        "oi_usd": 1259411
+        "symbol": "BLASTUSDT",
+        "funding_rate_8h": -0.00224282,
+        "funding_rate_raw": -0.00224282,
+        "funding_interval_hours": 8,
+        "annualized_pct": -245.59,
+        "price_24h_pct": -12.27,
+        "oi_usd": 1149802
        }
       ]
      },
@@ -2160,25 +2187,31 @@
       "baseline_min_ago": 30,
       "spikes": [
        {
-        "symbol": "SAGAUSDT",
-        "oi_usd": 4036255,
-        "oi_change_pct": 7.4,
-        "funding_rate_8h": 0.00005,
-        "price_24h_pct": -11.3
+        "symbol": "FLOCKUSDT",
+        "oi_usd": 3173189,
+        "oi_change_pct": 16.48,
+        "funding_rate_8h": 0.0001,
+        "funding_rate_raw": 0.00005,
+        "funding_interval_hours": 4,
+        "price_24h_pct": -9.9
        },
        {
-        "symbol": "SOXLUSDT",
-        "oi_usd": 51958235,
-        "oi_change_pct": 7.23,
-        "funding_rate_8h": 0.00002971,
-        "price_24h_pct": 11.57
+        "symbol": "ALGOUSDT",
+        "oi_usd": 14571114,
+        "oi_change_pct": 5.44,
+        "funding_rate_8h": -0.00022272,
+        "funding_rate_raw": -0.00022272,
+        "funding_interval_hours": 8,
+        "price_24h_pct": 8.95
        },
        {
-        "symbol": "RENDERUSDT",
-        "oi_usd": 13248249,
-        "oi_change_pct": 5.57,
-        "funding_rate_8h": 0.00005,
-        "price_24h_pct": 10.65
+        "symbol": "MARSCOINUSDT",
+        "oi_usd": 12820971,
+        "oi_change_pct": -5.37,
+        "funding_rate_8h": 0.0001,
+        "funding_rate_raw": 0.00005,
+        "funding_interval_hours": 4,
+        "price_24h_pct": 10.81
        }
       ]
      },
@@ -2303,11 +2336,13 @@
      "tool": "get_basis",
      "data": {
       "symbol": "SOLUSDT",
-      "mark_price": 121.42,
-      "spot_price": 121.43,
-      "basis_pct": -0.0082,
+      "mark_price": 118.201,
+      "spot_price": 118.26,
+      "basis_pct": -0.0499,
       "state": "flat",
-      "funding_rate_8h": 0.0001
+      "funding_rate_8h": 0.00008784,
+      "funding_rate_raw": 0.00008784,
+      "funding_interval_hours": 8
      },
      "paid": true
     },
@@ -2336,6 +2371,12 @@
          "type": "string"
         },
         "funding_rate_8h": {
+         "type": "number"
+        },
+        "funding_rate_raw": {
+         "type": "number"
+        },
+        "funding_interval_hours": {
          "type": "number"
         }
        }
@@ -2432,21 +2473,27 @@
      "data": {
       "symbol": "SOLUSDT",
       "intervals": 30,
-      "avg_rate_8h": 0.00003041,
-      "avg_annualized_pct": 3.33,
-      "positive_share_pct": 63,
+      "avg_rate_8h": 0.00005327,
+      "avg_annualized_pct": 5.83,
+      "positive_share_pct": 77,
       "history": [
        {
-        "ts": 1790352000000,
-        "rate_8h": 0.0001
+        "ts": 1790582400000,
+        "rate_8h": 0.00008247,
+        "funding_rate_raw": 0.00008247,
+        "funding_interval_hours": 8
        },
        {
-        "ts": 1790323200000,
-        "rate_8h": -0.0000047
+        "ts": 1790553600000,
+        "rate_8h": 0.00006338,
+        "funding_rate_raw": 0.00006338,
+        "funding_interval_hours": 8
        },
        {
-        "ts": 1790294400000,
-        "rate_8h": -0.00010564
+        "ts": 1790524800000,
+        "rate_8h": 0.0001,
+        "funding_rate_raw": 0.0001,
+        "funding_interval_hours": 8
        }
       ]
      },
@@ -2510,52 +2557,64 @@
      "tool": "get_top_movers",
      "data": {
       "source": "bybit_linear_universe",
-      "universe_size": 290,
+      "universe_size": 299,
       "min_turnover_usd": 1000000,
       "gainers": [
        {
-        "symbol": "PHAUSDT",
-        "price": 0.08014,
-        "change_24h_pct": 58.66,
-        "turnover_24h_usd": 30081331,
-        "funding_rate_8h": 0.00008699
+        "symbol": "QNTUSDT",
+        "price": 226.72,
+        "change_24h_pct": 31.05,
+        "turnover_24h_usd": 522856332,
+        "funding_rate_8h": 0.0001,
+        "funding_rate_raw": 0.0001,
+        "funding_interval_hours": 8
        },
        {
-        "symbol": "LYNUSDT",
-        "price": 0.05835,
-        "change_24h_pct": 46.28,
-        "turnover_24h_usd": 2473255,
-        "funding_rate_8h": 0.00005
+        "symbol": "BTWUSDT",
+        "price": 1.39689,
+        "change_24h_pct": 26.07,
+        "turnover_24h_usd": 45725371,
+        "funding_rate_8h": 0.00056134,
+        "funding_rate_raw": 0.00028067,
+        "funding_interval_hours": 4
        },
        {
-        "symbol": "BPUSDT",
-        "price": 1.17372,
-        "change_24h_pct": 29.03,
-        "turnover_24h_usd": 2514691,
-        "funding_rate_8h": 0.00005
+        "symbol": "HBARUSDT",
+        "price": 0.11291,
+        "change_24h_pct": 19.17,
+        "turnover_24h_usd": 89605037,
+        "funding_rate_8h": -0.00000436,
+        "funding_rate_raw": -0.00000436,
+        "funding_interval_hours": 8
        }
       ],
       "losers": [
        {
-        "symbol": "TMXUSDT",
-        "price": 0.01167,
-        "change_24h_pct": -26.14,
-        "turnover_24h_usd": 3539192,
-        "funding_rate_8h": 0.00116627
+        "symbol": "QUSDT",
+        "price": 0.02544,
+        "change_24h_pct": -45.87,
+        "turnover_24h_usd": 55364194,
+        "funding_rate_8h": 0.0001,
+        "funding_rate_raw": 0.00005,
+        "funding_interval_hours": 4
        },
        {
-        "symbol": "BRUSDT",
-        "price": 0.81658,
-        "change_24h_pct": -20.7,
-        "turnover_24h_usd": 30825239,
-        "funding_rate_8h": -0.00140557
+        "symbol": "LONGXIAUSDT",
+        "price": 0.07,
+        "change_24h_pct": -32.3,
+        "turnover_24h_usd": 5859730,
+        "funding_rate_8h": 0.00149958,
+        "funding_rate_raw": 0.00074979,
+        "funding_interval_hours": 4
        },
        {
-        "symbol": "SAGAUSDT",
-        "price": 0.03574,
-        "change_24h_pct": -15.96,
-        "turnover_24h_usd": 73503750,
-        "funding_rate_8h": 0.00002516
+        "symbol": "STONKUSDT",
+        "price": 0.2396,
+        "change_24h_pct": -24.44,
+        "turnover_24h_usd": 4663895,
+        "funding_rate_8h": 0.0007196,
+        "funding_rate_raw": 0.0003598,
+        "funding_interval_hours": 4
        }
       ]
      },
@@ -4264,53 +4323,60 @@
       "funding": {
        "venues": {
         "bybit": {
-         "funding_rate_8h": 0.0001,
-         "next_funding_time": 1790380800000,
-         "mark_price": 121.419
+         "funding_rate_8h": 0.00008784,
+         "funding_rate_raw": 0.00008784,
+         "funding_interval_hours": 8,
+         "next_funding_time": 1790611200000,
+         "mark_price": 118.209
         },
         "okx": {
-         "funding_rate_8h": 0.0001,
-         "next_funding_time": 1790409600000
+         "funding_rate_8h": 0.0000384889726373,
+         "funding_rate_raw": 0.0000384889726373,
+         "funding_interval_hours": 8,
+         "next_funding_time": 1790611200000,
+         "mark_price": 118.19
         },
         "hyperliquid": {
          "funding_rate_1h": 0.0000125,
          "funding_rate_8h_equiv": 0.0001,
-         "mark_price": 121.42
+         "funding_rate_raw": 0.0000125,
+         "funding_interval_hours": 1,
+         "mark_price": 118.31
         }
        },
-       "spread_8h": 0,
+       "spread_8h": 0.00006151,
        "crowding": "longs_pay_everywhere"
       },
       "open_interest": {
        "bybit": {
-        "oi_base": 6478924.1,
-        "oi_usd": 809609835,
-        "change_1h_pct": -1.3,
-        "change_24h_pct": 9.93
+        "oi_base": 6961018.5,
+        "oi_usd": 822567812,
+        "change_1h_pct": 0.36,
+        "change_24h_pct": -4.74
        },
        "okx": {
-        "oi_base": 3054425.3599999994,
-        "oi_usd": 370837783
+        "oi_base": 3046096.9400000013,
+        "oi_usd": 360200963
        },
-       "mark_price": 121.419
+       "mark_price": 118.209
       },
       "long_short": {
-       "long_pct": 68.86,
-       "short_pct": 31.14,
-       "long_pct_1h_ago": 68.74,
-       "long_pct_24h_ago": 70.08,
+       "long_pct": 68.82,
+       "short_pct": 31.18,
+       "long_pct_1h_ago": 68.79,
+       "long_pct_24h_ago": 67.29,
        "source": "bybit_v5_public"
       },
       "liquidations_24h": {
-       "prints": 1808,
-       "total_usd": 16129696.9,
-       "longs_usd": 3920645.3,
-       "shorts_usd": 12209051.6,
-       "biggest_print_usd": 915882,
+       "prints": 1652,
+       "total_usd": 12370870.62,
+       "longs_usd": 10578854.85,
+       "shorts_usd": 1792015.77,
+       "biggest_print_usd": 603093.97,
        "venues": 3,
-       "dominant_side": "shorts"
+       "dominant_side": "longs"
       },
-      "tape_age_sec": 3,
+      "tape_age_sec": 4,
       "partial": null,
       "source": "bybit+okx+hyperliquid venues, liquidations from our own tape"
      },
@@ -4476,31 +4542,37 @@
      "data": {
       "extremes": [
        {
-        "symbol": "RAREUSDT",
+        "symbol": "SAGAUSDT",
         "venue": "bybit",
-        "funding_rate_8h": -0.00495278,
-        "annualized_pct": -542.33,
-        "oi_usd": 833574,
-        "price_24h_pct": 23.09
+        "funding_rate_8h": -0.0053745,
+        "funding_rate_raw": -0.00268725,
+        "funding_interval_hours": 4,
+        "annualized_pct": -588.51,
+        "oi_usd": 3283608,
+        "price_24h_pct": -4.43
        },
        {
-        "symbol": "FLOCKUSDT",
+        "symbol": "BLASTUSDT",
         "venue": "bybit",
-        "funding_rate_8h": -0.00286719,
-        "annualized_pct": -313.96,
-        "oi_usd": 3637520,
-        "price_24h_pct": 4.19
+        "funding_rate_8h": -0.00224282,
+        "funding_rate_raw": -0.00224282,
+        "funding_interval_hours": 8,
+        "annualized_pct": -245.59,
+        "oi_usd": 1149802,
+        "price_24h_pct": -12.27
        },
        {
-        "symbol": "RAVEUSDT",
+        "symbol": "SAMSUNGUSDT",
         "venue": "bybit",
-        "funding_rate_8h": 0.0027543,
-        "annualized_pct": 301.6,
-        "oi_usd": 2489059,
-        "price_24h_pct": -2.56
+        "funding_rate_8h": -0.00191945,
+        "funding_rate_raw": -0.00191945,
+        "funding_interval_hours": 8,
+        "annualized_pct": -210.18,
+        "oi_usd": 9646288,
+        "price_24h_pct": -5.43
        }
       ],
-      "universe_size": 290,
+      "universe_size": 299,
       "min_turnover_usd": 1000000,
       "venue_scope": [
        "bybit"
@@ -4611,5 +4683,6 @@
    }
   }
  },
- "_schemas_regenerated_at": "2026-09-28T06:48:56.431Z"
+ "_schemas_regenerated_at": "2026-09-28T09:48:10.547Z",
+ "_outputs_recaptured_at": "2026-09-28T10:04:56.587Z"
 }

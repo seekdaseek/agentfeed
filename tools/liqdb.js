@@ -163,6 +163,9 @@ async function getSqueezeScore(p = {}) {
           ? `no venue quotes ${sym} and it has never appeared in the liquidation tape, so there is nothing to score`
           : `${missing.join(', ')} did not resolve for ${sym}, and this composite is not reported on partial inputs`,
         missing_inputs: missing,
+        // A Bybit rate whose interval could not be read has no 8h figure, and
+        // that is named rather than left looking like a missing rate.
+        ...(f?.venues?.bybit?.funding_interval_note ? { funding_interval_note: f.venues.bybit.funding_interval_note } : {}),
         recorded_in_tape: !!seen,
         note: 'a decline is an answer, not an error: a score built from inputs that did not resolve would look healthy and be wrong',
         source: 'agentfeed_liq_tape',
@@ -190,7 +193,8 @@ async function getSqueezeScore(p = {}) {
       short_squeeze_score: score(shortSq),
       long_flush_score: score(longSq),
       inputs: {
-        funding_rate_8h: funding, oi_change_24h_pct: oiChg, long_account_pct: longPct,
+        funding_rate_8h: funding, funding_rate_raw: f.venues.bybit.funding_rate_raw, funding_interval_hours: f.venues.bybit.funding_interval_hours,
+        oi_change_24h_pct: oiChg, long_account_pct: longPct,
         liq_24h: { longs_usd: longsUsd, shorts_usd: shortsUsd },
       },
       read: score(shortSq) >= 65 ? 'crowded shorts + building OI — short-squeeze conditions' :

@@ -10,7 +10,7 @@
 
 const TOOL_TITLES = {
   get_sol_price: 'SOL spot price', get_btc_price: 'BTC spot price', get_eth_price: 'ETH spot price',
-  get_spot: 'Spot price', get_funding_rate: 'SOL and BTC funding', get_fear_greed: 'Fear and Greed index',
+  get_spot: 'Spot price', get_funding_rate: 'Perp funding rate', get_fear_greed: 'Fear and Greed index',
   get_market_snapshot: 'Market snapshot', get_trade_context: 'Trade context', get_positioning: 'SOL and BTC positioning',
   get_perp: 'Perp snapshot', get_liq_pulse: 'Liquidation pulse', get_funding_pulse: 'Funding pulse',
   get_wallet_holdings: 'Solana wallet holdings', get_wallet_activity: 'Solana wallet activity',

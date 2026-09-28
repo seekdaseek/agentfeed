@@ -10,7 +10,7 @@ const { ExactEvmScheme } = require('@x402/evm/exact/server');
 const { SOLANA_MAINNET_CAIP2, SOLANA_DEVNET_CAIP2 } = require('@x402/svm');
 const { logCall } = require('./db');
 const { getPrice } = require('./tools/prices');
-const { getFunding } = require('./tools/funding');
+const { getFunding, getFundingRate } = require('./tools/funding');
 const { getFearGreed } = require('./tools/feargreed');
 const { getWalletHoldings, getTokenMetadata } = require('./tools/onchain');
 const { getRecentLiquidations, getLiquidationStats, getLastLiquidation, getLiquidationLeaders } = require('./tools/liquidations');
@@ -33,8 +33,9 @@ const TOOL_DEFS = [
     schema: {}, run: () => getPrice('SOL') },
   { name: 'get_btc_price', usd: 0.001, desc: 'Live BTC/USD spot price (multi-source: Coinbase, Kraken, Pyth Hermes fallback). The confidence and publish_time fields are null unless Pyth Hermes served the request; Coinbase and Kraken publish neither.',
     schema: {}, run: () => getPrice('BTC') },
-  { name: 'get_funding_rate', usd: 0.002, desc: 'Current SOL and BTC perp funding rates, mark prices, open interest (Hyperliquid).',
-    schema: {}, run: async () => ({ sol: await getFunding('SOL'), btc: await getFunding('BTC') }) },
+  { name: 'get_funding_rate', usd: 0.002, desc: 'Funding rate for any USDT perp on Bybit, OKX and Hyperliquid, each at its own interval: raw rate, interval hours, 8h equivalent, annualised rate, next funding time and mark price per venue. Without a symbol, SOL and BTC from Hyperliquid with open interest.',
+    schema: { symbol: z.string().optional().describe('USDT perp symbol e.g. ETHUSDT, ONDOUSDT (omit for SOL and BTC from Hyperliquid)') },
+    run: (a) => getFundingRate(a) },
   { name: 'get_fear_greed', usd: 0, desc: 'Crypto Fear & Greed index (0-100) with classification.',
     schema: {}, run: () => getFearGreed() },
   { name: 'get_market_snapshot', usd: 0.003, desc: 'SOL+BTC prices, funding rates, and Fear & Greed in one call.',
@@ -151,13 +152,19 @@ const TOOL_ANNOTATIONS = Object.freeze({
 // input schema, the description and the free sample at /api/sample/<route>.
 const BAZAAR_META = (() => { try { return require('./bazaar-examples.json').routes || {}; } catch { return {}; } })();
 const METfByTool = new Map(Object.values(BAZAAR_META).map((m) => [m.tool, m]));
+// A tool with two answer shapes names both, so the envelope's `data` says which
+// one comes back. The envelope itself already admits either.
+const OUTPUT_SHAPES = {
+  get_funding_rate: 'without symbol: {sol, btc} from Hyperliquid; with symbol: {symbol, venues: {bybit, okx, hyperliquid}}',
+};
 function outputSchemaFor(def) {
+  const shape = OUTPUT_SHAPES[def.name] ? ` (${OUTPUT_SHAPES[def.name]})` : '';
   return {
     tool: z.literal(def.name).describe('the tool that produced this payload'),
     data: z.record(z.string(), z.unknown()).describe(
       METfByTool.has(def.name)
-        ? `the ${def.name} payload; a real captured example is free at https://x402.ochinimus.app/api/sample/${def.name}`
-        : `the ${def.name} payload`,
+        ? `the ${def.name} payload${shape}; a real captured example is free at https://x402.ochinimus.app/api/sample/${def.name}`
+        : `the ${def.name} payload${shape}`,
     ),
   };
 }

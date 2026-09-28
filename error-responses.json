@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-28T06:49:34.013Z",
+  "generatedAt": "2026-09-28T09:49:21.076Z",
   "limits": {
     "get": 240,
     "other": 2400,
@@ -53,7 +53,14 @@
     },
     "GET /api/funding-rate": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_funding_rate",
+          "error": "invalid symbol: not-a-symbol"
+        }
+      }
     },
     "GET /api/market-snapshot": {
       "requiredInputs": [],
@@ -87,7 +94,14 @@
     },
     "GET /api/liquidations": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_recent_liquidations",
+          "error": "symbol must be an alias (SOL, BTC, ETH, XRP, DOGE) or a USDT perp symbol (e.g. SXTUSDT)"
+        }
+      }
     },
     "GET /api/cascade": {
       "requiredInputs": [],
@@ -128,31 +142,77 @@
     },
     "GET /api/cascade-forecast": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": null,
+      "probe": {
+        "violated": "optional query param symbol = not-a-symbol",
+        "observedStatus": 200
+      }
     },
     "GET /api/liq-history": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_liq_history",
+          "error": "invalid symbol: not-a-symbol"
+        }
+      }
     },
     "GET /api/liq-heatmap": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_liq_heatmap",
+          "error": "invalid symbol: not-a-symbol"
+        }
+      }
     },
     "GET /api/cascade-history": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_cascade_history",
+          "error": "invalid symbol: not-a-symbol"
+        }
+      }
     },
     "GET /api/squeeze-score": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_squeeze_score",
+          "error": "invalid symbol: not-a-symbol"
+        }
+      }
     },
     "GET /api/venue-liq-share": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_venue_liq_share",
+          "error": "invalid symbol: not-a-symbol"
+        }
+      }
     },
     "GET /api/funding-cross": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_funding_cross",
+          "error": "invalid symbol: not-a-symbol"
+        }
+      }
     },
     "GET /api/funding-extremes": {
       "requiredInputs": [],
@@ -160,7 +220,14 @@
     },
     "GET /api/open-interest": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_open_interest",
+          "error": "invalid symbol: not-a-symbol"
+        }
+      }
     },
     "GET /api/oi-spike-scan": {
       "requiredInputs": [],
@@ -168,19 +235,47 @@
     },
     "GET /api/long-short": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_long_short",
+          "error": "invalid symbol: not-a-symbol"
+        }
+      }
     },
     "GET /api/basis": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_basis",
+          "error": "invalid symbol: not-a-symbol"
+        }
+      }
     },
     "GET /api/volatility": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_volatility",
+          "error": "invalid symbol: not-a-symbol"
+        }
+      }
     },
     "GET /api/funding-history": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_funding_history",
+          "error": "invalid symbol: not-a-symbol"
+        }
+      }
     },
     "GET /api/top-movers": {
       "requiredInputs": [],
@@ -188,19 +283,47 @@
     },
     "GET /api/orderbook-imbalance": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_orderbook_imbalance",
+          "error": "invalid symbol: not-a-symbol"
+        }
+      }
     },
     "GET /api/orderbook-walls": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_orderbook_walls",
+          "error": "invalid symbol: not-a-symbol"
+        }
+      }
     },
     "GET /api/whale-trades": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_whale_trades",
+          "error": "invalid symbol: not-a-symbol"
+        }
+      }
     },
     "GET /api/spread-arb": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_spread_arb",
+          "error": "invalid symbol: not-a-symbol"
+        }
+      }
     },
     "GET /api/token-holders/:mint": {
       "requiredInputs": [
@@ -329,7 +452,14 @@
     },
     "GET /api/perp": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_perp",
+          "error": "invalid symbol: not-a-symbol"
+        }
+      }
     },
     "GET /api/liq-pulse": {
       "requiredInputs": [],
@@ -341,7 +471,11 @@
     },
     "GET /api/price": {
       "requiredInputs": [],
-      "callerError": null
+      "callerError": null,
+      "probe": {
+        "violated": "optional query param symbol = not-a-symbol",
+        "observedStatus": 200
+      }
     }
   }
 }

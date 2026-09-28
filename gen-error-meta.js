@@ -12,9 +12,13 @@
 //   the per-route 400 is OBSERVED, not guessed. A scratch booted with
 //   X402_MODE=off runs the handlers unpaid; every route that declares a required
 //   input is probed with that input missing or malformed, and the real status and
-//   body are recorded. Routes with no required input are not given a fabricated
-//   example: their only 400 is an upstream failure, and inventing a caller error
-//   for them would be the exact lie this file exists to avoid.
+//   body are recorded. A route whose only caller input is an optional symbol is
+//   probed with that symbol malformed: a 400 for "no required input" would
+//   otherwise be documented as an upstream failure, which stopped being true
+//   when those symbols became optional. Routes with no input a caller can get
+//   wrong are not given a fabricated example: their only 400 is an upstream
+//   failure, and inventing a caller error for them would be the exact lie this
+//   file exists to avoid.
 //
 // Usage:  BASE=http://127.0.0.1:3998 node gen-error-meta.js
 'use strict';
@@ -83,12 +87,17 @@ const META = JSON.parse(fs.readFileSync(path.join(ROOT, 'bazaar-examples.json'),
 const { PRICES } = require('./payments.js');
 
 const BAD_PATH_VALUE = 'not-a-valid-address';
+// Optional inputs worth probing, with a value no validator accepts. Whatever the
+// route really answers is recorded; only a 400 with an error body becomes the
+// documented caller error.
+const BAD_OPTIONAL_VALUE = { symbol: 'not-a-symbol' };
 
 function requiredOf(pattern) {
   const m = META[pattern] || {};
   const q = (m.inputSchema && Array.isArray(m.inputSchema.required)) ? m.inputSchema.required : [];
   const p = (m.pathParamsSchema && m.pathParamsSchema.properties) ? Object.keys(m.pathParamsSchema.properties) : [];
-  return { query: q, pathParams: p, input: m.input || {}, pathValues: m.pathParams || {} };
+  const props = (m.inputSchema && m.inputSchema.properties) ? Object.keys(m.inputSchema.properties) : [];
+  return { query: q, pathParams: p, optional: props.filter((k) => !q.includes(k)), input: m.input || {}, pathValues: m.pathParams || {} };
 }
 
 // Build a URL that violates exactly one required input, so the handler's own
@@ -107,6 +116,11 @@ function probeUrl(pattern, req) {
     const qs = keep.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`).join('&');
     return { url: route + (qs ? `?${qs}` : ''), violated: `required query param ${req.query[0]} omitted` };
   }
+  const opt = req.optional.find((k) => k in BAD_OPTIONAL_VALUE);
+  if (opt) {
+    // Sent alone and malformed, so the handler's own validation meets it first.
+    return { url: `${route}?${opt}=${encodeURIComponent(BAD_OPTIONAL_VALUE[opt])}`, violated: `optional query param ${opt} = ${BAD_OPTIONAL_VALUE[opt]}` };
+  }
   return null;
 }
 
@@ -121,7 +135,7 @@ async function main() {
     const entry = { requiredInputs: [...req.pathParams, ...req.query] };
 
     if (!probe) {
-      entry.callerError = null; // no required input: a 400 here can only be upstream
+      entry.callerError = null; // no input a caller can get wrong: a 400 here can only be upstream
       skipped++;
     } else {
       probed++;
@@ -145,7 +159,7 @@ async function main() {
   fs.writeFileSync(path.join(ROOT, 'error-responses.json'), JSON.stringify(out, null, 2) + '\n');
   console.log(`[error-meta] ${patterns.length} paid routes`);
   console.log(`[error-meta]   probed ${probed}, real 400 observed on ${observed}`);
-  console.log(`[error-meta]   ${skipped} have no required input (no caller-error example, by design)`);
+  console.log(`[error-meta]   ${skipped} have no input a caller can get wrong (no caller-error example, by design)`);
   console.log(`[error-meta]   ${probed - observed} probed but did not 400 (no input validation)`);
   console.log(`[error-meta] shared contract: ${SHARED.map((s) => s.status).join(', ')} — all anchors matched`);
 }

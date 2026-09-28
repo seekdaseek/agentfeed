@@ -26,7 +26,7 @@ db.exec(`
     payer_wallet TEXT,
     tx_sig TEXT,
     amount_usdc REAL,
-    status TEXT NOT NULL,          -- paid | free | error | bad_request
+    status TEXT NOT NULL,          -- paid | free | error | bad_request | payment_refused
     latency_ms INTEGER,
     ip TEXT,
     error_msg TEXT,

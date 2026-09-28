@@ -615,4 +615,4 @@ function wrapX402(middleware) {
   };
 }
 
-module.exports = { clampDescription, gate, init, isEnabled, usdToBaseUnits, wrapX402 };
+module.exports = { clampDescription, credentialSource, gate, init, isEnabled, usdToBaseUnits, wrapX402 };

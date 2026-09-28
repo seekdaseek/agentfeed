@@ -6,8 +6,9 @@ const path = require('path');
 const express = require('express');
 const { db, logCall } = require('./db');
 const { buildPaymentLayer, decodeSettlement, PRICES } = require('./payments');
+const { makeRefusalRecorder } = require('./lib/refusals');
 const { getPrice } = require('./tools/prices');
-const { getFunding } = require('./tools/funding');
+const { getFunding, getFundingRate } = require('./tools/funding');
 const { getFearGreed } = require('./tools/feargreed');
 const { getWalletHoldings, getTokenMetadata } = require('./tools/onchain');
 
@@ -223,6 +224,13 @@ app.use((req, _res, next) => {
   next();
 });
 
+// ---- refused payments (mounted BEFORE both payment layers)
+// A request that presents a payment and still ends in 402 writes one calls row,
+// status payment_refused, with the facilitator's or the middleware's reason.
+// A plain unpaid challenge writes nothing. See lib/refusals.js. `mpp` is read
+// at request time, after the MPP block below has set it.
+app.use(makeRefusalRecorder({ logCall, PRICES, mppPayer: (req) => (mpp && mpp.credentialSource ? mpp.credentialSource(req) : null) }));
+
 // ---- MPP solana/charge layer (additive, MPP_ENABLED-gated)
 // Mounted BEFORE the x402 layer so that a 402 can carry both challenges: MPP's
 // in WWW-Authenticate, x402's in PAYMENT-REQUIRED. The reference payer reads
@@ -420,10 +428,7 @@ const { tool } = makeTool({ paymentsOn, PRICES, decodeSettlement, logCall });
 app.get('/api/sol-price', tool('get_sol_price', 0.001, () => getPrice('SOL')));
 app.get('/api/btc-price', tool('get_btc_price', 0.001, () => getPrice('BTC')));
 
-app.get('/api/funding-rate', tool('get_funding_rate', 0.002, async () => ({
-  sol: await getFunding('SOL'),
-  btc: await getFunding('BTC'),
-})));
+app.get('/api/funding-rate', tool('get_funding_rate', 0.002, (req) => getFundingRate({ symbol: req.query.symbol })));
 
 app.get('/api/fear-greed', tool('get_fear_greed', 0.001, () => getFearGreed()));
 

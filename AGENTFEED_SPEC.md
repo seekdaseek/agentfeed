@@ -32,7 +32,7 @@ Working name: agentfeed (rename whenever). One backend, two rails: raw HTTP x402
 |---------------------------|---------------|--------------|-------|
 | get_sol_price             | multi-source: Coinbase, Kraken, Pyth Hermes fallback | 0.001        | spot price. `confidence` and `publish_time` are null unless Pyth Hermes served the request — Coinbase and Kraken publish neither |
 | get_btc_price             | multi-source: Coinbase, Kraken, Pyth Hermes fallback | 0.001        | spot price. same null-when-unavailable fields as above |
-| get_funding_rate          | existing src  | 0.002        | SOL + BTC perp funding |
+| get_funding_rate          | Hyperliquid; with `symbol`, Bybit + OKX + Hyperliquid | 0.002        | SOL + BTC perp funding; with `symbol`, any USDT perp per venue, each rate at its own interval |
 | get_fear_greed            | alternative.me| 0.001        | cache 30 min |
 | get_market_snapshot       | all above     | 0.003        | one call, everything — agents prefer fewer calls |
 | get_wallet_holdings       | Helius DAS    | 0.008        | the differentiated one |

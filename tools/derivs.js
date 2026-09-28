@@ -47,7 +47,14 @@ async function bybit(path) {
 }
 async function okx(path) {
   const j = await fetchJson(OKX() + path);
-  if (j.code !== '0') throw new Error(`okx: ${j.msg}`);
+  if (j.code !== '0') {
+    const e = new Error(`okx: ${j.msg}`);
+    // 51001 is OKX's "instrument does not exist" (measured 2026-09-28 on
+    // funding-rate and mark-price alike): OKX answered and does not list the
+    // symbol, which is not the same thing as OKX being down.
+    e.okxCode = j.code;
+    throw e;
+  }
   return j.data;
 }
 
@@ -61,25 +68,105 @@ const allTickers = () =>
 const pct = (now, then) => (then ? Math.round(((now - then) / then) * 10000) / 100 : null);
 const n = (v) => (v == null || v === '' ? null : Number(v));
 
+// ---- funding intervals ------------------------------------------------------
+// A venue quotes funding for ITS OWN interval, and about half the market is not
+// 8-hourly. Measured 2026-09-28 from each venue's own API: Bybit settles 376 of
+// its 777 USDT perps every 4h and one hourly; OKX 209 of 477 every 4h and one
+// every 2h. SOL, BTC and ETH are 8h on both, which is why tests on the majors
+// never showed a 4h rate being published as an 8h rate, at half its size. So
+// the interval is read from the venue for every symbol, and a rate whose
+// interval cannot be read says so and gets no 8h figure instead of a guess:
+//   Bybit        instruments-info fundingInterval (minutes), one cached sweep
+//   OKX          nextFundingTime - fundingTime, on its own funding-rate answer
+//   Hyperliquid  hourly, by protocol
+// Bybit also moves symbols between intervals (see get_funding_history), so the
+// sweep is cached for ten minutes, not for the day. instruments-info answers
+// only status=Trading unless asked, while the tickers every screen here ranks
+// also carry PreLaunch perps with a live funding rate (measured 2026-09-28:
+// BPUSDT, 4h, $1.1M 24h turnover), so each status tickers can show is swept.
+const INTERVAL_STATUSES = ['Trading', 'PreLaunch', 'Delivering'];
+const bybitIntervals = () =>
+  cached('bybit:fundingIntervals', 600_000, async () => {
+    const hours = {};
+    await Promise.all(INTERVAL_STATUSES.map(async (status) => {
+      let cursor = '';
+      for (let page = 0; page < 10; page++) {
+        const r = await bybit(`/v5/market/instruments-info?category=linear&status=${status}&limit=1000${cursor ? `&cursor=${cursor}` : ''}`);
+        for (const i of r.list) if (Number(i.fundingInterval) > 0) hours[i.symbol] = Number(i.fundingInterval) / 60;
+        cursor = r.nextPageCursor;
+        if (!cursor) break;
+      }
+    }));
+    return hours;
+  });
+// A failed sweep leaves every Bybit interval unknown -- never 8h by default.
+const bybitIntervalMap = () => bybitIntervals().catch(() => ({}));
+const okxIntervalHours = (row) => {
+  const h = (n(row.nextFundingTime) - n(row.fundingTime)) / 3_600_000;
+  return Number.isFinite(h) && h > 0 ? h : null;
+};
+const HL_INTERVAL_HOURS = 1;
+
+// raw x 8 / interval, and raw x (24 / interval) x 365 x 100. Both are exact for
+// 1, 2, 4 and 8h, the only intervals the three venues use today: an 8h symbol's
+// figures are its raw rate bit for bit, and a 4h symbol's 8h figure is exactly
+// twice its raw rate.
+const to8h = (raw, ih) => (raw == null || ih == null ? null : (raw * 8) / ih);
+const annualizedPct = (raw, ih) => (raw == null || ih == null ? null : Number((raw * (24 / ih) * 365 * 100).toFixed(2)));
+// the two fields every venue rate now carries
+const rateBasis = (raw, ih) => ({ funding_rate_raw: raw, funding_interval_hours: ih });
+const INTERVAL_UNKNOWN = 'no funding interval could be read for this rate, so funding_rate_8h is null rather than a guess';
+const intervalNote = (ih) => (ih == null ? { funding_interval_note: INTERVAL_UNKNOWN } : {});
+const ROWS_INTERVAL_UNKNOWN = 'rows with funding_interval_hours null had no interval to read, so their funding_rate_8h is null rather than a guess';
+
 // ---- get_funding_cross ($0.01) — one symbol, funding across 3 venues
+// Each venue lookup settles to its row, to NOT_LISTED when the venue answered
+// that it does not list the symbol, or to null when it could not be asked. The
+// symbol is the caller's mistake only when all three answered NOT_LISTED; while
+// any venue went unanswered it may still list it, and that failure is ours.
+const NOT_LISTED = Symbol('not listed');
+const listed = (v) => v != null && v !== NOT_LISTED;
 async function getFundingCross(p = {}) {
   const sym = normSym(p.symbol);
   return cached(`fcross:${sym}`, 30_000, async () => {
-    const [by, ok, hl] = await Promise.all([
-      bybit(`/v5/market/tickers?category=linear&symbol=${sym}`).then((r) => r.list[0]).catch(() => null),
-      okx(`/api/v5/public/funding-rate?instId=${okxInst(sym)}`).then((d) => d[0]).catch(() => null),
+    const [by, ok, okMark, hl, ivs] = await Promise.all([
+      bybit(`/v5/market/tickers?category=linear&symbol=${sym}`).then((r) => r.list[0] || NOT_LISTED).catch((e) => (e.upstreamParamError ? NOT_LISTED : null)),
+      okx(`/api/v5/public/funding-rate?instId=${okxInst(sym)}`).then((d) => d[0] || NOT_LISTED).catch((e) => (e.okxCode === '51001' ? NOT_LISTED : null)),
+      okx(`/api/v5/public/mark-price?instType=SWAP&instId=${okxInst(sym)}`).then((d) => d[0] || null).catch(() => null),
       cached('hl:ctxs', 60_000, () =>
         fetchJson(HL(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'metaAndAssetCtxs' }) }),
       ).then(([meta, ctxs]) => {
         const i = meta.universe.findIndex((u) => u.name === baseCoin(sym));
-        return i >= 0 ? ctxs[i] : null;
+        return i >= 0 ? ctxs[i] : NOT_LISTED;
       }).catch(() => null),
+      bybitIntervalMap(),
     ]);
     const venues = {};
-    if (by) venues.bybit = { funding_rate_8h: n(by.fundingRate), next_funding_time: n(by.nextFundingTime), mark_price: n(by.markPrice) };
-    if (ok) venues.okx = { funding_rate_8h: n(ok.fundingRate), next_funding_time: n(ok.nextFundingTime) };
-    if (hl) venues.hyperliquid = { funding_rate_1h: n(hl.funding), funding_rate_8h_equiv: n(hl.funding) != null ? Number((n(hl.funding) * 8).toFixed(8)) : null, mark_price: n(hl.markPx) };
-    if (!Object.keys(venues).length) throw new Error(`no venue lists ${sym}`);
+    if (listed(by)) {
+      const raw = n(by.fundingRate), ih = ivs[sym] ?? null;
+      venues.bybit = { funding_rate_8h: to8h(raw, ih), ...rateBasis(raw, ih), ...intervalNote(ih), next_funding_time: n(by.nextFundingTime), mark_price: n(by.markPrice) };
+    }
+    if (listed(ok)) {
+      const raw = n(ok.fundingRate), ih = okxIntervalHours(ok);
+      // OKX's fundingTime is its NEXT settlement and nextFundingTime the one
+      // after that. Measured 2026-09-28 09:25 UTC on SOL-USDT-SWAP: fundingTime
+      // 16:00, nextFundingTime 00:00 the next day, Bybit's nextFundingTime 16:00.
+      venues.okx = { funding_rate_8h: to8h(raw, ih), ...rateBasis(raw, ih), ...intervalNote(ih), next_funding_time: n(ok.fundingTime), mark_price: okMark ? n(okMark.markPx) : null };
+    }
+    if (listed(hl)) {
+      const raw = n(hl.funding);
+      venues.hyperliquid = { funding_rate_1h: raw, funding_rate_8h_equiv: raw != null ? Number((raw * 8).toFixed(8)) : null, ...rateBasis(raw, HL_INTERVAL_HOURS), mark_price: n(hl.markPx) };
+    }
+    if (!Object.keys(venues).length) {
+      if (by === NOT_LISTED && ok === NOT_LISTED && hl === NOT_LISTED) {
+        const e = new Error(`no venue lists ${sym}: bybit, okx and hyperliquid each answered and none lists it`);
+        e.kind = 'bad_request';
+        e.upstreamParamError = true;
+        throw e;
+      }
+      const silent = [['bybit', by], ['okx', ok], ['hyperliquid', hl]].filter(([, v]) => v == null).map(([k]) => k);
+      throw new Error(`no venue lists ${sym} (no answer from ${silent.join(', ')})`);
+    }
     const rates = [venues.bybit?.funding_rate_8h, venues.okx?.funding_rate_8h, venues.hyperliquid?.funding_rate_8h_equiv].filter((x) => x != null);
     return {
       symbol: sym, venues,
@@ -90,23 +177,34 @@ async function getFundingCross(p = {}) {
 }
 
 // ---- get_funding_extremes ($0.02) — most crowded trades across every Bybit USDT perp
+// Ranked on the 8h equivalent, so a 4h symbol competes at its true size. A
+// symbol whose interval cannot be read cannot be placed in that ranking; it is
+// named in unranked_interval_unknown instead of being ranked on a guess.
 async function getFundingExtremes(p = {}) {
   const limit = Math.min(Math.max(parseInt(p.limit) || 10, 1), 25);
   const minTurn = Number(p.min_turnover_usd) || 1_000_000;
-  const list = (await allTickers())
-    .filter((t) => n(t.turnover24h) >= minTurn && t.fundingRate !== '')
-    .map((t) => ({
-      symbol: t.symbol,
-      funding_rate_8h: n(t.fundingRate),
-      annualized_pct: Number((n(t.fundingRate) * 3 * 365 * 100).toFixed(2)),
-      price_24h_pct: Number((n(t.price24hPcnt) * 100).toFixed(2)),
-      oi_usd: Math.round(n(t.openInterestValue) || 0),
-    }))
+  const [tickers, ivs] = await Promise.all([allTickers(), bybitIntervalMap()]);
+  const liquid = tickers.filter((t) => n(t.turnover24h) >= minTurn && t.fundingRate !== '');
+  const unranked = liquid.filter((t) => ivs[t.symbol] == null).map((t) => t.symbol);
+  const list = liquid
+    .filter((t) => ivs[t.symbol] != null)
+    .map((t) => {
+      const raw = n(t.fundingRate), ih = ivs[t.symbol];
+      return {
+        symbol: t.symbol,
+        funding_rate_8h: to8h(raw, ih),
+        ...rateBasis(raw, ih),
+        annualized_pct: annualizedPct(raw, ih),
+        price_24h_pct: Number((n(t.price24hPcnt) * 100).toFixed(2)),
+        oi_usd: Math.round(n(t.openInterestValue) || 0),
+      };
+    })
     .sort((a, b) => b.funding_rate_8h - a.funding_rate_8h);
   return {
     source: 'bybit_linear_universe', universe_size: list.length, min_turnover_usd: minTurn,
     most_positive: list.slice(0, limit),        // longs paying most — short-squeeze fuel is spent, long-flush risk
     most_negative: list.slice(-limit).reverse(), // shorts paying most — crowded shorts, squeeze candidates
+    ...(unranked.length ? { unranked_interval_unknown: unranked } : {}),
   };
 }
 
@@ -155,10 +253,16 @@ async function getOiSpikeScan(p = {}) {
   }
   rows.sort((a, b) => Math.abs(b.oi_change_pct) - Math.abs(a.oi_change_pct));
   const tickBySym = Object.fromEntries(list.map((t) => [t.symbol, t]));
+  const ivs = await bybitIntervalMap();
+  const spikes = rows.slice(0, limit).map((r) => {
+    const raw = n(tickBySym[r.symbol]?.fundingRate), ih = ivs[r.symbol] ?? null;
+    return { ...r, funding_rate_8h: to8h(raw, ih), ...rateBasis(raw, ih), price_24h_pct: Number((n(tickBySym[r.symbol]?.price24hPcnt) * 100).toFixed(2)) };
+  });
   return {
     source: 'bybit_linear_universe',
     baseline_min_ago: Math.round((now - base.at) / 60_000),
-    spikes: rows.slice(0, limit).map((r) => ({ ...r, funding_rate_8h: n(tickBySym[r.symbol]?.fundingRate), price_24h_pct: Number((n(tickBySym[r.symbol]?.price24hPcnt) * 100).toFixed(2)) })),
+    spikes,
+    ...(spikes.some((x) => x.funding_rate_raw != null && x.funding_interval_hours == null) ? { funding_interval_note: ROWS_INTERVAL_UNKNOWN } : {}),
   };
 }
 
@@ -223,9 +327,10 @@ async function getBasis(p = {}) {
     // The perp and the FIRST spot candidate go out together, so an ordinary
     // symbol still costs one round trip. The second candidate is only fetched
     // for a multiplied perp whose unmultiplied spot pair does not exist.
-    const [perp, direct] = await Promise.all([
+    const [perp, direct, ivs] = await Promise.all([
       bybit(`/v5/market/tickers?category=linear&symbol=${sym}`).then((r) => r.list[0]),
       bybit(`/v5/market/tickers?category=spot&symbol=${cands[0].symbol}`).then((r) => r.list[0]).catch(() => null),
+      bybitIntervalMap(),
     ]);
 
     let spot = direct, chosen = cands[0];
@@ -265,7 +370,9 @@ async function getBasis(p = {}) {
       }),
       basis_pct: basisPct,
       state: basisPct > 0.05 ? 'contango (perp premium — longs aggressive)' : basisPct < -0.05 ? 'backwardation (perp discount — shorts aggressive)' : 'flat',
-      funding_rate_8h: n(perp.fundingRate),
+      funding_rate_8h: to8h(n(perp.fundingRate), ivs[sym] ?? null),
+      ...rateBasis(n(perp.fundingRate), ivs[sym] ?? null),
+      ...intervalNote(ivs[sym] ?? null),
     };
   });
 }
@@ -295,18 +402,52 @@ async function getVolatility(p = {}) {
 }
 
 // ---- get_funding_history ($0.005) — funding trend for a symbol
+// Every row is converted with the interval THAT settlement closed, read from
+// its spacing to the settlement before it. Bybit moves symbols between
+// intervals -- measured 2026-09-28, CLUSDT's last 200 settlements mix 8h and
+// 4h and AKEUSDT's mix 4h and 1h -- so one interval applied to every row would
+// misstate part of the history. The window is fetched with one settlement to
+// spare so its oldest row has a predecessor too (a second call at the venue's
+// 200-row cap). A spacing that is not an interval in use -- a switch-over, a
+// halt, or a symbol's first settlement -- leaves that row's interval unknown
+// and its rate_8h null, never guessed.
+// avg_rate_8h is time-weighted, 8 x sum(raw) / sum(interval hours): what 8
+// hours held cost on average across the window. With one interval throughout
+// it is exactly the plain mean of the rows, as it always was.
+const VENUE_INTERVALS_H = [1, 2, 4, 8];
 async function getFundingHistory(p = {}) {
   const sym = normSym(p.symbol);
   const limit = Math.min(Math.max(parseInt(p.limit) || 30, 1), 200);
   return cached(`fhist:${sym}:${limit}`, 300_000, async () => {
-    const r = await bybit(`/v5/market/funding/history?category=linear&symbol=${sym}&limit=${limit}`);
-    const rows = r.list.map((x) => ({ ts: parseInt(x.fundingRateTimestamp), rate_8h: n(x.fundingRate) }));
-    const avg = rows.length ? rows.reduce((s, x) => s + x.rate_8h, 0) / rows.length : null;
+    const [r, ivs] = await Promise.all([
+      bybit(`/v5/market/funding/history?category=linear&symbol=${sym}&limit=${Math.min(limit + 1, 200)}`),
+      bybitIntervalMap(),
+    ]);
+    const ts = (x) => parseInt(x.fundingRateTimestamp);
+    const settled = r.list.slice(0, limit); // newest first
+    let before = r.list.length > limit ? r.list[limit] : null;
+    if (!before && settled.length === 200) {
+      const prev = await bybit(`/v5/market/funding/history?category=linear&symbol=${sym}&endTime=${ts(settled[199]) - 1}&limit=1`).catch(() => null);
+      before = prev?.list?.[0] || null;
+    }
+    const inUse = new Set([...VENUE_INTERVALS_H, ivs[sym]].filter((h) => h != null));
+    const rows = settled.map((x, i) => {
+      const prior = settled[i + 1] || before;
+      const gap = prior ? (ts(x) - ts(prior)) / 3_600_000 : null;
+      const ih = inUse.has(gap) ? gap : null;
+      const raw = n(x.fundingRate);
+      return { ts: ts(x), rate_8h: to8h(raw, ih), ...rateBasis(raw, ih) };
+    });
+    const timed = rows.filter((x) => x.funding_interval_hours != null);
+    const hours = timed.reduce((s, x) => s + x.funding_interval_hours, 0);
+    const avg = hours ? (8 * timed.reduce((s, x) => s + x.funding_rate_raw, 0)) / hours : null;
+    const untimed = rows.length - timed.length;
     return {
       symbol: sym, intervals: rows.length,
       avg_rate_8h: avg != null ? Number(avg.toFixed(8)) : null,
       avg_annualized_pct: avg != null ? Number((avg * 3 * 365 * 100).toFixed(2)) : null,
-      positive_share_pct: rows.length ? Math.round((rows.filter((x) => x.rate_8h > 0).length / rows.length) * 100) : null,
+      positive_share_pct: rows.length ? Math.round((rows.filter((x) => x.funding_rate_raw > 0).length / rows.length) * 100) : null,
+      ...(untimed ? { funding_interval_note: `${untimed} of ${rows.length} settlements had no readable interval (a switch-over, a halt or a first settlement), so their rate_8h is null and they are left out of avg_rate_8h` } : {}),
       history: rows,
     };
   });
@@ -316,20 +457,27 @@ async function getFundingHistory(p = {}) {
 async function getTopMovers(p = {}) {
   const limit = Math.min(Math.max(parseInt(p.limit) || 10, 1), 25);
   const minTurn = Number(p.min_turnover_usd) || 1_000_000;
-  const list = (await allTickers())
+  const [tickers, ivs] = await Promise.all([allTickers(), bybitIntervalMap()]);
+  const list = tickers
     .filter((t) => n(t.turnover24h) >= minTurn)
-    .map((t) => ({
-      symbol: t.symbol,
-      price: n(t.lastPrice),
-      change_24h_pct: Number((n(t.price24hPcnt) * 100).toFixed(2)),
-      turnover_24h_usd: Math.round(n(t.turnover24h)),
-      funding_rate_8h: n(t.fundingRate),
-    }))
+    .map((t) => {
+      const raw = n(t.fundingRate), ih = ivs[t.symbol] ?? null;
+      return {
+        symbol: t.symbol,
+        price: n(t.lastPrice),
+        change_24h_pct: Number((n(t.price24hPcnt) * 100).toFixed(2)),
+        turnover_24h_usd: Math.round(n(t.turnover24h)),
+        funding_rate_8h: to8h(raw, ih),
+        ...rateBasis(raw, ih),
+      };
+    })
     .sort((a, b) => b.change_24h_pct - a.change_24h_pct);
+  const gainers = list.slice(0, limit), losers = list.slice(-limit).reverse();
   return {
     source: 'bybit_linear_universe', universe_size: list.length, min_turnover_usd: minTurn,
-    gainers: list.slice(0, limit),
-    losers: list.slice(-limit).reverse(),
+    gainers,
+    losers,
+    ...([...gainers, ...losers].some((x) => x.funding_rate_raw != null && x.funding_interval_hours == null) ? { funding_interval_note: ROWS_INTERVAL_UNKNOWN } : {}),
   };
 }
 
@@ -338,4 +486,6 @@ module.exports = {
   getLongShort, getBasis, getVolatility, getFundingHistory, getTopMovers,
   _normSym: normSym,
   _spotCandidates: spotCandidates,
+  _to8h: to8h,
+  _annualizedPct: annualizedPct,
 };

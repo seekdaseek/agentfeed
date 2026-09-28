@@ -145,7 +145,7 @@ async function getFundingPulse() {
     // cross-venue scan it does not run.
     const x = await getFundingExtremes({ limit: 5 });
     const rows = [...(x.most_positive || []), ...(x.most_negative || [])]
-      .map((r) => ({ symbol: r.symbol, venue: 'bybit', funding_rate_8h: r.funding_rate_8h, annualized_pct: r.annualized_pct, oi_usd: r.oi_usd, price_24h_pct: r.price_24h_pct }))
+      .map((r) => ({ symbol: r.symbol, venue: 'bybit', funding_rate_8h: r.funding_rate_8h, funding_rate_raw: r.funding_rate_raw, funding_interval_hours: r.funding_interval_hours, annualized_pct: r.annualized_pct, oi_usd: r.oi_usd, price_24h_pct: r.price_24h_pct }))
       .sort((a, b) => Math.abs(b.annualized_pct) - Math.abs(a.annualized_pct))
       .slice(0, 5);
     if (!rows.length) return { decline: 'the funding screener returned no rows for the Bybit USDT perp universe', universe_size: x.universe_size ?? null };
@@ -155,6 +155,7 @@ async function getFundingPulse() {
       min_turnover_usd: x.min_turnover_usd,
       venue_scope: ['bybit'],
       note: 'Ranked by absolute annualised funding across every Bybit USDT perp above the liquidity floor. For one symbol across Bybit, OKX and Hyperliquid use /api/funding-cross.',
+      ...(x.unranked_interval_unknown ? { unranked_interval_unknown: x.unranked_interval_unknown } : {}),
       source: x.source,
     };
   });

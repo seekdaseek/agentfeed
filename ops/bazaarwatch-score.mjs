@@ -145,21 +145,6 @@ async function rankRows() {
   return out;
 }
 
-/**
- * The first sentence of a when-to-use description: "Use when you need to
- * answer: <question>?" or "Use when an agent needs <x>." -- whichever the live
- * route opens with. Taken from the LIVE challenge, so it follows tools/questions.js
- * without this file needing a copy of the question map.
- */
-function whenSentence(desc) {
-  const d = String(desc || '');
-  if (!/^Use when/.test(d)) return null;
-  const q = d.indexOf('?');
-  const dot = d.indexOf('. ');
-  const cut = [q, dot].filter((i) => i > 0).sort((a, b) => a - b)[0];
-  return cut ? d.slice(0, cut + 1) : null;
-}
-
 async function catalogRows() {
   const ins = db.prepare(`INSERT OR REPLACE INTO catalog
     (ts,day,resource,last_updated,last_crawled_at,index_active,desc_hash,desc_len,opens_with_when,matches_live)
@@ -168,7 +153,7 @@ async function catalogRows() {
   try { rows = (await j(`${CDP}/merchant?payTo=${MERCHANTS[0].payTo}&limit=100&offset=0`)).resources || []; }
   catch (e) { console.log(`  catalog: merchant lookup failed (${e.message})`); return null; }
 
-  let fresh = 0, known = 0, live = 0;
+  let fresh = 0, known = 0, unknown = 0;
   const stale = [];
   for (const r of rows) {
     const indexed = String(r.description || '');
@@ -186,15 +171,17 @@ async function catalogRows() {
       if (res.ok) v = await res.json();
     } catch { v = null; }
     const liveDesc = v?.paymentRequirements?.resource?.description ?? null;
-    const sentence = whenSentence(liveDesc);
-    // With the live sentence, "new" means the index opens with EXACTLY what the
-    // route leads with today. If /validate failed, fall back to /^Use when/:
-    // no pre-3571ce9 description opened that way except the four entry routes,
-    // whose text did not change, so the two tests agree on every current route.
-    const opens = sentence ? indexed.startsWith(sentence) : /^Use when/.test(indexed);
+    // "Current" means the index holds EXACTLY the live challenge text. The prefix
+    // test this replaced stopped working on Sep 28, when each route's own noun
+    // phrase went back in front of its question: the new text and the pre-3571ce9
+    // text both open that way. If /validate failed the route is unknown, counted
+    // apart, never guessed. opens_with_when now records whether the INDEX still
+    // leads with the question, i.e. still holds the 3571ce9 text.
     const matches = liveDesc === null ? null : indexed === liveDesc;
-    if (liveDesc !== null) live++;
-    if (opens) fresh++; else stale.push(r.resource.replace(ORIGIN, ''));
+    const opens = /^Use when you need to answer:/.test(indexed);
+    if (matches === null) unknown++;
+    else if (matches) fresh++;
+    else stale.push(r.resource.replace(ORIGIN, ''));
     known++;
     ins.run(now, day, r.resource, r.lastUpdated ?? null, v?.index?.lastCrawledAt ?? null,
       v?.index ? (v.index.active ? 1 : 0) : null,
@@ -202,7 +189,7 @@ async function catalogRows() {
       opens ? 1 : 0, matches === null ? null : (matches ? 1 : 0));
     await new Promise((res) => setTimeout(res, 300));
   }
-  console.log(`  catalog: ${fresh} of ${known} indexed descriptions open with the live when-to-use sentence (${live} checked against /validate)`);
+  console.log(`  catalog: ${fresh} of ${known} indexed descriptions match the live challenge text (${unknown} unknown: /validate failed)`);
   if (stale.length) console.log(`  catalog: still the old text on ${stale.length}: ${stale.join(', ')}`);
   return { fresh, known, stale };
 }
@@ -266,7 +253,7 @@ function tg(text) {
     line('otto/base'), line('kronos/base'), line('oblique/base'),
     ``,
     `<b>Bazaar catalog</b>`,
-    cat ? `${cat.fresh} of ${cat.known} indexed descriptions are the current when-to-use text` : 'catalog: lookup failed',
+    cat ? `${cat.fresh} of ${cat.known} indexed descriptions match the live challenge text` : 'catalog: lookup failed',
     ``,
     `<b>Search rank</b>`,
     ...ranks.map((r) => `${r.q}: ${r.rank ? '#' + r.rank : 'absent'} of ${r.results}`),

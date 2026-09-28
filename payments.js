@@ -59,6 +59,7 @@ Object.assign(PRICES, require('./expansion').PRICES_ADD);
 // declaration -- which is exactly what shipped until today -- and never stop the
 // paid surface from serving.
 const { questionFor } = require('./tools/questions');
+const { TOOL_TITLES } = require('./tools/titles');
 
 let BAZAAR_META = {};
 try {
@@ -96,26 +97,61 @@ const ICON_URL = 'https://x402.ochinimus.app/icon.png';
 // cannot push a route over. It was 256 until CDP's curation bar required the
 // description to say WHEN to use the endpoint: the when-to-use sentence is
 // prepended, which costs 18-62 chars, and at 256 that was silently eating the
-// tail of 29 of the 52 routes. At 400 exactly 4 are trimmed, and because the
-// when-to-use sentence LEADS, the trim only ever costs the tail of the prose --
-// never the sentence CDP curates on.
+// tail of 29 of the 52 routes. At 400 exactly 4 are trimmed. The trim only ever
+// costs the tail: the route's opening and its when-to-use question come first,
+// and the deploy gate refuses a build where those two alone would not fit.
 const CHALLENGE_DESC_MAX = 400;
 
 /**
- * The challenge description, led by when to use the route.
+ * The challenge description: the route's own noun phrase first, then when to
+ * use it, then the rest.
  *
  * CDP's curation bar (docs.cdp.coinbase.com/x402/seller/get-discovered) asks for
- * "a description that tells an agent WHEN to use the endpoint". Ours said what
- * comes back. The sentence is built from tools/questions.js -- the same map
- * SKILL.md renders -- so the two are the same string by construction and cannot
- * drift apart the next time one of them is edited.
+ * "a description that tells an agent WHEN to use the endpoint". 3571ce9 answered
+ * that by putting "Use when you need to answer: <question>" FIRST on every route.
+ * MEASURED 2026-09-28: after /api/funding-rate's index picked up that text,
+ * "funding rate perps" fell from #3 to #4 (stable over four samples), "funding
+ * rate" rose #5 -> #4 and "funding rates perps" held #7. CDP's search is hybrid
+ * and weights the opening, so the question now goes SECOND and each route leads
+ * with its own keywords again -- "perp market data" returned AgentFeed nowhere
+ * while every result it did return opened with those words.
+ *
+ * Built, not written: the opening is the description's first sentence and the
+ * question is tools/questions.js -- the same map SKILL.md renders.
  */
-function whenToUse(p) {
+// The four entry routes' descriptions open "Use when an agent needs X. Returns
+// Y." X is what their question already says, and Y alone ("the price, the venue
+// that served it...") lacks the route's key noun, so they open with the route's
+// title from tools/titles.js instead: "Spot price: the price, ...". /api/perp's
+// opening is named outright because the query it has to win is "perp market data".
+const OPENING = { get_perp: 'Perp market data for one USDT perp in a single call' };
+
+// First sentence and the rest. A sentence ends at . ? or ! followed by a capital,
+// a digit, "$" or "(" -- but not after an abbreviation, or "e.g. SOLUSDT" would
+// split in the middle of an example.
+const ABBREV = /(?:\be\.g|\bi\.e|\bvs|\betc|\bapprox|\bincl|\bU\.S|\bNo)\.$/i;
+function splitFirst(text) {
+  const re = /([.?!])\s+(?=[A-Z0-9$(])/g;
+  let m;
+  while ((m = re.exec(text))) {
+    const head = text.slice(0, m.index + 1);
+    if (!ABBREV.test(head)) return [head, text.slice(m.index + m[0].length)];
+  }
+  return [text, ''];
+}
+
+function challengeLead(p) {
   const d = String(p.desc || '');
-  // The four entry routes already open with "Use when an agent needs ...", which
-  // IS the when-to-use sentence. Prefixing those would say it twice.
-  if (/^Use when/i.test(d)) return d;
-  return `Use when you need to answer: ${questionFor(p.tool, d)} ${d}`;
+  const ask = `Use when you need to answer: ${questionFor(p.tool, d)}`;
+  const entry = d.match(/^Use when an agent needs [^.]+\.\s*Returns\s+([\s\S]*)$/);
+  if (entry) {
+    const head = OPENING[p.tool] || TOOL_TITLES[p.tool];
+    if (!head) throw new Error(`payments: no opening for ${p.tool}`);
+    const [what, rest] = splitFirst(entry[1]);
+    return [`${head}: ${what}`, ask, rest].filter(Boolean).join(' ');
+  }
+  const [first, rest] = splitFirst(d);
+  return [first, ask, rest].filter(Boolean).join(' ');
 }
 
 /** Trim for the challenge only. Never mutates the pricing table. */
@@ -207,7 +243,7 @@ function buildPaymentLayer() {
           payTo: payToEvm,
         }] : []),
       ],
-      description: challengeDesc(whenToUse(p)), // challenge only; p.desc stays whole
+      description: challengeDesc(challengeLead(p)), // challenge only; p.desc stays whole
       // NO errors key. MEASURED 2026-09-26: @x402/extensions strips unknown keys
       // from the discovery extension config, and sanitizeResourceServiceMetadata
       // keeps only serviceName, tags and iconUrl, so an `errors` field on this
@@ -247,4 +283,4 @@ function decodeSettlement(res) {
   }
 }
 
-module.exports = { buildPaymentLayer, decodeSettlement, PRICES, TAGS, BAZAAR_META, ICON_URL, CHALLENGE_DESC_MAX, challengeDesc };
+module.exports = { buildPaymentLayer, decodeSettlement, PRICES, TAGS, BAZAAR_META, ICON_URL, CHALLENGE_DESC_MAX, challengeDesc, challengeLead, splitFirst };

@@ -1517,8 +1517,8 @@
    "inputSchema": {
     "properties": {
      "symbol": {
-      "type": "string",
-      "description": "USDT perp symbol e.g. SOLUSDT"
+      "description": "USDT perp symbol e.g. SOLUSDT, BTCUSDT (default SOLUSDT)",
+      "type": "string"
      },
      "hours": {
       "description": "lookback 1-168, default 24",
@@ -1529,9 +1529,7 @@
       "type": "number"
      }
     },
-    "required": [
-     "symbol"
-    ]
+    "required": []
    },
    "output": {
     "example": {
@@ -1745,13 +1743,11 @@
    "inputSchema": {
     "properties": {
      "symbol": {
-      "type": "string",
-      "description": "USDT perp symbol e.g. SOLUSDT"
+      "description": "USDT perp symbol e.g. SOLUSDT, BTCUSDT (default SOLUSDT)",
+      "type": "string"
      }
     },
-    "required": [
-     "symbol"
-    ]
+    "required": []
    },
    "output": {
     "example": {
@@ -1911,13 +1907,11 @@
    "inputSchema": {
     "properties": {
      "symbol": {
-      "type": "string",
-      "description": "USDT perp symbol e.g. SOLUSDT"
+      "description": "USDT perp symbol e.g. SOLUSDT, BTCUSDT (default SOLUSDT)",
+      "type": "string"
      }
     },
-    "required": [
-     "symbol"
-    ]
+    "required": []
    },
    "output": {
     "example": {
@@ -2090,13 +2084,11 @@
    "inputSchema": {
     "properties": {
      "symbol": {
-      "type": "string",
-      "description": "USDT perp symbol e.g. SOLUSDT"
+      "description": "USDT perp symbol e.g. SOLUSDT, BTCUSDT (default SOLUSDT)",
+      "type": "string"
      }
     },
-    "required": [
-     "symbol"
-    ]
+    "required": []
    },
    "output": {
     "example": {
@@ -2228,13 +2220,11 @@
    "inputSchema": {
     "properties": {
      "symbol": {
-      "type": "string",
-      "description": "USDT perp symbol e.g. SOLUSDT"
+      "description": "USDT perp symbol e.g. SOLUSDT, BTCUSDT (default SOLUSDT)",
+      "type": "string"
      }
     },
-    "required": [
-     "symbol"
-    ]
+    "required": []
    },
    "output": {
     "example": {
@@ -2302,13 +2292,11 @@
    "inputSchema": {
     "properties": {
      "symbol": {
-      "type": "string",
-      "description": "USDT perp symbol e.g. SOLUSDT"
+      "description": "USDT perp symbol e.g. SOLUSDT, BTCUSDT (default SOLUSDT)",
+      "type": "string"
      }
     },
-    "required": [
-     "symbol"
-    ]
+    "required": []
    },
    "output": {
     "example": {
@@ -2368,13 +2356,11 @@
    "inputSchema": {
     "properties": {
      "symbol": {
-      "type": "string",
-      "description": "USDT perp symbol e.g. SOLUSDT"
+      "description": "USDT perp symbol e.g. SOLUSDT, BTCUSDT (default SOLUSDT)",
+      "type": "string"
      }
     },
-    "required": [
-     "symbol"
-    ]
+    "required": []
    },
    "output": {
     "example": {
@@ -2430,17 +2416,15 @@
    "inputSchema": {
     "properties": {
      "symbol": {
-      "type": "string",
-      "description": "USDT perp symbol e.g. SOLUSDT"
+      "description": "USDT perp symbol e.g. SOLUSDT, BTCUSDT (default SOLUSDT)",
+      "type": "string"
      },
      "limit": {
       "description": "intervals, 1-200, default 30",
       "type": "number"
      }
     },
-    "required": [
-     "symbol"
-    ]
+    "required": []
    },
    "output": {
     "example": {
@@ -2619,17 +2603,15 @@
    "inputSchema": {
     "properties": {
      "symbol": {
-      "type": "string",
-      "description": "USDT perp symbol e.g. SOLUSDT"
+      "description": "USDT perp symbol e.g. SOLUSDT, BTCUSDT (default SOLUSDT)",
+      "type": "string"
      },
      "bps": {
       "description": "window ±bps around mid, 5-500, default 50",
       "type": "number"
      }
     },
-    "required": [
-     "symbol"
-    ]
+    "required": []
    },
    "output": {
     "example": {
@@ -2697,17 +2679,15 @@
    "inputSchema": {
     "properties": {
      "symbol": {
-      "type": "string",
-      "description": "USDT perp symbol e.g. SOLUSDT"
+      "description": "USDT perp symbol e.g. SOLUSDT, BTCUSDT (default SOLUSDT)",
+      "type": "string"
      },
      "top": {
       "description": "walls per side, 1-15, default 5",
       "type": "number"
      }
     },
-    "required": [
-     "symbol"
-    ]
+    "required": []
    },
    "output": {
     "example": {
@@ -2796,8 +2776,8 @@
    "inputSchema": {
     "properties": {
      "symbol": {
-      "type": "string",
-      "description": "USDT perp symbol e.g. SOLUSDT"
+      "description": "USDT perp symbol e.g. SOLUSDT, BTCUSDT (default SOLUSDT)",
+      "type": "string"
      },
      "min_usd": {
       "description": "min print USD, default 100k",
@@ -2808,9 +2788,7 @@
       "type": "number"
      }
     },
-    "required": [
-     "symbol"
-    ]
+    "required": []
    },
    "output": {
     "example": {
@@ -2901,13 +2879,11 @@
    "inputSchema": {
     "properties": {
      "symbol": {
-      "type": "string",
-      "description": "USDT perp symbol e.g. SOLUSDT"
+      "description": "USDT perp symbol e.g. SOLUSDT, BTCUSDT (default SOLUSDT)",
+      "type": "string"
      }
     },
-    "required": [
-     "symbol"
-    ]
+    "required": []
    },
    "output": {
     "example": {
@@ -4634,5 +4610,6 @@
     }
    }
   }
- }
+ },
+ "_schemas_regenerated_at": "2026-09-28T06:48:56.431Z"
 }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-26T06:24:02.249Z",
+  "generatedAt": "2026-09-28T06:49:34.013Z",
   "limits": {
     "get": 240,
     "other": 2400,
@@ -135,144 +135,72 @@
       "callerError": null
     },
     "GET /api/liq-heatmap": {
-      "requiredInputs": [
-        "symbol"
-      ],
-      "callerError": null,
-      "probe": {
-        "violated": "required query param symbol omitted",
-        "observedStatus": 200
-      }
+      "requiredInputs": [],
+      "callerError": null
     },
     "GET /api/cascade-history": {
       "requiredInputs": [],
       "callerError": null
     },
     "GET /api/squeeze-score": {
-      "requiredInputs": [
-        "symbol"
-      ],
-      "callerError": null,
-      "probe": {
-        "violated": "required query param symbol omitted",
-        "observedStatus": 200
-      }
+      "requiredInputs": [],
+      "callerError": null
     },
     "GET /api/venue-liq-share": {
       "requiredInputs": [],
       "callerError": null
     },
     "GET /api/funding-cross": {
-      "requiredInputs": [
-        "symbol"
-      ],
-      "callerError": null,
-      "probe": {
-        "violated": "required query param symbol omitted",
-        "observedStatus": 200
-      }
+      "requiredInputs": [],
+      "callerError": null
     },
     "GET /api/funding-extremes": {
       "requiredInputs": [],
       "callerError": null
     },
     "GET /api/open-interest": {
-      "requiredInputs": [
-        "symbol"
-      ],
-      "callerError": null,
-      "probe": {
-        "violated": "required query param symbol omitted",
-        "observedStatus": 200
-      }
+      "requiredInputs": [],
+      "callerError": null
     },
     "GET /api/oi-spike-scan": {
       "requiredInputs": [],
       "callerError": null
     },
     "GET /api/long-short": {
-      "requiredInputs": [
-        "symbol"
-      ],
-      "callerError": null,
-      "probe": {
-        "violated": "required query param symbol omitted",
-        "observedStatus": 200
-      }
+      "requiredInputs": [],
+      "callerError": null
     },
     "GET /api/basis": {
-      "requiredInputs": [
-        "symbol"
-      ],
-      "callerError": null,
-      "probe": {
-        "violated": "required query param symbol omitted",
-        "observedStatus": 200
-      }
+      "requiredInputs": [],
+      "callerError": null
     },
     "GET /api/volatility": {
-      "requiredInputs": [
-        "symbol"
-      ],
-      "callerError": null,
-      "probe": {
-        "violated": "required query param symbol omitted",
-        "observedStatus": 200
-      }
+      "requiredInputs": [],
+      "callerError": null
     },
     "GET /api/funding-history": {
-      "requiredInputs": [
-        "symbol"
-      ],
-      "callerError": null,
-      "probe": {
-        "violated": "required query param symbol omitted",
-        "observedStatus": 200
-      }
+      "requiredInputs": [],
+      "callerError": null
     },
     "GET /api/top-movers": {
       "requiredInputs": [],
       "callerError": null
     },
     "GET /api/orderbook-imbalance": {
-      "requiredInputs": [
-        "symbol"
-      ],
-      "callerError": null,
-      "probe": {
-        "violated": "required query param symbol omitted",
-        "observedStatus": 200
-      }
+      "requiredInputs": [],
+      "callerError": null
     },
     "GET /api/orderbook-walls": {
-      "requiredInputs": [
-        "symbol"
-      ],
-      "callerError": null,
-      "probe": {
-        "violated": "required query param symbol omitted",
-        "observedStatus": 200
-      }
+      "requiredInputs": [],
+      "callerError": null
     },
     "GET /api/whale-trades": {
-      "requiredInputs": [
-        "symbol"
-      ],
-      "callerError": null,
-      "probe": {
-        "violated": "required query param symbol omitted",
-        "observedStatus": 200
-      }
+      "requiredInputs": [],
+      "callerError": null
     },
     "GET /api/spread-arb": {
-      "requiredInputs": [
-        "symbol"
-      ],
-      "callerError": null,
-      "probe": {
-        "violated": "required query param symbol omitted",
-        "observedStatus": 200
-      }
+      "requiredInputs": [],
+      "callerError": null
     },
     "GET /api/token-holders/:mint": {
       "requiredInputs": [

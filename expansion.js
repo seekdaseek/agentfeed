@@ -20,7 +20,15 @@ const PX = require('./tools/prices');
 const EN = require('./tools/entry');
 
 const sym = (d) => z.string().optional().describe(`USDT perp symbol e.g. SOLUSDT, BTCUSDT (default ${d})`);
-const symReq = z.string().describe('USDT perp symbol e.g. SOLUSDT');
+// Twelve routes -- liq-heatmap, squeeze-score, six derivatives and four
+// microstructure -- declared `symbol` REQUIRED here, while every one of their
+// handlers resolves an absent symbol through normSym() in tools/derivs.js. A
+// caller who left it out got a 200 for SOLUSDT; the Bazaar schema and the MCP
+// tool schema, both generated from this line, told agents it was mandatory.
+// The default is taken by RUNNING that normalizer rather than typed here, so the
+// schema and the handlers cannot disagree again.
+const SYM_DEFAULT = D._normSym(undefined);
+const symDefault = sym(SYM_DEFAULT);
 
 const EXP = [
   { name: 'get_cascade_forecast', route: 'GET /api/cascade-forecast', usd: 0.02,
@@ -37,7 +45,7 @@ const EXP = [
   { name: 'get_liq_heatmap', route: 'GET /api/liq-heatmap', usd: 0.05,
     desc: 'Liquidation heatmap by PRICE LEVEL: where leverage actually got flushed in the last N hours — USD, prints and long/short split per price zone, with the hottest zone flagged. Built from real liquidation prints, not entry-price estimates.',
     tags: ['liquidations', 'heatmap', 'levels', 'trading', 'exclusive'],
-    schema: { symbol: symReq, hours: z.number().optional().describe('lookback 1-168, default 24'), buckets: z.number().optional().describe('price buckets 5-50, default 20') },
+    schema: { symbol: symDefault, hours: z.number().optional().describe('lookback 1-168, default 24'), buckets: z.number().optional().describe('price buckets 5-50, default 20') },
     run: (a) => L.getLiqHeatmap(a) },
   { name: 'get_cascade_history', route: 'GET /api/cascade-history', usd: 0.03,
     desc: 'Liquidation cascade history: past clustered same-side flush events reconstructed from our own tape, with start and end, prints, USD total and peak print, up to 72h back. /api/cascade tells you what is happening NOW; this tells you what already happened.',
@@ -47,7 +55,7 @@ const EXP = [
   { name: 'get_squeeze_score', route: 'GET /api/squeeze-score', usd: 0.10,
     desc: 'Short squeeze score and long flush score, 0-100, for any USDT perp. Composite of the funding rate, long/short crowding, 24h open-interest build, and liquidation skew from our own tape. One number for whether a trade is crowded and about to hurt someone.',
     tags: ['squeeze', 'signal', 'liquidations', 'funding', 'trading', 'exclusive'],
-    schema: { symbol: symReq },
+    schema: { symbol: symDefault },
     run: (a) => L.getSqueezeScore(a) },
   { name: 'get_venue_liq_share', route: 'GET /api/venue-liq-share', usd: 0.02,
     desc: 'Liquidations by exchange: per-venue liquidation share across Bybit, OKX and Binance with long/short split and biggest print, for any symbol or the whole recorded universe. Which venue is flushing whom.',
@@ -59,7 +67,7 @@ const EXP = [
   { name: 'get_funding_cross', route: 'GET /api/funding-cross', usd: 0.01,
     desc: 'Funding rate for ANY USDT perp across Bybit, OKX and Hyperliquid in one call, with the cross-venue spread and a crowding read. /api/funding-rate covers SOL and BTC only.',
     tags: ['funding', 'perps', 'cross-exchange', 'trading'],
-    schema: { symbol: symReq }, run: (a) => D.getFundingCross(a) },
+    schema: { symbol: symDefault }, run: (a) => D.getFundingCross(a) },
   { name: 'get_funding_extremes', route: 'GET /api/funding-extremes', usd: 0.02,
     desc: 'Funding rate extremes across every Bybit USDT perp: the most positive and most negative funding with annualized %, 24h price move and open interest. The most crowded trades in the market — crowded shorts are squeeze candidates.',
     tags: ['funding', 'screener', 'crowding', 'trading'],
@@ -68,7 +76,7 @@ const EXP = [
   { name: 'get_open_interest', route: 'GET /api/open-interest', usd: 0.01,
     desc: 'Open interest for ANY USDT perp: Bybit OI in base units and in USD with 1h and 24h change, plus OKX open interest and the mark price. /api/positioning covers SOL and BTC only.',
     tags: ['open-interest', 'perps', 'crypto', 'trading'],
-    schema: { symbol: symReq }, run: (a) => D.getOpenInterest(a) },
+    schema: { symbol: symDefault }, run: (a) => D.getOpenInterest(a) },
   { name: 'get_oi_spike_scan', route: 'GET /api/oi-spike-scan', usd: 0.02,
     desc: 'Open interest spikes across every Bybit USDT perp: abnormal OI jumps against an earlier snapshot of the same universe, at least 30 minutes old and with its exact age returned as baseline_min_ago, plus funding and 24h price context.',
     tags: ['open-interest', 'screener', 'anomaly', 'trading'],
@@ -77,19 +85,19 @@ const EXP = [
   { name: 'get_long_short', route: 'GET /api/long-short', usd: 0.01,
     desc: 'Long/short ratio for ANY USDT perp: the retail long and short account percentages from Bybit with 1h and 24h trend. The crowding gauge.',
     tags: ['positioning', 'long-short', 'crypto', 'trading'],
-    schema: { symbol: symReq }, run: (a) => D.getLongShort(a) },
+    schema: { symbol: symDefault }, run: (a) => D.getLongShort(a) },
   { name: 'get_basis', route: 'GET /api/basis', usd: 0.01,
     desc: 'Perp-vs-spot basis for any USDT pair: the premium or discount in %, a contango or backwardation read, and the funding context that goes with it.',
     tags: ['basis', 'perps', 'spot', 'trading'],
-    schema: { symbol: symReq }, run: (a) => D.getBasis(a) },
+    schema: { symbol: symDefault }, run: (a) => D.getBasis(a) },
   { name: 'get_volatility', route: 'GET /api/volatility', usd: 0.01,
     desc: 'Realized volatility for any USDT perp: 7-day and 30-day annualized from daily closes, plus today\'s range in %. A position-sizing input.',
     tags: ['volatility', 'risk', 'crypto', 'trading'],
-    schema: { symbol: symReq }, run: (a) => D.getVolatility(a) },
+    schema: { symbol: symDefault }, run: (a) => D.getVolatility(a) },
   { name: 'get_funding_history', route: 'GET /api/funding-history', usd: 0.005,
     desc: 'Funding rate history for any USDT perp, up to 200 intervals: the average rate, its annualized %, the share of intervals that were positive, and the raw series. What the carry has actually been.',
     tags: ['funding', 'history', 'carry', 'trading'],
-    schema: { symbol: symReq, limit: z.number().optional().describe('intervals, 1-200, default 30') },
+    schema: { symbol: symDefault, limit: z.number().optional().describe('intervals, 1-200, default 30') },
     run: (a) => D.getFundingHistory(a) },
   { name: 'get_top_movers', route: 'GET /api/top-movers', usd: 0.01,
     desc: 'Top gainers and losers over 24h across every Bybit USDT perp above a liquidity floor, each with its funding rate attached. The "what moved" screener.',
@@ -101,22 +109,22 @@ const EXP = [
   { name: 'get_orderbook_imbalance', route: 'GET /api/orderbook-imbalance', usd: 0.01,
     desc: 'Orderbook imbalance for any USDT perp: resting bid and ask liquidity in USD within ±N bps of mid, the ratio between the two sides, and a skew read.',
     tags: ['orderbook', 'microstructure', 'depth', 'trading'],
-    schema: { symbol: symReq, bps: z.number().optional().describe('window ±bps around mid, 5-500, default 50') },
+    schema: { symbol: symDefault, bps: z.number().optional().describe('window ±bps around mid, 5-500, default 50') },
     run: (a) => M.getOrderbookImbalance(a) },
   { name: 'get_orderbook_walls', route: 'GET /api/orderbook-walls', usd: 0.01,
     desc: 'Orderbook walls for any USDT perp: the largest resting orders on each side of the book, with USD size and distance from mid.',
     tags: ['orderbook', 'walls', 'levels', 'trading'],
-    schema: { symbol: symReq, top: z.number().optional().describe('walls per side, 1-15, default 5') },
+    schema: { symbol: symDefault, top: z.number().optional().describe('walls per side, 1-15, default 5') },
     run: (a) => M.getOrderbookWalls(a) },
   { name: 'get_whale_trades', route: 'GET /api/whale-trades', usd: 0.02,
     desc: 'Whale trades for any USDT perp: prints from the live trade tape above a USD threshold, with buy and sell totals, net flow and the dominant side.',
     tags: ['whales', 'trades', 'flow', 'trading'],
-    schema: { symbol: symReq, min_usd: z.number().optional().describe('min print USD, default 100k'), limit: z.number().optional().describe('max trades returned, 1-50, default 20') },
+    schema: { symbol: symDefault, min_usd: z.number().optional().describe('min print USD, default 100k'), limit: z.number().optional().describe('max trades returned, 1-50, default 20') },
     run: (a) => M.getWhaleTrades(a) },
   { name: 'get_spread_arb', route: 'GET /api/spread-arb', usd: 0.02,
     desc: 'Cross-exchange spread and arbitrage edge for any USDT perp: the best bid and ask on Bybit, OKX and Hyperliquid, with the best cross-venue edge in bps, pre-fee.',
     tags: ['arbitrage', 'spread', 'cross-exchange', 'trading'],
-    schema: { symbol: symReq }, run: (a) => M.getSpreadArb(a) },
+    schema: { symbol: symDefault }, run: (a) => M.getSpreadArb(a) },
 
   // ---- Solana suite ----
   { name: 'get_token_holders', route: 'GET /api/token-holders/:mint', usd: 0.02,

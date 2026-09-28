@@ -3,6 +3,11 @@
 // declaration for every paid route, with a REAL output example.
 //
 //   run:  cd /opt/agentfeed && node --env-file=.env gen-bazaar-meta.js
+//   or:   node gen-bazaar-meta.js --schemas-only
+//         recompute every route's input declaration from the current zod
+//         schemas and KEEP the captured output examples. A schema fix must not
+//         drag 52 fresh output captures into the 402 challenges with it, or the
+//         diff can no longer show that only the intended routes changed.
 //
 // Nothing here is hand-written per route. Three existing tables are the source:
 //
@@ -313,7 +318,32 @@ function splitSchema(zodSchema, pathParamKeys, tool) {
   return { query, pathP, input, pathParams };
 }
 
+/**
+ * --schemas-only: the input half of the declaration, regenerated; the output half,
+ * kept. Each entry is rebuilt on top of the existing one, so its key order -- and
+ * therefore the bytes of every route whose schema did not change -- stay the same.
+ */
+function schemasOnly() {
+  const rows = buildRoutes();
+  const prev = JSON.parse(fs.readFileSync(OUT_FILE, 'utf8'));
+  const changed = [];
+  for (const r of rows) {
+    const old = prev.routes[r.pattern];
+    if (!old) { console.error(`FATAL: ${r.pattern} has no existing entry; run the full generator`); process.exit(1); }
+    const { query, pathP, input, pathParams } = splitSchema(r.zodSchema, r.pathParamKeys, r.tool);
+    const entry = { ...old, input, inputSchema: query };
+    if (r.pathParamKeys.length) { entry.pathParamsSchema = pathP; entry.pathParams = pathParams; }
+    if (JSON.stringify(entry) !== JSON.stringify(old)) changed.push(r.pattern);
+    prev.routes[r.pattern] = entry;
+  }
+  prev._schemas_regenerated_at = new Date().toISOString();
+  fs.writeFileSync(OUT_FILE, JSON.stringify(prev, null, 1) + '\n');
+  console.log(`schemas-only: ${rows.length} routes, input declaration changed on ${changed.length}, outputs untouched`);
+  for (const p of changed) console.log(`  changed: ${p}`);
+}
+
 async function main() {
+  if (process.argv.includes('--schemas-only')) return schemasOnly();
   const rows = buildRoutes();
   const missing = rows.filter((r) => typeof r.run !== 'function');
   if (missing.length) {

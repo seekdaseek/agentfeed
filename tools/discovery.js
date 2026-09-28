@@ -313,7 +313,9 @@ function buildOpenApi({ PRICES, META, FREE_TOOLS, mpp }) {
       version: '1.0.0',
       description: 'Live crypto market, liquidation, tokenized-equity and Solana on-chain data for AI agents. Paid per call in USDC over x402 on Solana or Base. No API keys, no accounts.',
       'x-generated-from': 'payments.PRICES + bazaar-examples.json, at boot',
-      contact: { name: 'seekdaseek', url: 'https://github.com/seekdaseek/agentfeed' },
+      // x402scan verifies ownership from info.contact; it names the operator, a
+      // reachable address and the studio site, not the repository.
+      contact: { name: 'ochinimus', email: 'ochinimus@gmail.com', url: 'https://ochinimus.app' },
       'x-guidance': [
         'Every route is a GET that returns JSON. There are no API keys and no accounts.',
         'Paid routes answer 402 with the challenge base64-encoded in the PAYMENT-REQUIRED response header (x402 v2, not the body). Pay it and repeat the request with an X-PAYMENT header. USDC on Solana mainnet or Base.',

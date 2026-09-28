@@ -261,7 +261,7 @@ Sampled every 5 minutes since 19 July 2026. Deviation is measured against the un
 
 | Tool | Price | Route | What you get |
 |---|---|---|---|
-| `get_funding_cross` | $0.01 | `/api/funding-cross` | Funding for ANY USDT perp across Bybit + OKX + Hyperliquid in one call, with cross-venue spread and crowding read. (get_funding_rate covers SOL+BTC only.) |
+| `get_funding_cross` | $0.01 | `/api/funding-cross` | Funding for ANY USDT perp across Bybit + OKX + Hyperliquid in one call, with cross-venue spread and crowding read. |
 | `get_funding_extremes` | $0.02 | `/api/funding-extremes` | Most crowded trades across every Bybit USDT perp: top most-positive and most-negative funding with annualized %, 24h price move and OI. Crowded shorts = squeeze candidates. |
 | `get_open_interest` | $0.01 | `/api/open-interest` | Open interest for ANY USDT perp: Bybit OI in base + USD with 1h/24h change, plus OKX OI. (get_positioning covers SOL+BTC only.) |
 | `get_oi_spike_scan` | $0.02 | `/api/oi-spike-scan` | Abnormal open-interest jumps across every Bybit USDT perp vs a 30min+ baseline — where new leverage is piling in, with funding and price context. Squeeze/flush precursor screener. |
@@ -290,7 +290,7 @@ Sampled every 5 minutes since 19 July 2026. Deviation is measured against the un
 | `get_sol_price` | $0.001 | `/api/sol-price` | SOL spot price (multi-source: Coinbase, Kraken, Pyth Hermes fallback) |
 | `get_btc_price` | $0.001 | `/api/btc-price` | BTC spot price (multi-source: Coinbase, Kraken, Pyth Hermes fallback) |
 | `get_eth_price` | $0.001 | `/api/eth-price` | ETH spot price in USD, aggregated across seven independent venues (CoinGecko, Coinbase, Kraken, Binance, OKX, Gemini, DefiLlama). Returns the lead figure plus every venue quote that answered, so a caller can see the spread rather than trust one exchange. Venues are ranked in a fixed declared order, not completion order, so identical market state always returns the same lead price. |
-| `get_funding_rate` | $0.002 | `/api/funding-rate` | SOL+BTC perp funding rates |
+| `get_funding_rate` | $0.002 | `/api/funding-rate` | Funding rate for any USDT perp on Bybit + OKX + Hyperliquid, each at its own interval: raw rate, interval hours, 8h equivalent, annualised, next funding time, mark price. No symbol: SOL+BTC from Hyperliquid |
 | `get_market_snapshot` | $0.003 | `/api/market-snapshot` | Full market snapshot in one call |
 | `get_positioning` | $0.004 | `/api/positioning` | SOL+BTC long/short account ratio + open interest with 1h/24h OI change |
 | `get_trade_context` | $0.01 | `/api/trade-context` | Full market state in one call: prices, funding, fear/greed, positioning, liquidations |

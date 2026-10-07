@@ -178,8 +178,11 @@ function recordRelease() {
 function runRecordWorker(symbol, limit) {
   return new Promise((resolve, reject) => {
     let done = false;
+    // A heap ceiling, so a runaway read ends this worker (ERR_WORKER_OUT_OF_MEMORY
+    // -> 'error' -> reject) instead of the whole box. A normal read peaks ~130 MB.
     const w = new Worker(RECORD_WORKER, {
       workerData: { caliperDir: CALIPER_DIR, recordDb: RECORD_DB, symbol, limit },
+      resourceLimits: { maxOldGenerationSizeMb: 256 },
     });
     // 'exit' fires after a successful message too, so every path goes through
     // finish() and the first one wins.
@@ -215,6 +218,13 @@ function recordPayload(entry) {
   };
 }
 
+// rows is caller-controlled on a free route. Clamped like tools/liquidations.js:
+// a negative value reached SQLite's LIMIT as "no limit" and loaded every row of
+// record.db into one process (OOM kill, 2026-10-04 17:32 UTC).
+function recordRowLimit(raw) {
+  return Math.min(Math.max(parseInt(raw) || 50, 1), 500);
+}
+
 /**
  * The live track record.
  *
@@ -225,7 +235,7 @@ function recordPayload(entry) {
  */
 async function getForecastRecord({ query = {} } = {}) {
   const symbol = query.symbol ? String(query.symbol).toUpperCase() : '';
-  const limit = Math.min(Number(query.rows) || 50, 500);
+  const limit = recordRowLimit(query.rows);
   const key = `${symbol}|${limit}`;
 
   const hit = recordCache.get(key);
@@ -286,4 +296,4 @@ async function getForecastQuestion() {
   }
 }
 
-module.exports = { getCascadeForecast, getCascadeForecastFree, getForecastQuestion, getForecastRecord };
+module.exports = { getCascadeForecast, getCascadeForecastFree, getForecastQuestion, getForecastRecord, recordRowLimit };

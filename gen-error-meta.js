@@ -41,6 +41,7 @@ function must(file, re, label) {
 const m400 = must('lib/tool.js', /res\.status\(400\)\.json\(\{\s*tool:\s*name,\s*error:\s*e\.message\s*\}\)/, '400 emitter');
 const m429 = must('server.js', /res\.status\(429\)\.json\(\{\s*error:\s*`rate limit: \$\{limit\} req\/min`,\s*retry_after:\s*retryAfter\s*\}\)/, '429 emitter');
 const m405 = must('server.js', /res\.set\('Allow',\s*'GET'\);\s*\n\s*res\.status\(405\)\.end\(\)/, '405 emitter');
+const m402v1 = must('lib/x402v1.js', /x402Version: 1,\s*error: pr\.error \|\| 'Payment required',\s*accepts:/, 'x402 v1 402 body');
 const m503 = must('lib/tool.js', /res\.status\(503\)\.json\(\{\s*tool:\s*name,\s*error:\s*e\.message,\s*retry_after:\s*60\s*\}\)/, '503 emitter');
 const mLimit = must('server.js', /const LIMIT = (\d+);/, 'GET rate limit');
 const mOther = must('server.js', /const OTHER_LIMIT = (\d+);/, 'other-method rate limit');
@@ -59,8 +60,8 @@ const SHARED = [
     status: 402,
     name: 'Payment Required',
     when: 'No payment presented, or the payment did not settle.',
-    body: { x402Version: 2, error: 'Payment required' },
-    note: 'The full challenge is base64 in the PAYMENT-REQUIRED response header, not in the body. Read it from the header.',
+    body: { x402Version: 1, error: 'Payment required', accepts: ['<x402 v1 PaymentRequirements, one per v1 rail: base, solana>'] },
+    note: 'x402 v2: the full challenge is base64 in the PAYMENT-REQUIRED response header, for every rail; read it first. x402 v1: the body above, for Base and Solana; pay it with X-PAYMENT.',
   },
   {
     status: 400,

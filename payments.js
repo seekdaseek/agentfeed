@@ -278,7 +278,7 @@ function buildPaymentLayer() {
   const withOutput = Object.keys(routes).filter((r) => BAZAAR_META[r] && BAZAAR_META[r].output).length;
   console.log(`[payments] x402 active: network=${networkName} facilitator=${facilitatorUrl} payTo=${payTo} evm=${EVM.map((r) => r.name).join(',') || 'none'}`);
   console.log(`[payments] bazaar: ${Object.keys(routes).length} routes declared, ${withOutput} with an output example, icon=${ICON_URL}`);
-  return { middleware, PRICES, network: networkName };
+  return { middleware, PRICES, network: networkName, resourceServer, routes, facilitator };
 }
 
 // decode X-PAYMENT-RESPONSE / PAYMENT-RESPONSE header (base64 JSON) for audit logging

@@ -65,7 +65,7 @@ function openApiErrors(pattern, mpp) {
         'PAYMENT-REQUIRED response header, and in WWW-Authenticate (MPP solana/charge)',
       );
     }
-    if (e.status === 402) r.headers = { 'PAYMENT-REQUIRED': { description: 'Base64 x402 v2 challenge.', schema: { type: 'string' } } };
+    if (e.status === 402) r.headers = { 'PAYMENT-REQUIRED': { description: 'Base64 x402 v2 challenge. The body is the same challenge as x402 v1 (Base and Solana).', schema: { type: 'string' } } };
     if (e.status === 429 || e.status === 503) r.headers = { 'Retry-After': { description: 'Seconds to wait.', schema: { type: 'integer' } } };
     if (e.status === 405) r.headers = { Allow: { description: 'Always GET.', schema: { type: 'string' } } };
     if (e.status === 400 && route.callerError) {
@@ -336,7 +336,7 @@ function buildOpenApi({ PRICES, META, FREE_TOOLS, mpp }) {
       contact: { name: 'ochinimus', email: 'ochinimus@gmail.com', url: 'https://ochinimus.app' },
       'x-guidance': [
         'Every route is a GET that returns JSON. There are no API keys and no accounts.',
-        `Paid routes answer 402 with the challenge base64-encoded in the PAYMENT-REQUIRED response header (x402 v2, not the body). Pay it and repeat the request with a PAYMENT-SIGNATURE header (x402 v2; the v1 X-PAYMENT header is not read). USDC on ${railNames('Solana mainnet')}.`,
+        `Paid routes answer 402 with the challenge twice: x402 v2, base64 JSON in the PAYMENT-REQUIRED response header, for every rail; and x402 v1, the JSON body {x402Version: 1, accepts}, for Base and Solana. Pay with a PAYMENT-SIGNATURE header (x402 v2) or an X-PAYMENT header (x402 v1, Base or Solana; an X-PAYMENT carrying a v2 payload is read as PAYMENT-SIGNATURE). USDC on ${railNames('Solana mainnet')}.`,
         PAYTO_WARNING,
         'Response shape is always { "tool": "<name>", "data": { ... }, "paid": true }.',
         'Before paying, GET /api/sample/<route> for that route\'s real captured response, free. GET /api/sample lists them.',
@@ -418,10 +418,10 @@ function buildLlmsTxt({ PRICES, TAGS, META, FREE_TOOLS, mpp, network }) {
     '',
     '## How to pay',
     '',
-    'There are no API keys and no accounts. Payment is per call, in USDC, over x402 v2.',
+    'There are no API keys and no accounts. Payment is per call, in USDC, over x402 v2 on every rail and x402 v1 on Base and Solana.',
     '',
-    '1. GET the route. Unpaid, it answers 402 and carries the payment challenge in the PAYMENT-REQUIRED response header, base64-encoded JSON. The challenge is in the HEADER, not the body.',
-    '2. Pay the challenge and repeat the request with the PAYMENT-SIGNATURE header (x402 v2; the v1 X-PAYMENT header is not read).',
+    '1. GET the route. Unpaid, it answers 402. The x402 v2 challenge is in the PAYMENT-REQUIRED response header, base64-encoded JSON, for every rail. The body is the x402 v1 challenge, {x402Version: 1, accepts}, for Base and Solana.',
+    '2. Pay and repeat the request with a PAYMENT-SIGNATURE header (x402 v2) or an X-PAYMENT header (x402 v1, Base or Solana). An X-PAYMENT carrying a v2 payload is read as PAYMENT-SIGNATURE.',
     `   ${PAYTO_WARNING}`,
     '3. The response body is `{ "tool": "<name>", "data": { ... }, "paid": true }`.',
     '',
@@ -507,7 +507,7 @@ function buildSkillMd({ PRICES, TAGS, META, FREE_TOOLS, mpp, network }) {
     '',
     '## How to pay',
     '',
-    'Call the route. Unpaid, it answers **402** with the challenge base64-encoded in the **`PAYMENT-REQUIRED` response header** — not in the body. Decode it, pay it, and repeat the request with a `PAYMENT-SIGNATURE` header (x402 v2; the v1 `X-PAYMENT` header is not read).',
+    'Call the route. Unpaid, it answers **402** with the x402 v2 challenge base64-encoded in the **`PAYMENT-REQUIRED` response header** (every rail); the JSON body is the same challenge as **x402 v1** (`{x402Version: 1, accepts}`, Base and Solana). Pay and repeat the request with a `PAYMENT-SIGNATURE` header (v2) or an `X-PAYMENT` header (v1; an `X-PAYMENT` carrying a v2 payload is read as `PAYMENT-SIGNATURE`).',
     '',
     `${evmRails().length + 1} rails are accepted on every paid route: **USDC on ${solana}**${evmRails().map((r) => `, **USDC on ${r.name}** (\`${r.network}\`)`).join('')}.`,
     '',

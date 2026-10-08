@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-08T18:37:12.225Z",
+  "generatedAt": "2026-10-08T20:53:45.687Z",
   "limits": {
     "get": 240,
     "other": 2400,
@@ -11,10 +11,13 @@
       "name": "Payment Required",
       "when": "No payment presented, or the payment did not settle.",
       "body": {
-        "x402Version": 2,
-        "error": "Payment required"
+        "x402Version": 1,
+        "error": "Payment required",
+        "accepts": [
+          "<x402 v1 PaymentRequirements, one per v1 rail: base, solana>"
+        ]
       },
-      "note": "The full challenge is base64 in the PAYMENT-REQUIRED response header, not in the body. Read it from the header."
+      "note": "x402 v2: the full challenge is base64 in the PAYMENT-REQUIRED response header, for every rail; read it first. x402 v1: the body above, for Base and Solana; pay it with X-PAYMENT."
     },
     {
       "status": 400,

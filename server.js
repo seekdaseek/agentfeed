@@ -6,7 +6,9 @@ const path = require('path');
 const express = require('express');
 const { db, logCall } = require('./db');
 const { buildPaymentLayer, decodeSettlement, PRICES } = require('./payments');
-const { makeRefusalRecorder, sanitizeChallengeErrors, aliasXPayment } = require('./lib/refusals');
+const { makeRefusalRecorder, sanitizeChallengeErrors, aliasXPayment, _headerShape } = require('./lib/refusals');
+const { makeV1 } = require('./lib/x402v1');
+const x402v1 = makeV1({ shapeOf: _headerShape });
 const { evmRails, railNames } = require('./lib/rails');
 const { getPrice } = require('./tools/prices');
 const { getFunding, getFundingRate } = require('./tools/funding');
@@ -255,6 +257,11 @@ app.use(sanitizeChallengeErrors);
 // After the recorder (which already counts either header as presented) and the
 // sanitizer (which explains a refused v1 payload), before both payment layers.
 app.use(aliasXPayment);
+// x402 v1 buyers (lib/x402v1.js): the v1 body on every 402, and X-PAYMENT v1 paid on
+// base and solana. Here, before the MPP gates and the x402 layer; bound to that layer
+// once it is built below, and inert until then.
+app.use(x402v1.challengeBody);
+app.use(x402v1.payments);
 
 // ---- MPP solana/charge layer (additive, MPP_ENABLED-gated)
 // Mounted BEFORE the x402 layer so that a 402 can carry both challenges: MPP's
@@ -443,7 +450,12 @@ let x402Network = 'off';
 if (paymentsOn) {
   const layer = buildPaymentLayer();
   x402Network = layer.network;
-  app.use(mppOn ? mpp.wrapX402(layer.middleware) : layer.middleware);
+  const gate = mppOn ? mpp.wrapX402(layer.middleware) : layer.middleware;
+  // A request lib/x402v1.js has verified is paid for; it settles after the handler.
+  app.use((req, res, next) => (req.x402v1 ? next() : gate(req, res, next)));
+  x402v1.bind(layer)
+    .then((nets) => console.log(`[x402v1] active on ${nets.join(', ') || 'no network (facilitator lists no v1 kind)'}`))
+    .catch((e) => console.error('[x402v1] DISABLED: facilitator /supported failed:', e.message));
 }
 
 // ---- route wrapper: timing + audit, and the paid flag.

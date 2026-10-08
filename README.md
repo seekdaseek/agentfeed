@@ -152,7 +152,10 @@ the service publishes it.
 
 ## Two payment protocols on one 402
 
-Every paid route answers `402` with an x402 v2 challenge in the `PAYMENT-REQUIRED` header.
+Every paid route answers `402` with an x402 v2 challenge in the `PAYMENT-REQUIRED` header, and
+the same challenge as an x402 v1 body (`{x402Version: 1, accepts}`) for Base and Solana. Pay with
+`PAYMENT-SIGNATURE` (v2, any rail) or `X-PAYMENT` (v1 on Base or Solana, verified and settled
+through the CDP facilitator's v1 kinds; Polygon and Arbitrum have no v1 kind there and stay v2).
 `/api/sol-price` and `/api/btc-price` additionally carry an MPP `solana`/`charge` challenge in
 `WWW-Authenticate` on the *same* response, so a client settles with whichever protocol it
 speaks. The two live in disjoint header namespaces, so an x402-only client never sees the MPP

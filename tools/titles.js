@@ -23,7 +23,7 @@ const TOOL_TITLES = {
   get_cascade_forecast: 'Liquidation cascade forecast', get_cascade_forecast_free: 'Free cascade forecast',
   get_forecast_question: 'Forecast question spec', get_forecast_record: 'Forecast track record',
   get_squeeze_score: 'Squeeze score', get_funding_cross: 'Cross venue funding',
-  get_funding_extremes: 'Funding extremes', get_funding_radar: 'Funding radar', get_funding_history: 'Funding history',
+  get_funding_extremes: 'Funding extremes', get_funding_radar: 'Funding radar', get_options_summary: 'Options summary', get_options_gex: 'Options gamma exposure', get_market_state: 'Market state', get_macro_calendar: 'Macro calendar', get_tradfi_radar: 'TradFi perps radar', get_equity_24h: 'Equity 24/7 price', get_funding_history: 'Funding history',
   get_open_interest: 'Open interest', get_oi_spike_scan: 'Open interest spikes',
   get_long_short: 'Long short ratio', get_basis: 'Perp spot basis', get_volatility: 'Realized volatility',
   get_top_movers: 'Top movers', get_orderbook_imbalance: 'Orderbook imbalance',

@@ -170,7 +170,8 @@ function outputSchemaFor(def) {
 }
 
 async function initMcp(app) {
-  const networkName = (process.env.X402_NETWORK || 'devnet').toLowerCase();
+  if (!process.env.X402_NETWORK) throw new Error('X402_NETWORK missing from .env (mainnet or devnet)');
+  const networkName = process.env.X402_NETWORK.toLowerCase();
   const network = networkName === 'mainnet' ? SOLANA_MAINNET_CAIP2 : SOLANA_DEVNET_CAIP2;
   const facilitatorUrl = process.env.FACILITATOR_URL;
   const payTo = process.env.PAY_TO;

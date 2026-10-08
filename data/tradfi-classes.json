@@ -1,0 +1,796 @@
+{
+ "_note": "HIP-3 market -> asset class, from each deployer's own docs (evidence = URL) or, where the docs are silent, the ticker (evidence = symbol only). A market missing here is reported as unclassified, never guessed. Built 2026-10-08 by agentfeed-slice2/tradfi/build_classification.py from the live universe.",
+ "generated_at": "2026-10-08T18:29:33.766Z",
+ "markets": {
+  "xyz:XYZ100": {
+   "asset_class": "index",
+   "underlying": "XYZ U.S. 100 Index (own-brand Nasdaq-100-like, 100 non-financial US names)",
+   "evidence": "https://docs.trade.xyz/perpetuals/markets/equity-indices/us.md"
+  },
+  "xyz:TSLA": {
+   "asset_class": "stock",
+   "underlying": "Tesla",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:NVDA": {
+   "asset_class": "stock",
+   "underlying": "NVIDIA",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:GOLD": {
+   "asset_class": "commodity",
+   "underlying": "Gold",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:HOOD": {
+   "asset_class": "stock",
+   "underlying": "Robinhood",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:INTC": {
+   "asset_class": "stock",
+   "underlying": "Intel",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:PLTR": {
+   "asset_class": "stock",
+   "underlying": "Palantir",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:COIN": {
+   "asset_class": "stock",
+   "underlying": "Coinbase",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:META": {
+   "asset_class": "stock",
+   "underlying": "Meta Platforms",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:AAPL": {
+   "asset_class": "stock",
+   "underlying": "Apple",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:MSFT": {
+   "asset_class": "stock",
+   "underlying": "Microsoft",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:ORCL": {
+   "asset_class": "stock",
+   "underlying": "Oracle",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:GOOGL": {
+   "asset_class": "stock",
+   "underlying": "Alphabet",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:AMZN": {
+   "asset_class": "stock",
+   "underlying": "Amazon",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:AMD": {
+   "asset_class": "stock",
+   "underlying": "AMD",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:MU": {
+   "asset_class": "stock",
+   "underlying": "Micron",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:SNDK": {
+   "asset_class": "stock",
+   "underlying": "SanDisk",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:MSTR": {
+   "asset_class": "stock",
+   "underlying": "Strategy (MicroStrategy)",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:CRCL": {
+   "asset_class": "stock",
+   "underlying": "Circle",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:NFLX": {
+   "asset_class": "stock",
+   "underlying": "Netflix",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:COST": {
+   "asset_class": "stock",
+   "underlying": "Costco",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:LLY": {
+   "asset_class": "stock",
+   "underlying": "Eli Lilly",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:SKHX": {
+   "asset_class": "stock",
+   "underlying": "SK hynix common, KRX 000660 (KRW->USD)",
+   "evidence": "https://docs.trade.xyz/perpetuals/markets/stocks/korea.md"
+  },
+  "xyz:TSM": {
+   "asset_class": "stock",
+   "underlying": "TSMC",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:JPY": {
+   "asset_class": "fx",
+   "underlying": "USD/JPY spot (yen per USD)",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:EUR": {
+   "asset_class": "fx",
+   "underlying": "EUR/USD spot",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:SILVER": {
+   "asset_class": "commodity",
+   "underlying": "Silver",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:RIVN": {
+   "asset_class": "stock",
+   "underlying": "Rivian",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:BABA": {
+   "asset_class": "stock",
+   "underlying": "Alibaba",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:CL": {
+   "asset_class": "commodity",
+   "underlying": "WTI light sweet crude, rolled futures (spec name WTIOIL)",
+   "evidence": "https://docs.trade.xyz/perpetuals/markets/commodities.md"
+  },
+  "xyz:COPPER": {
+   "asset_class": "commodity",
+   "underlying": "High-grade copper, rolled futures",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:NATGAS": {
+   "asset_class": "commodity",
+   "underlying": "Henry Hub natural gas, rolled futures",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:SMSN": {
+   "asset_class": "stock",
+   "underlying": "Samsung Electronics common, KRX 005930 (KRW->USD)",
+   "evidence": "https://docs.trade.xyz/perpetuals/markets/stocks/korea.md"
+  },
+  "xyz:PLATINUM": {
+   "asset_class": "commodity",
+   "underlying": "Platinum",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:USAR": {
+   "asset_class": "stock",
+   "underlying": "USA Rare Earth",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:CRWV": {
+   "asset_class": "stock",
+   "underlying": "CoreWeave",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:URNM": {
+   "asset_class": "index",
+   "underlying": "Sprott Uranium Miners ETF",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:PALLADIUM": {
+   "asset_class": "commodity",
+   "underlying": "Palladium",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:GME": {
+   "asset_class": "stock",
+   "underlying": "GameStop",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:KR200": {
+   "asset_class": "index",
+   "underlying": "Korea 200 index, KRW points (quanto)",
+   "evidence": "https://docs.trade.xyz/perpetuals/markets/equity-indices/korea.md"
+  },
+  "xyz:SOFTBANK": {
+   "asset_class": "stock",
+   "underlying": "SoftBank Group, TSE 9984",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:JP225": {
+   "asset_class": "index",
+   "underlying": "Japan 225 index, JPY points (quanto)",
+   "evidence": "https://docs.trade.xyz/perpetuals/markets/equity-indices/japan.md"
+  },
+  "xyz:HYUNDAI": {
+   "asset_class": "stock",
+   "underlying": "Hyundai Motor, KRX 005380 (KRW->USD)",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:KIOXIA": {
+   "asset_class": "stock",
+   "underlying": "Kioxia Holdings, TSE 285A (JPY->USD)",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:EWY": {
+   "asset_class": "index",
+   "underlying": "iShares MSCI South Korea ETF",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:EWJ": {
+   "asset_class": "index",
+   "underlying": "iShares MSCI Japan ETF",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:BRENTOIL": {
+   "asset_class": "commodity",
+   "underlying": "Brent crude, rolled futures",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:HIMS": {
+   "asset_class": "stock",
+   "underlying": "Hims & Hers",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:SP500": {
+   "asset_class": "index",
+   "underlying": "S&P 500 (licensed from S&P DJI)",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:DKNG": {
+   "asset_class": "stock",
+   "underlying": "DraftKings",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:LITE": {
+   "asset_class": "stock",
+   "underlying": "Lumentum",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:XLE": {
+   "asset_class": "index",
+   "underlying": "Energy Select Sector SPDR ETF",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:BX": {
+   "asset_class": "stock",
+   "underlying": "Blackstone",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:PURRDAT": {
+   "asset_class": "stock",
+   "underlying": "Hyperliquid Strategies Inc., Nasdaq PURR",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:MRVL": {
+   "asset_class": "stock",
+   "underlying": "Marvell",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:RKLB": {
+   "asset_class": "stock",
+   "underlying": "Rocket Lab",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:BIRD": {
+   "asset_class": "stock",
+   "underlying": "Smartbird Inc., Nasdaq BIRD",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:DRAM": {
+   "asset_class": "index",
+   "underlying": "Roundhill Memory ETF (Cboe DRAM)",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:CBRS": {
+   "asset_class": "stock",
+   "underlying": "Cerebras Systems, Nasdaq CBRS (converted from pre-IPO)",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md ; docs.trade.xyz/perpetuals/specifications-and-schedules/pre-ipo-specification-index.md"
+  },
+  "xyz:EWZ": {
+   "asset_class": "index",
+   "underlying": "iShares MSCI Brazil ETF",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:ZM": {
+   "asset_class": "stock",
+   "underlying": "Zoom",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:EBAY": {
+   "asset_class": "stock",
+   "underlying": "eBay",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:ARM": {
+   "asset_class": "stock",
+   "underlying": "Arm Holdings",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:EWT": {
+   "asset_class": "index",
+   "underlying": "iShares MSCI Taiwan ETF",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:GBP": {
+   "asset_class": "fx",
+   "underlying": "GBP/USD spot",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:SPCX": {
+   "asset_class": "stock",
+   "underlying": "SpaceX Class A, Nasdaq SPCX (converted from pre-IPO)",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md ; docs.trade.xyz/perpetuals/specifications-and-schedules/pre-ipo-specification-index.md"
+  },
+  "xyz:ASML": {
+   "asset_class": "stock",
+   "underlying": "ASML",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:MINIMAX": {
+   "asset_class": "stock",
+   "underlying": "MiniMax Group, HKEX 0100",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:BB": {
+   "asset_class": "stock",
+   "underlying": "BlackBerry, NYSE BB",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:QNT": {
+   "asset_class": "stock",
+   "underlying": "Quantinuum, Nasdaq QNT (converted from pre-IPO)",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md ; docs.trade.xyz/perpetuals/specifications-and-schedules/pre-ipo-specification-index.md"
+  },
+  "xyz:DELL": {
+   "asset_class": "stock",
+   "underlying": "Dell",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:IBM": {
+   "asset_class": "stock",
+   "underlying": "IBM",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:AVGO": {
+   "asset_class": "stock",
+   "underlying": "Broadcom",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:NOW": {
+   "asset_class": "stock",
+   "underlying": "ServiceNow",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:NBIS": {
+   "asset_class": "stock",
+   "underlying": "Nebius",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:WDC": {
+   "asset_class": "stock",
+   "underlying": "Western Digital",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:NOK": {
+   "asset_class": "stock",
+   "underlying": "Nokia ADS",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:SMH": {
+   "asset_class": "index",
+   "underlying": "VanEck Semiconductor ETF",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:BE": {
+   "asset_class": "stock",
+   "underlying": "Bloom Energy",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:ZHIPU": {
+   "asset_class": "stock",
+   "underlying": "Knowledge Atlas (Zhipu AI), HKEX 2513",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:QCOM": {
+   "asset_class": "stock",
+   "underlying": "Qualcomm",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:STRC": {
+   "asset_class": "other",
+   "underlying": "Strategy Inc. STRC variable-rate perpetual preferred",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:BOT": {
+   "asset_class": "stock",
+   "underlying": "RoboStrategy Inc. (closed-end fund), Nasdaq BOT",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:AMAT": {
+   "asset_class": "stock",
+   "underlying": "Applied Materials",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:GIGADEV": {
+   "asset_class": "stock",
+   "underlying": "GigaDevice Semiconductor, SSE 603986 (CNY->USD)",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:SHAZ": {
+   "asset_class": "stock",
+   "underlying": "SharonAI Holdings, Nasdaq SHAZ",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:SKHY": {
+   "asset_class": "stock",
+   "underlying": "SK hynix ADS, Nasdaq SKHY (converted from pre-IPO)",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md ; docs.trade.xyz/perpetuals/specifications-and-schedules/pre-ipo-specification-index.md"
+  },
+  "xyz:KSTR": {
+   "asset_class": "index",
+   "underlying": "KraneShares China Tech & Semi STAR 50 ETF",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:CXMT": {
+   "asset_class": "stock",
+   "underlying": "ChangXin Memory, SSE STAR 688825 (converted from pre-IPO)",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md ; docs.trade.xyz/perpetuals/specifications-and-schedules/pre-ipo-specification-index.md"
+  },
+  "xyz:GEV": {
+   "asset_class": "stock",
+   "underlying": "GE Vernova",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:KORU": {
+   "asset_class": "index",
+   "underlying": "Direxion Daily MSCI South Korea Bull 3X ETF",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:UNITREE": {
+   "asset_class": "stock",
+   "underlying": "Unitree Robotics (Yushu), SSE STAR 688836 (converted from pre-IPO)",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md ; docs.trade.xyz/perpetuals/specifications-and-schedules/pre-ipo-specification-index.md"
+  },
+  "xyz:LYTE": {
+   "asset_class": "index",
+   "underlying": "Roundhill Photonics & Optics ETF",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:NCLD": {
+   "asset_class": "index",
+   "underlying": "Roundhill Neocloud ETF",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:SOXL": {
+   "asset_class": "index",
+   "underlying": "Direxion Daily Semiconductor Bull 3X ETF",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:MAGS": {
+   "asset_class": "index",
+   "underlying": "Roundhill Magnificent Seven ETF",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:IREN": {
+   "asset_class": "stock",
+   "underlying": "IREN",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:NET": {
+   "asset_class": "stock",
+   "underlying": "Cloudflare",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:CRWD": {
+   "asset_class": "stock",
+   "underlying": "CrowdStrike",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:RDDT": {
+   "asset_class": "stock",
+   "underlying": "Reddit",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:AAOI": {
+   "asset_class": "stock",
+   "underlying": "Applied Optoelectronics",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:MRNA": {
+   "asset_class": "stock",
+   "underlying": "Moderna",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:XBI": {
+   "asset_class": "index",
+   "underlying": "SPDR S&P Biotech ETF",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:SHEIN": {
+   "asset_class": "stock",
+   "underlying": "SHEIN Global Holdings, HKEX 0625 (converted from pre-IPO)",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md ; docs.trade.xyz/perpetuals/specifications-and-schedules/pre-ipo-specification-index.md"
+  },
+  "xyz:BMNR": {
+   "asset_class": "stock",
+   "underlying": "BitMine Immersion Technologies",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:SNXX": {
+   "asset_class": "stock",
+   "underlying": "Tradr 2X Long SNDK Daily ETF (leveraged single-stock ETF)",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:CVX": {
+   "asset_class": "stock",
+   "underlying": "Chevron",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:TLT": {
+   "asset_class": "rates",
+   "underlying": "iShares 20+ Year Treasury Bond ETF",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:HO": {
+   "asset_class": "commodity",
+   "underlying": "HO not in docs; NYMEX code for NY Harbor ULSD (docs list a DIESEL market) - inferred",
+   "evidence": "symbol only"
+  },
+  "xyz:OURA": {
+   "asset_class": "pre_ipo",
+   "underlying": "Oura Inc. (pre-IPO, expected Nasdaq OURA; funding mult 0.005)",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/pre-ipo-specification-index.md"
+  },
+  "xyz:LRCX": {
+   "asset_class": "stock",
+   "underlying": "Lam Research",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "xyz:UMC": {
+   "asset_class": "stock",
+   "underlying": "United Microelectronics ADS, NYSE UMC",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md"
+  },
+  "xyz:TWST": {
+   "asset_class": "stock",
+   "underlying": "ticker TWST (not in xyz docs; Twist Bioscience? unverified)",
+   "evidence": "symbol only"
+  },
+  "xyz:GLW": {
+   "asset_class": "stock",
+   "underlying": "Corning",
+   "evidence": "https://docs.trade.xyz/perpetuals/specifications-and-schedules/specification-index.md (ticker listed)"
+  },
+  "para:TOTAL2": {
+   "asset_class": "crypto_index",
+   "underlying": "Total crypto market cap ex-BTC (top-125 basket)",
+   "evidence": "https://docs.paragon.trade/markets/crypto-indices/methodology.md"
+  },
+  "para:OTHERS": {
+   "asset_class": "crypto_index",
+   "underlying": "Total crypto market cap ex-top-10",
+   "evidence": "https://docs.paragon.trade/markets/crypto-indices/methodology.md"
+  },
+  "para:BTCD": {
+   "asset_class": "crypto_index",
+   "underlying": "Bitcoin dominance BTC.D (BTC mcap / TOTAL, decimal)",
+   "evidence": "https://docs.paragon.trade/markets/crypto-indices/methodology.md"
+  },
+  "para:AVGO": {
+   "asset_class": "stock",
+   "underlying": "Broadcom (Pyth Equity.US feed)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:COHR": {
+   "asset_class": "stock",
+   "underlying": "Coherent (Pyth Equity.US feed)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:GLW": {
+   "asset_class": "stock",
+   "underlying": "Corning (Pyth Equity.US feed)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:CRDO": {
+   "asset_class": "stock",
+   "underlying": "Credo Technology (Pyth Equity.US feed)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:LRCX": {
+   "asset_class": "stock",
+   "underlying": "Lam Research (Pyth Equity.US feed)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:NET": {
+   "asset_class": "stock",
+   "underlying": "Cloudflare (Pyth Equity.US feed)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:STX": {
+   "asset_class": "stock",
+   "underlying": "Seagate (Pyth Equity.US feed)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:IREN": {
+   "asset_class": "stock",
+   "underlying": "IREN Ltd (Pyth Equity.US feed)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:VST": {
+   "asset_class": "stock",
+   "underlying": "Vistra (Pyth Equity.US feed)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:TER": {
+   "asset_class": "stock",
+   "underlying": "Teradyne (Pyth Equity.US feed)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:AAOI": {
+   "asset_class": "stock",
+   "underlying": "Applied Optoelectronics (Pyth Equity.US feed)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:10Y": {
+   "asset_class": "rates",
+   "underlying": "US 10Y Treasury yield in % (Pyth Rates.US10Y); long yield = short bond",
+   "evidence": "https://docs.paragon.trade/markets/rates-and-yields.md ; docs.paragon.trade/resources/specifications.md"
+  },
+  "para:CIEN": {
+   "asset_class": "stock",
+   "underlying": "Ciena (Pyth Equity.US feed)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:RDDT": {
+   "asset_class": "stock",
+   "underlying": "Reddit (Pyth Equity.US feed)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:UNITREE": {
+   "asset_class": "stock",
+   "underlying": "Unitree Robotics A-share 688836.SH (CNY->USD via USD/CNH; converted from pre-listing)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:CRWD": {
+   "asset_class": "stock",
+   "underlying": "CrowdStrike (Pyth Equity.US feed)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:MELI": {
+   "asset_class": "stock",
+   "underlying": "MercadoLibre (Pyth Equity.US feed)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:SMCI": {
+   "asset_class": "stock",
+   "underlying": "Super Micro Computer (Pyth Equity.US feed)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:ANSEM": {
+   "asset_class": "other",
+   "underlying": "ANSEM creator coin (crypto token spot price)",
+   "evidence": "https://docs.paragon.trade/markets/crypto-indices.md"
+  },
+  "para:30Y": {
+   "asset_class": "rates",
+   "underlying": "US 30Y Treasury yield in % (Pyth Rates.US30Y)",
+   "evidence": "https://docs.paragon.trade/markets/rates-and-yields.md ; docs.paragon.trade/resources/specifications.md"
+  },
+  "para:2Y": {
+   "asset_class": "rates",
+   "underlying": "US 2Y Treasury yield in % (Pyth Rates.US2Y)",
+   "evidence": "https://docs.paragon.trade/markets/rates-and-yields.md ; docs.paragon.trade/resources/specifications.md"
+  },
+  "para:IGV": {
+   "asset_class": "index",
+   "underlying": "iShares Expanded Tech-Software Sector ETF",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:SOFI": {
+   "asset_class": "stock",
+   "underlying": "SoFi (Pyth Equity.US feed)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:TTWO": {
+   "asset_class": "stock",
+   "underlying": "Take-Two Interactive (Pyth Equity.US feed)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:CIFR": {
+   "asset_class": "stock",
+   "underlying": "Cipher (Cipher Digital) (Pyth Equity.US feed)",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "para:TREAD": {
+   "asset_class": "other",
+   "underlying": "TREAD, utility token of Tread.fi (crypto token spot price)",
+   "evidence": "https://docs.paragon.trade/markets/crypto-indices.md"
+  },
+  "para:SMH": {
+   "asset_class": "index",
+   "underlying": "MarketVector US Listed Semiconductor 25 Index (MVCSMH), referenced directly",
+   "evidence": "https://docs.paragon.trade/resources/specifications.md"
+  },
+  "mkts:US500": {
+   "asset_class": "index",
+   "underlying": "US 500 synthetic; designated oracle reference NYSE:SPY",
+   "evidence": "https://markets.xyz/docs/available-assets.md"
+  },
+  "mkts:USBOND": {
+   "asset_class": "rates",
+   "underlying": "US long bond synthetic; designated oracle reference NASDAQ:TLT (price, not yield)",
+   "evidence": "https://markets.xyz/docs/available-assets.md"
+  },
+  "mkts:SMALL2000": {
+   "asset_class": "index",
+   "underlying": "US small-cap synthetic; designated oracle reference NYSE:IWM",
+   "evidence": "https://markets.xyz/docs/available-assets.md"
+  },
+  "mkts:USTECH": {
+   "asset_class": "index",
+   "underlying": "US Tech synthetic; designated oracle reference NASDAQ:QQQ",
+   "evidence": "https://markets.xyz/docs/available-assets.md"
+  },
+  "mkts:BVIV": {
+   "asset_class": "crypto_index",
+   "underlying": "Volmex 30-day Bitcoin Implied Volatility Index (vol points; via Perps.inc/Volmex)",
+   "evidence": "https://markets.xyz/docs/bviv-volmex-bitcoin-implied-volatility-index.md"
+  },
+  "io:OAI": {
+   "asset_class": "pre_ipo",
+   "underlying": "OpenAI Group PBC; $1 = $1B market cap; bounds 200-3000",
+   "evidence": "https://docs.entropy.io/asset-directory/pre-ipo-assets.md"
+  },
+  "io:ANTH": {
+   "asset_class": "pre_ipo",
+   "underlying": "Anthropic PBC; $1 = $1B market cap; bounds 300-4200",
+   "evidence": "https://docs.entropy.io/asset-directory/pre-ipo-assets.md"
+  },
+  "io:SNDK": {
+   "asset_class": "stock",
+   "underlying": "SanDisk Corp.",
+   "evidence": "https://docs.entropy.io/asset-directory/equity-assets.md"
+  },
+  "io:IONQ": {
+   "asset_class": "stock",
+   "underlying": "IonQ Inc",
+   "evidence": "https://docs.entropy.io/asset-directory/equity-assets.md"
+  },
+  "io:NBIS": {
+   "asset_class": "stock",
+   "underlying": "Nebius Group NV",
+   "evidence": "https://docs.entropy.io/asset-directory/equity-assets.md"
+  },
+  "io:EWY": {
+   "asset_class": "index",
+   "underlying": "iShares MSCI South Korea ETF",
+   "evidence": "https://docs.entropy.io/asset-directory/index-assets.md"
+  },
+  "io:GPRO": {
+   "asset_class": "stock",
+   "underlying": "GoPro Inc",
+   "evidence": "https://docs.entropy.io/asset-directory/equity-assets.md"
+  },
+  "io:TCNT": {
+   "asset_class": "stock",
+   "underlying": "Reference issuer \"HK700\" (HKEX 0700 = Tencent; name not in docs)",
+   "evidence": "https://docs.entropy.io/asset-directory/equity-assets.md"
+  },
+  "io:DRAM": {
+   "asset_class": "index",
+   "underlying": "Roundhill Memory ETF",
+   "evidence": "https://docs.entropy.io/asset-directory/index-assets.md"
+  }
+ }
+}

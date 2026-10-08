@@ -2,13 +2,13 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.seekdaseek/agentfeed",
   "title": "AgentFeed",
-  "description": "Liquidation tape, funding radar, derivatives, Solana data. 60 tools, per-call USDC on 4 chains.",
+  "description": "Liquidations, funding radar, options IV/GEX, stock perps, macro calendar. 66 tools, USDC, 4 chains.",
   "websiteUrl": "https://x402.ochinimus.app",
   "repository": {
     "url": "https://github.com/seekdaseek/agentfeed",
     "source": "github"
   },
-  "version": "2.4.0",
+  "version": "2.5.0",
   "remotes": [
     {
       "type": "streamable-http",

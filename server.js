@@ -6,7 +6,7 @@ const path = require('path');
 const express = require('express');
 const { db, logCall } = require('./db');
 const { buildPaymentLayer, decodeSettlement, PRICES } = require('./payments');
-const { makeRefusalRecorder, sanitizeChallengeErrors } = require('./lib/refusals');
+const { makeRefusalRecorder, sanitizeChallengeErrors, aliasXPayment } = require('./lib/refusals');
 const { evmRails, railNames } = require('./lib/rails');
 const { getPrice } = require('./tools/prices');
 const { getFunding, getFundingRate } = require('./tools/funding');
@@ -251,6 +251,10 @@ app.use(makeRefusalRecorder({ logCall, PRICES, mppPayer: (req) => (mpp && mpp.cr
 // Rewrites at setHeader time, so the recorder above -- which reads the header
 // when the response finishes -- records the reason the buyer was actually sent.
 app.use(sanitizeChallengeErrors);
+// X-PAYMENT with a v2 payload counts as PAYMENT-SIGNATURE; see lib/refusals.js.
+// After the recorder (which already counts either header as presented) and the
+// sanitizer (which explains a refused v1 payload), before both payment layers.
+app.use(aliasXPayment);
 
 // ---- MPP solana/charge layer (additive, MPP_ENABLED-gated)
 // Mounted BEFORE the x402 layer so that a 402 can carry both challenges: MPP's

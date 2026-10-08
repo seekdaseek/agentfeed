@@ -450,11 +450,11 @@ on — `MPP_SECRET_KEY` have no working default.
 | `HELIUS_RPC` | `https://mainnet.helius-rpc.com/?api-key=$HELIUS_API_KEY` | |
 | `HELIUS_ENH` | `https://api.helius.xyz` | |
 | `X402_MODE` | `on` | `off` serves every route free |
-| `X402_NETWORK` | `devnet` | set `mainnet` in production |
+| `X402_NETWORK` | — | **required** when `X402_MODE` is on: `mainnet` in production, `devnet` for tests; boot fails without it |
 | `PAY_TO` | — | **required**; Solana treasury that receives USDC |
 | `PAY_TO_EVM` | — | EVM treasury for Base, Polygon and Arbitrum USDC; unset drops every EVM rail from the challenge |
 | `X402_EVM_NETWORKS` | unset (all) | comma-separated CAIP-2 ids to narrow the EVM rails, e.g. `eip155:8453` for Base only |
-| `FACILITATOR_URL` | `https://facilitator.x402.org` | |
+| `FACILITATOR_URL` | — | **required** when `X402_MODE` is on; boot fails without it. Production uses the CDP facilitator, `https://api.cdp.coinbase.com/platform/v2/x402` |
 | `MPP_ENABLED` | unset (off) | `true` mounts the `solana/charge` layer |
 | `MPP_SECRET_KEY` | — | **required when `MPP_ENABLED=true`; must be 32 characters or longer** — mppx HMAC-binds the challenge id so verification is stateless, and init refuses anything shorter |
 | `MPP_NETWORK` | `mainnet` | |

@@ -158,12 +158,22 @@ function pacer(gapMs) {
   };
 }
 
-// A 500-row fundingHistory page weighs about 45 (20 + 1 per 20 items), so 4 s
-// between calls holds the collector under 700 of Hyperliquid's 1200 a minute.
-function venueClient({ fetchImpl = fetch, budget = { bybit: 150, okx: 60, hyperliquid: 30 }, gaps = { bybit: 150, okx: 400, hyperliquid: 4000 } } = {}) {
-  const pace = Object.fromEntries(VENUES.map((v) => [v, pacer(gaps[v])]));
+// A 500-row fundingHistory page weighs about 45 (20 + 1 per 20 items); at 3.5 s
+// between calls the collector stays under ~780 of Hyperliquid's 1200 a minute even
+// when every call is a full backfill page.
+//
+// RUN LENGTH. The cron fires every 5 minutes under flock -n, so a run that outlives
+// 5 minutes silently swallows the next one. With the crypto radar (30) and the
+// HIP-3 markets (32) both at their Hyperliquid budgets, 62 calls x 3.5 s = 217 s;
+// `deadline` is the hard backstop on top: past it a client starts no new call, so
+// a slow venue can never stretch a run past ~270 s. Measured 2026-10-08: 45 + 40
+// calls at 4 s would have been ~340 s at the top of each hour during backfill.
+function venueClient({ fetchImpl = fetch, budget = { bybit: 150, okx: 60, hyperliquid: 30 }, gaps = { bybit: 150, okx: 400, hyperliquid: 3500 }, sharedPace = null, deadline = Infinity } = {}) {
+  // sharedPace: a second client with its own budget but the SAME pacers, so two
+  // budgets never add up to a faster request rate against one venue.
+  const pace = sharedPace || Object.fromEntries(VENUES.map((v) => [v, pacer(gaps[v])]));
   const used = { bybit: 0, okx: 0, hyperliquid: 0 };
-  const left = (v) => budget[v] - used[v];
+  const left = (v) => (Date.now() >= deadline ? 0 : budget[v] - used[v]);
   async function get(v, url, opts) {
     if (left(v) <= 0) { const e = new Error(`${v}: call budget for this run spent`); e.budget = true; throw e; }
     used[v]++;
@@ -175,7 +185,7 @@ function venueClient({ fetchImpl = fetch, budget = { bybit: 150, okx: 60, hyperl
   const bybit = async (p) => { const j = await get('bybit', BYBIT() + p); if (j.retCode !== 0) throw new Error(`bybit: ${j.retMsg}`); return j.result; };
   const okx = async (p) => { const j = await get('okx', OKX() + p); if (j.code !== '0') { const e = new Error(`okx: ${j.msg}`); e.okxCode = j.code; throw e; } return j.data; };
   const hl = (body) => get('hyperliquid', HL(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  return { bybit, okx, hl, used, left };
+  return { bybit, okx, hl, used, left, pace };
 }
 
 const okxInst = (sym) => sym.replace(/USDT$/, '') + '-USDT-SWAP';
@@ -282,8 +292,9 @@ async function fetchHistory(c, venue, symbol, since) {
  * interest first, updates before backfill), then write the snapshot from
  * whatever history is stored. Returns a summary for the cron log.
  */
-async function collect({ now = Date.now(), client = venueClient(), log = () => {} } = {}) {
+async function collect({ now = Date.now(), client = null, log = () => {} } = {}) {
   const t0 = Date.now();
+  client = client || venueClient({ deadline: t0 + 200_000 });
   const db = openDb();
   const cur = await readCurrent(client);
   const symbols = new Set([...Object.keys(cur.bybit), ...Object.keys(cur.okx), ...Object.keys(cur.hyperliquid)]);
@@ -373,6 +384,16 @@ async function collect({ now = Date.now(), client = venueClient(), log = () => {
     rows.push(radarRow(u.symbol, venues, u.oi));
   }
   rows.sort(byExtremity);
+  // Stock, index, commodity and FX perps (HIP-3) ride the same run, budget and
+  // snapshot; a failure there never costs the crypto radar its snapshot.
+  let tradfi = null, tradfiSummary = null;
+  try {
+    // its own call budget, the crypto client's pacers: the crypto radar's hourly
+    // Hyperliquid updates can no longer starve the HIP-3 markets of calls
+    const tradfiClient = venueClient({ budget: { bybit: 0, okx: 0, hyperliquid: 32 }, sharedPace: client.pace, deadline: t0 + 235_000 });
+    const t = await require('./tradfi').collectTradfi({ client: tradfiClient, db, now, log, fr: module.exports });
+    tradfi = t.section; tradfiSummary = t.summary;
+  } catch (e) { log(`tradfi: ${e.message}`); }
   const snapshot = {
     version: 1,
     as_of: new Date(now).toISOString(),
@@ -382,12 +403,13 @@ async function collect({ now = Date.now(), client = venueClient(), log = () => {
     window_target_days: WINDOW_DAYS,
     coverage: { series_total: seriesTotal, series_with_history: seriesWithHistory, series_full_window: seriesFull },
     symbols: rows,
+    ...(tradfi ? { tradfi } : {}),
   };
   const tmp = SNAP_PATH() + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(snapshot));
   fs.renameSync(tmp, SNAP_PATH());
   db.close();
-  return { universe: universe.length, due: due.length, fetched, failed, skipped, calls: { ...client.used }, coverage: snapshot.coverage, ms: Date.now() - t0 };
+  return { universe: universe.length, due: due.length, fetched, failed, skipped, calls: { ...client.used }, coverage: snapshot.coverage, tradfi: tradfiSummary, ms: Date.now() - t0 };
 }
 
 // ---- the paid route ------------------------------------------------------------
@@ -439,8 +461,17 @@ function getFundingRadar(p = {}, { now = Date.now() } = {}) {
   };
 }
 
+/** One symbol's radar row straight from the snapshot (not limited to the top N), with its as_of and staleness. */
+function getRadarRow(symbol, { now = Date.now() } = {}) {
+  const snap = readSnapshot();
+  if (!snap) return null;
+  const row = snap.symbols.find((r) => r.symbol === symbol);
+  const age = Math.max(0, Math.round((now - snap.as_of_ms) / 1000));
+  return row ? { row, as_of: snap.as_of, age_s: age, stale: age > STALE_AFTER_S } : { row: null, as_of: snap.as_of, age_s: age, stale: age > STALE_AFTER_S };
+}
+
 module.exports = {
-  collect, getFundingRadar,
+  collect, getFundingRadar, getRadarRow,
   _to8hSeries: to8hSeries, _windowStats: windowStats, _zScore: zScore, _radarRow: radarRow, _byExtremity: byExtremity,
   _venueClient: venueClient, _readCurrent: readCurrent, _fetchHistory: fetchHistory,
   STALE_AFTER_S, UNIVERSE_MIN_OI_USD, DEFAULT_MIN_OI_USD, DEFAULT_TOP,

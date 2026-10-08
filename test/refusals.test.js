@@ -177,3 +177,35 @@ test('a JavaScript error never reaches the buyer in a 402; a facilitator reason 
     srv.close();
   }
 });
+
+test('X-PAYMENT with a v2 payload becomes PAYMENT-SIGNATURE; a v1 payload stays refused, with a reason', async () => {
+  const { aliasXPayment, sanitizeChallengeErrors, V1_UNSUPPORTED } = require('../lib/refusals');
+  const app = express();
+  app.use(sanitizeChallengeErrors);
+  app.use(aliasXPayment);
+  app.get('/echo', (req, res) => {
+    // stand-in for the x402 layer: a decodable v2 PAYMENT-SIGNATURE "settles"; anything else gets the plain challenge
+    const ps = req.headers['payment-signature'];
+    if (ps && JSON.parse(Buffer.from(ps, 'base64').toString()).x402Version === 2) {
+      res.setHeader('PAYMENT-RESPONSE', Buffer.from(JSON.stringify({ success: true })).toString('base64'));
+      return res.status(200).json({ ok: true });
+    }
+    res.setHeader('PAYMENT-REQUIRED', Buffer.from(JSON.stringify({ x402Version: 2, error: 'Payment required' })).toString('base64'));
+    res.status(402).json({});
+  });
+  const srv = app.listen(0);
+  const port = srv.address().port;
+  const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64');
+  try {
+    const v2 = await fetch(`http://127.0.0.1:${port}/echo`, { headers: { 'x-payment': b64({ x402Version: 2, accepted: {}, payload: {} }) } });
+    assert.equal(v2.status, 200);
+    assert.ok(v2.headers.get('payment-response') && v2.headers.get('x-payment-response'), 'settlement mirrored to X-PAYMENT-RESPONSE');
+    const v1 = await fetch(`http://127.0.0.1:${port}/echo`, { headers: { 'x-payment': b64({ x402Version: 1, scheme: 'exact', network: 'base', payload: {} }) } });
+    assert.equal(v1.status, 402);
+    assert.equal(JSON.parse(Buffer.from(v1.headers.get('payment-required'), 'base64').toString()).error, V1_UNSUPPORTED);
+    const both = await fetch(`http://127.0.0.1:${port}/echo`, { headers: { 'x-payment': b64({ x402Version: 1 }), 'payment-signature': b64({ x402Version: 2 }) } });
+    assert.equal(both.status, 200, 'PAYMENT-SIGNATURE wins when both are sent');
+  } finally {
+    srv.close();
+  }
+});

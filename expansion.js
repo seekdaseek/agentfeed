@@ -19,6 +19,10 @@ const B = require('./tools/base');
 const PX = require('./tools/prices');
 const EN = require('./tools/entry');
 const FR = require('./tools/fundingradar');
+const OPT = require('./tools/options');
+const MS = require('./tools/marketstate');
+const MAC = require('./tools/macro');
+const TF = require('./tools/tradfi');
 
 const sym = (d) => z.string().optional().describe(`USDT perp symbol e.g. SOLUSDT, BTCUSDT (default ${d})`);
 // Twelve routes -- liq-heatmap, squeeze-score, six derivatives and four
@@ -82,6 +86,45 @@ const EXP = [
     schema: { top: z.number().optional().describe('symbols returned, most extreme first, 1-100, default 20'),
               min_oi_usd: z.number().optional().describe('minimum combined open interest in USD across the venues: default 10000000 ($10M); the radar tracks pairs from 5000000 ($5M), and lower values return that floor') },
     run: (a) => FR.getFundingRadar(a) },
+  // ---- options desk, market state, macro clock (S3, 2026-10-08) ----
+  // options-*: served from the snapshot bin/options-collect.js writes every 5 min;
+  // a paid request never calls Deribit, and a stale snapshot answers 503.
+  { name: 'get_options_summary', route: 'GET /api/options-summary', usd: 0.02,
+    desc: 'Implied volatility and options skew for BTC, ETH, SOL, XRP and HYPE from Deribit: DVOL (or our 30-day ATM implied vol where Deribit publishes none) with its 24h change, the ATM IV term structure, 25-delta risk reversal and butterfly per expiry, put/call ratio by open interest and 24h volume, options open interest in USD, max pain for the next three expiries and the top strikes. Precomputed every 5 minutes; a snapshot older than 15 minutes answers 503 and is never charged.',
+    tags: ['options', 'implied-volatility', 'skew', 'max-pain', 'dvol', 'deribit', 'trading'],
+    schema: { currency: z.string().optional().describe('BTC (default), ETH, SOL, XRP or HYPE') },
+    run: (a) => OPT.getOptionsSummary(a) },
+  { name: 'get_options_gex', route: 'GET /api/options-gex', usd: 0.03,
+    desc: 'Gamma exposure (GEX) for BTC, ETH, SOL, XRP and HYPE options on Deribit: gamma by strike in USD per 1% move, net GEX under a dealer-sign convention stated in every response, the gamma flip level and the call and put walls. Black-Scholes gamma on Deribit mark implied volatility across every live expiry. Precomputed every 5 minutes; a snapshot older than 15 minutes answers 503 and is never charged.',
+    tags: ['options', 'gamma-exposure', 'gex', 'dealer-positioning', 'deribit', 'trading'],
+    schema: { currency: z.string().optional().describe('BTC (default), ETH, SOL, XRP or HYPE') },
+    run: (a) => OPT.getOptionsGex(a) },
+  { name: 'get_market_state', route: 'GET /api/market-state', usd: 0.02,
+    desc: 'Market state for BTC, ETH, SOL or HYPE in one call: spot and perp basis, realized vol 7d and 30d, implied vol (DVOL or 30-day ATM) and the IV minus RV spread, funding per venue with 30-day z-scores, open interest and its 24h change, long/short, liquidations 1h and 24h by side, Fear and Greed, the next FOMC or CPI release, and flags with stated thresholds. Every part carries its source and as-of time; a part we do not hold is null with a reason.',
+    tags: ['market-data', 'implied-volatility', 'funding', 'liquidations', 'macro', 'trading'],
+    schema: { symbol: z.string().optional().describe('BTC (default), ETH, SOL or HYPE') },
+    run: (a) => MS.getMarketState(a) },
+  { name: 'get_macro_calendar', route: 'GET /api/macro-calendar', usd: 0.005,
+    desc: "FOMC, CPI, NFP and PCE calendar for traders: the next Fed rate decisions and the CPI, nonfarm payrolls and PCE release dates with UTC times converted from New York time (DST-aware), each with its official Fed, BLS or BEA source URL and the time we verified it. Read daily from the agencies' own pages and never entered by hand; data verified more than 35 days ago answers 503 and is never charged.",
+    tags: ['macro', 'fomc', 'cpi', 'calendar', 'economic-data'],
+    schema: { type: z.string().optional().describe('comma list of FOMC, CPI, NFP, PCE (default all)'),
+              days: z.number().optional().describe('days ahead, 1-400, default 90') },
+    run: (a) => MAC.getMacroCalendar(a) },
+  // TradFi perps: HIP-3 markets ride the funding-radar collector and snapshot;
+  // Bybit, Binance and OKX TradFi perps are read in the same run.
+  { name: 'get_tradfi_radar', route: 'GET /api/tradfi-radar', usd: 0.02,
+    desc: 'Stock perps, S&P 500, Nasdaq, gold and oil perps ranked by funding rate: every stock, index, commodity and FX perp on Hyperliquid HIP-3 dexes (trade[XYZ], Paragon, Markets by Kinetiq, Entropy), Bybit, Binance and OKX, with funding at its 8h equivalent, a 30-day funding z-score on HIP-3, open interest and its 24h change, mark minus oracle basis and 24h volume. Filter by asset class or venue. Precomputed every 5 minutes; stale data answers 503.',
+    tags: ['stock-perps', 'funding', 'tradfi', 'commodities', 'indices', 'hyperliquid', 'trading'],
+    schema: { class: z.string().optional().describe('comma list of stock, index, commodity, fx, rates, pre_ipo, crypto_index, other (default all)'),
+              venue: z.string().optional().describe('comma list of hyperliquid, bybit, binance, okx (default all)'),
+              top: z.number().optional().describe('markets returned, 1-200, default 25'),
+              min_oi_usd: z.number().optional().describe('minimum open interest in USD; venues that publish no OI are then left out (default 0)') },
+    run: (a) => TF.getTradfiRadar(a) },
+  { name: 'get_equity_24h', route: 'GET /api/equity-24h', usd: 0.01,
+    desc: "Weekend price for US stocks: an indicative 24/7 price for a stock or index (TSLA, NVDA, S&P 500, Nasdaq) from stock perps on Hyperliquid, Bybit, Binance and OKX and our tokenized stocks DEX price, with the last regular-session price, its time and source, the implied gap in %, each source's liquidity and the session (open, pre, after, overnight, weekend). Indicative, never an exchange quote; 503 when no source has liquidity.",
+    tags: ['tokenized-stocks', 'stock-perps', 'weekend-price', 'equities', 'indicative-price'],
+    schema: { symbol: z.string().describe('US stock or index ticker as the venues list it, e.g. TSLA, NVDA, SP500, XYZ100') },
+    run: (a) => TF.getEquity24h(a) },
   { name: 'get_open_interest', route: 'GET /api/open-interest', usd: 0.01,
     desc: 'Open interest for ANY USDT perp: Bybit OI in base units and in USD with 1h and 24h change, plus OKX open interest and the mark price. /api/positioning covers SOL and BTC only.',
     tags: ['open-interest', 'perps', 'crypto', 'trading'],

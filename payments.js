@@ -207,9 +207,16 @@ function bazaarConfig(pattern) {
 
 function buildPaymentLayer() {
   missingMeta.length = 0;
-  const networkName = (process.env.X402_NETWORK || 'devnet').toLowerCase();
+  // FAIL FAST, like mcp.js. These used to default to devnet and to
+  // https://facilitator.x402.org -- a host that no longer resolves (checked
+  // 2026-10-08) -- so a .env that lost a line would have booted a service that
+  // quoted devnet or could never settle, and looked healthy doing it.
+  if (!process.env.X402_NETWORK) throw new Error('X402_NETWORK missing from .env (mainnet or devnet)');
+  const networkName = process.env.X402_NETWORK.toLowerCase();
+  if (networkName !== 'mainnet' && networkName !== 'devnet') throw new Error(`X402_NETWORK must be mainnet or devnet, got ${networkName}`);
   const network = networkName === 'mainnet' ? SOLANA_MAINNET_CAIP2 : SOLANA_DEVNET_CAIP2;
-  const facilitatorUrl = process.env.FACILITATOR_URL || 'https://facilitator.x402.org';
+  const facilitatorUrl = process.env.FACILITATOR_URL;
+  if (!facilitatorUrl) throw new Error('FACILITATOR_URL missing from .env');
   const payTo = process.env.PAY_TO;
   if (!payTo) throw new Error('PAY_TO missing from .env (treasury address)');
 

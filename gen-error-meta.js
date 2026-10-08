@@ -41,6 +41,7 @@ function must(file, re, label) {
 const m400 = must('lib/tool.js', /res\.status\(400\)\.json\(\{\s*tool:\s*name,\s*error:\s*e\.message\s*\}\)/, '400 emitter');
 const m429 = must('server.js', /res\.status\(429\)\.json\(\{\s*error:\s*`rate limit: \$\{limit\} req\/min`,\s*retry_after:\s*retryAfter\s*\}\)/, '429 emitter');
 const m405 = must('server.js', /res\.set\('Allow',\s*'GET'\);\s*\n\s*res\.status\(405\)\.end\(\)/, '405 emitter');
+const m503 = must('lib/tool.js', /res\.status\(503\)\.json\(\{\s*tool:\s*name,\s*error:\s*e\.message,\s*retry_after:\s*60\s*\}\)/, '503 emitter');
 const mLimit = must('server.js', /const LIMIT = (\d+);/, 'GET rate limit');
 const mOther = must('server.js', /const OTHER_LIMIT = (\d+);/, 'other-method rate limit');
 const mWindow = must('server.js', /const WINDOW_MS = ([\d_]+);/, 'rate limit window');
@@ -72,6 +73,13 @@ const SHARED = [
     name: 'Too Many Requests',
     when: `More than ${GET_LIMIT} GET (or POST /mcp) requests from one IP in ${WINDOW_S}s. Other HTTP methods have a separate ${OTHER_LIMIT}/${WINDOW_S}s allowance.`,
     body: { error: `rate limit: ${GET_LIMIT} req/min`, retry_after: '<seconds>' },
+    note: 'Retry-After is also set as a response header.',
+  },
+  {
+    status: 503,
+    name: 'Service Unavailable',
+    when: 'The route answers from a precomputed snapshot and that snapshot is past its staleness limit, or no source has data to answer with. Never charged: a status of 400 or more cancels the x402 settlement.',
+    body: { tool: '<tool name>', error: '<reason, including the snapshot age>', retry_after: 60 },
     note: 'Retry-After is also set as a response header.',
   },
   {

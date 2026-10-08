@@ -80,6 +80,8 @@ const SYMBOL_FOR = {
   get_cascade_forecast: 'SOL',   // this tool takes the bare asset, not the perp
   get_spot: 'SOL',               // the spot route serves bare assets (SOL/BTC/ETH), not perps
   get_funding_rate: 'ETHUSDT',   // shows the symbol mode on a perp that is not the no-symbol pair
+  get_equity_24h: 'TSLA',        // a US stock ticker; the route takes no perp symbols
+  get_market_state: 'SOL',       // market-state takes the bare asset
 };
 
 // Extra call arguments for routes whose default parameters return a real but

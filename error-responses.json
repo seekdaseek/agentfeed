@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-08T14:56:41.583Z",
+  "generatedAt": "2026-10-08T18:37:12.225Z",
   "limits": {
     "get": 240,
     "other": 2400,
@@ -32,6 +32,17 @@
       "body": {
         "error": "rate limit: 240 req/min",
         "retry_after": "<seconds>"
+      },
+      "note": "Retry-After is also set as a response header."
+    },
+    {
+      "status": 503,
+      "name": "Service Unavailable",
+      "when": "The route answers from a precomputed snapshot and that snapshot is past its staleness limit, or no source has data to answer with. Never charged: a status of 400 or more cancels the x402 settlement.",
+      "body": {
+        "tool": "<tool name>",
+        "error": "<reason, including the snapshot age>",
+        "retry_after": 60
       },
       "note": "Retry-After is also set as a response header."
     },
@@ -221,6 +232,46 @@
     "GET /api/funding-radar": {
       "requiredInputs": [],
       "callerError": null
+    },
+    "GET /api/options-summary": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/options-gex": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/market-state": {
+      "requiredInputs": [],
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_market_state",
+          "error": "market-state covers BTC, ETH, SOL, HYPE; got NOT-A-SYMBOL"
+        }
+      }
+    },
+    "GET /api/macro-calendar": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/tradfi-radar": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/equity-24h": {
+      "requiredInputs": [
+        "symbol"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param symbol omitted",
+        "body": {
+          "tool": "get_equity_24h",
+          "error": "symbol required: a US stock or index ticker, e.g. TSLA, NVDA, SP500"
+        }
+      }
     },
     "GET /api/open-interest": {
       "requiredInputs": [],

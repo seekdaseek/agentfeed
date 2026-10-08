@@ -1,4 +1,4 @@
-// tools/entry.js — the $0.001 entry tier: four compact routes composed from
+// tools/entry.js — the entry tier ($0.001 until 2026-10-08, now $0.005): four compact routes composed from
 // functions this service already runs. Nothing here adds an upstream source.
 //
 // WHY THESE FOUR. Measured on the Bazaar 2026-09-25: the six best-selling

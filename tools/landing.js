@@ -11,6 +11,8 @@
 // Null-safe: if the tape is unreachable getPerpCoverage() returns null and
 // the page falls back to the qualitative phrase. A landing page must never
 // 500 because a read-only analytics database is busy.
+const { evmRails, railNames } = require('../lib/rails');
+
 function renderLanding(PRICES, network, coverage) {
   const n = coverage && coverage.perp_markets_7d;
   const perps = n ? String(n) : 'all';
@@ -42,8 +44,8 @@ function renderLanding(PRICES, network, coverage) {
   .foot{margin-top:36px;color:var(--dim);font-size:12px;border-top:1px solid var(--line);padding-top:14px}
 </style></head><body>
 <h1>AgentFeed</h1>
-<p class="tag">Live liquidations, cascade detection, positioning, funding and prices for AI trading agents — <b>${perpsPhrase}</b> across Bybit, OKX and Binance. Pay per call in USDC via x402 on Solana or Base. No API keys, no accounts, no subscriptions.</p>
-<span class="badge">x402 ${network}</span><span class="badge">Solana + Base</span><span class="badge">elizaOS plugin</span><span class="badge">MCP + REST</span><span class="badge">${perps} perps, 3 exchanges</span><span class="badge">full-universe cascades</span>
+<p class="tag">Live liquidations, cascade detection, positioning, funding and prices for AI trading agents — <b>${perpsPhrase}</b> across Bybit, OKX and Binance. Pay per call in USDC via x402 on ${railNames()}. No API keys, no accounts, no subscriptions.</p>
+<span class="badge">x402 ${network}</span><span class="badge">${["Solana", ...evmRails().map((r) => r.name)].join(" + ")}</span><span class="badge">elizaOS plugin</span><span class="badge">MCP + REST</span><span class="badge">${perps} perps, 3 exchanges</span><span class="badge">full-universe cascades</span>
 
 <p style="color:var(--dim);font-size:13px;margin-top:18px;border-left:2px solid var(--gold);padding-left:12px">
 Bybit's <code>allLiquidation</code> is the only <b>complete, unthrottled</b> public liquidation stream among the major perp venues — Binance and OKX both throttle to ~1 print/sec/symbol, a documented limitation that undercounts hardest during cascades. No exchange publishes historical liquidation data (Binance deleted theirs; Bybit never had one). We record it live. <a href="https://ochinimuse.gumroad.com/l/liqdata">Free dataset + full quality disclosure &rarr;</a>
@@ -57,6 +59,7 @@ Bybit's <code>allLiquidation</code> is the only <b>complete, unthrottled</b> pub
 
 <h2>Try it (returns 402 with payment terms; x402 clients pay + retry automatically)</h2>
 <pre>curl https://x402.ochinimus.app/api/trade-context</pre>
+<p style="color:var(--dim);font-size:13px"><b>Copy payTo only from a fresh 402 response, never from transaction history.</b> A lookalike of our treasury address has sent address-poisoning transfers to our buyers.</p>
 
 <div class="links">
   <a href="https://github.com/seekdaseek/agentfeed">GitHub</a> ·
@@ -64,7 +67,7 @@ Bybit's <code>allLiquidation</code> is the only <b>complete, unthrottled</b> pub
   <a href="/.well-known/x402.json">x402 manifest</a> ·
   <a href="/health">health</a>
 </div>
-<div class="foot">Built by <a href="https://ochinimus.app">ochinimus</a> · USDC settlement on Solana &amp; Base · <a href="https://www.npmjs.com/package/@seekdaseek/plugin-agentfeed">elizaOS plugin</a> · <a href="https://smithery.ai/servers/ochinimus/agentfeed">Smithery</a> · <a href="https://ochinimuse.gumroad.com/l/liqdata">datasets</a> · agents hitting this URL get JSON</div>
+<div class="foot">Built by <a href="https://ochinimus.app">ochinimus</a> · USDC settlement on ${["Solana", ...evmRails().map((r) => r.name)].join(", ")} · <a href="https://www.npmjs.com/package/@seekdaseek/plugin-agentfeed">elizaOS plugin</a> · <a href="https://smithery.ai/servers/ochinimus/agentfeed">Smithery</a> · <a href="https://ochinimuse.gumroad.com/l/liqdata">datasets</a> · agents hitting this URL get JSON</div>
 </body></html>`;
 }
 module.exports = { renderLanding };

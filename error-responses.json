@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-28T09:49:21.076Z",
+  "generatedAt": "2026-10-08T14:56:41.583Z",
   "limits": {
     "get": 240,
     "other": 2400,
@@ -38,7 +38,7 @@
     {
       "status": 405,
       "name": "Method Not Allowed",
-      "when": "Any method other than GET on a paid route. The response has an Allow: GET header and an empty body.",
+      "when": "HEAD on a free /api route. The response has an Allow: GET header and an empty body. HEAD on a paid route answers 402 with the challenge in PAYMENT-REQUIRED and no body.",
       "body": null
     }
   ],
@@ -215,6 +215,10 @@
       }
     },
     "GET /api/funding-extremes": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/funding-radar": {
       "requiredInputs": [],
       "callerError": null
     },

@@ -34,6 +34,7 @@ const QUESTIONS = {
   get_funding_pulse: 'Where is funding most extreme right now?',
   get_funding_cross: 'What is funding for this perp across venues?',
   get_funding_extremes: 'Which trades are most crowded by funding?',
+  get_funding_radar: 'Which perps have unusual funding right now, venue by venue?',
   get_funding_history: 'What has the carry on this perp actually been?',
   get_funding_rate: 'What is the funding rate on this perp?',
   get_open_interest: 'How much open interest sits on this perp?',

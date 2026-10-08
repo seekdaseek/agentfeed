@@ -6,7 +6,8 @@ const path = require('path');
 const express = require('express');
 const { db, logCall } = require('./db');
 const { buildPaymentLayer, decodeSettlement, PRICES } = require('./payments');
-const { makeRefusalRecorder } = require('./lib/refusals');
+const { makeRefusalRecorder, sanitizeChallengeErrors } = require('./lib/refusals');
+const { evmRails, railNames } = require('./lib/rails');
 const { getPrice } = require('./tools/prices');
 const { getFunding, getFundingRate } = require('./tools/funding');
 const { getFearGreed } = require('./tools/feargreed');
@@ -139,13 +140,30 @@ setInterval(() => {
 // HEAD request, while app.get() answers HEAD as well as GET — so a HEAD reached
 // every paid handler unmetered (856 crawler probes since 2026-07-21, all one
 // GCP IP). Still verb-exact in @x402/core 2.21.0 (checked 2026-09-15), so a
-// dependency bump alone would not close it. Protocol-correct alternative for
-// later: answer HEAD with the 402 challenge — x402 v2 carries it entirely in
-// the PAYMENT-REQUIRED response header, so a bodiless response can still quote.
-// 405 is the safe move today. Matches /api/* only: /health, / and /.well-known
-// are untouched.
+// dependency bump alone would not close it.
+//
+// A HEAD on a PAID route is answered with the 402 challenge (since 2026-10-08;
+// 405 before). x402 v2 carries the whole challenge in the PAYMENT-REQUIRED
+// header, so a bodiless answer still quotes, and a crawler that probes with
+// HEAD sees a priced route instead of a dead one. It is done by handing the
+// request to the x402 layer as a GET with every payment header removed: with
+// nothing presented the layer can only answer its plain challenge, so a HEAD
+// can never settle and never reach a handler. Node drops the body by itself,
+// because it decided the response has none when the request arrived as HEAD.
+// A HEAD on a free /api route still answers 405: a 402 there would be a lie,
+// and running the handler for a discarded body would only cost us.
+// Matches /api/* only: /health, / and /.well-known are untouched.
+const PRICED_PATHS = Object.keys(PRICES).map((r) => new RegExp('^' + r.slice(4).replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/:[A-Za-z0-9_]+/g, '[^/]+') + '$'));
+const isPricedPath = (p) => PRICED_PATHS.some((re) => re.test(p)) || QUERY_ALIASABLE.some((r) => r.base === p);
 app.use((req, res, next) => {
   if (req.method !== 'HEAD' || !req.path.startsWith('/api/')) return next();
+  if (isPricedPath(req.path)) {
+    for (const h of ['payment-signature', 'x-payment', 'payment-authorization']) delete req.headers[h];
+    if (/^payment\s/i.test(String(req.headers.authorization || '').trim())) delete req.headers.authorization;
+    req.method = 'GET';
+    req.headOnly = true;
+    return next();
+  }
   // ONE ROW PER CALLER PER WINDOW. HEAD used to be inside the 240 bucket, so a
   // sweep was throttled long before it could flood this table. Now that HEAD
   // has 2400 of its own, an unthrottled sweep would write a row per request --
@@ -156,7 +174,7 @@ app.use((req, res, next) => {
     b.headLogged = true;
     logCall({
       tool: 'head_probe', status: 'bad_request', ip: req.callerIp,
-      error_msg: 'HEAD rejected: paid surface is GET-only',
+      error_msg: 'HEAD rejected on a free /api route (a paid route answers HEAD with its 402 challenge)',
       req_path: req.path, user_agent: req.headers['user-agent'], method: req.method,
     });
   }
@@ -230,6 +248,9 @@ app.use((req, _res, next) => {
 // A plain unpaid challenge writes nothing. See lib/refusals.js. `mpp` is read
 // at request time, after the MPP block below has set it.
 app.use(makeRefusalRecorder({ logCall, PRICES, mppPayer: (req) => (mpp && mpp.credentialSource ? mpp.credentialSource(req) : null) }));
+// Rewrites at setHeader time, so the recorder above -- which reads the header
+// when the response finishes -- records the reason the buyer was actually sent.
+app.use(sanitizeChallengeErrors);
 
 // ---- MPP solana/charge layer (additive, MPP_ENABLED-gated)
 // Mounted BEFORE the x402 layer so that a 402 can carry both challenges: MPP's
@@ -425,14 +446,14 @@ const { makeTool } = require('./lib/tool');
 const { tool } = makeTool({ paymentsOn, PRICES, decodeSettlement, logCall });
 
 // ---- routes (patterns must match PRICES keys in payments.js exactly)
-app.get('/api/sol-price', tool('get_sol_price', 0.001, () => getPrice('SOL')));
-app.get('/api/btc-price', tool('get_btc_price', 0.001, () => getPrice('BTC')));
+app.get('/api/sol-price', tool('get_sol_price', 0.005, () => getPrice('SOL')));
+app.get('/api/btc-price', tool('get_btc_price', 0.005, () => getPrice('BTC')));
 
-app.get('/api/funding-rate', tool('get_funding_rate', 0.002, (req) => getFundingRate({ symbol: req.query.symbol })));
+app.get('/api/funding-rate', tool('get_funding_rate', 0.005, (req) => getFundingRate({ symbol: req.query.symbol })));
 
 app.get('/api/fear-greed', tool('get_fear_greed', 0.001, () => getFearGreed()));
 
-app.get('/api/market-snapshot', tool('get_market_snapshot', 0.003, async () => {
+app.get('/api/market-snapshot', tool('get_market_snapshot', 0.005, async () => {
   const [sol, btc, fundingSol, fundingBtc, fg] = await Promise.all([
     getPrice('SOL'), getPrice('BTC'), getFunding('SOL'), getFunding('BTC'), getFearGreed(),
   ]);
@@ -446,11 +467,11 @@ app.get('/api/token-metadata/:mint', tool('get_token_metadata', 0.005,
   (req) => getTokenMetadata(req.params.mint)));
 
 const { getRecentLiquidations, getLiquidationStats, getLastLiquidation, getLiquidationLeaders } = require('./tools/liquidations');
-app.get('/api/liquidations', tool('get_recent_liquidations', 0.003,
+app.get('/api/liquidations', tool('get_recent_liquidations', 0.005,
   (req) => getRecentLiquidations(req)));
 app.get('/api/liquidation-leaders', tool('get_liquidation_leaders', 0.02,
   (req) => getLiquidationLeaders(req)));
-app.get('/api/liquidation-stats', tool('get_liquidation_stats', 0.004,
+app.get('/api/liquidation-stats', tool('get_liquidation_stats', 0.01,
   () => getLiquidationStats()));
 app.get('/api/last-liquidation', tool('get_last_liquidation', 0,
   () => getLastLiquidation()));
@@ -470,7 +491,7 @@ app.get('/api/cascade-scan', tool('get_cascade_scan', 0.05,
 
 
 const { getPositioning } = require('./tools/positioning');
-app.get('/api/positioning', tool('get_positioning', 0.004,
+app.get('/api/positioning', tool('get_positioning', 0.005,
   () => getPositioning()));
 
 const { getTradeContext } = require('./tools/tradecontext');
@@ -500,8 +521,8 @@ app.get('/', (req, res, next) => {
 
 app.get('/', (_req, res) => res.json({
   service: 'agentfeed',
-  description: 'Live crypto market data for AI agents - liquidations, positioning, funding, prices, token risk. Paid per-call in USDC via x402 on Solana or Base; /api/sol-price and /api/btc-price also carry an MPP solana/charge challenge on the same 402. No API keys.',
-  x402: { active: paymentsOn, network: x402Network, chains: ['solana:mainnet', 'eip155:8453'] },
+  description: `Live crypto market data for AI agents - liquidations, positioning, funding, prices, token risk. Paid per-call in USDC via x402 on ${railNames()}; /api/sol-price and /api/btc-price also carry an MPP solana/charge challenge on the same 402. No API keys. Copy payTo only from a fresh 402 response, never from transaction history.`,
+  x402: { active: paymentsOn, network: x402Network, chains: ['solana:mainnet', ...evmRails().map((r) => r.network)] },
   // DERIVED, not restated: whatever is actually mounted is what is advertised.
   mpp: { active: mppOn, intent: 'solana/charge', routes: mppOn ? MPP_ROUTES : [] },
   // The three routes that are genuinely unpriced over HTTP. This used to read
@@ -547,7 +568,7 @@ app.get('/.well-known/glama.json', (_req, res) => res.json({
 app.get('/.well-known/x402.json', (_req, res) => res.json({
   x402Version: 2,
   service: 'agentfeed',
-  description: 'Crypto market, liquidations, and Solana on-chain data for AI agents. Pay per call in USDC via x402 on Solana or Base. /api/sol-price and /api/btc-price also carry an MPP solana/charge challenge on the same 402. No API keys.',
+  description: `Crypto market, liquidations, and Solana on-chain data for AI agents. Pay per call in USDC via x402 on ${railNames()}. /api/sol-price and /api/btc-price also carry an MPP solana/charge challenge on the same 402. No API keys. Copy payTo only from a fresh 402 response, never from transaction history.`,
   website: 'https://x402.ochinimus.app',
   // Derived from what is mounted, so the manifest cannot advertise a protocol
   // the service is not actually speaking.
@@ -562,7 +583,7 @@ app.get('/.well-known/x402.json', (_req, res) => res.json({
     asset: 'USDC',
     accepts: [
       { scheme: 'exact', network: x402Network === 'mainnet' ? 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp' : 'solana:devnet', payTo: process.env.PAY_TO, asset: 'USDC', price_usd: p.usd },
-      ...(process.env.PAY_TO_EVM ? [{ scheme: 'exact', network: 'eip155:8453', payTo: process.env.PAY_TO_EVM, asset: 'USDC', price_usd: p.usd }] : []),
+      ...evmRails().map((r) => ({ scheme: 'exact', network: r.network, payTo: process.env.PAY_TO_EVM, asset: 'USDC', asset_address: r.usdc, price_usd: p.usd })),
     ],
   })),
 }));

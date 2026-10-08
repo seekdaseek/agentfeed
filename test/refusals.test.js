@@ -148,3 +148,32 @@ test('a reason never carries a signature, a hash or a payload', () => {
   assert.equal(scrub(`tx 0x${'a1'.repeat(32)} reverted`), 'tx <hash> reverted');
   assert.equal(scrub(`payer ${MPP_SOURCE} and ${EVM_FROM}`), `payer ${MPP_SOURCE} and ${EVM_FROM}`, 'addresses are kept');
 });
+
+test("an unreadable payment header is logged by shape only, never by content", () => {
+  const { _headerShape: shape } = require("../lib/refusals");
+  const garbage = shape({ headers: { "payment-signature": "secretgarbage!!" } });
+  assert.equal(garbage, "PAYMENT-SIGNATURE len=15 prefix=aaaaaaaa base64json=no");
+  assert.ok(!garbage.includes("secret"), "no content");
+  const v1 = Buffer.from(JSON.stringify({ x402Version: 1, scheme: "exact", payload: { signature: "0xdead" } })).toString("base64");
+  const s = shape({ headers: { "x-payment": v1 } });
+  assert.match(s, /^X-PAYMENT len=\d+ prefix=[Aa9+\/=_?-]{8} base64json=yes x402Version=1$/);
+  assert.ok(!s.includes("dead") && !s.includes(v1.slice(0, 12)), "no content");
+});
+
+test('a JavaScript error never reaches the buyer in a 402; a facilitator reason does', async () => {
+  const { sanitizeChallengeErrors } = require('../lib/refusals');
+  const app = express();
+  app.use(sanitizeChallengeErrors);
+  const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64');
+  app.get('/js', (req, res) => { res.setHeader('PAYMENT-REQUIRED', b64({ x402Version: 2, error: "Cannot destructure property 'extra' of 'accepted' as it is undefined." })); res.status(402).json({}); });
+  app.get('/fac', (req, res) => { res.setHeader('PAYMENT-REQUIRED', b64({ x402Version: 2, error: 'invalid_exact_svm_payload_transaction_simulation_failed: x' })); res.status(402).json({}); });
+  const srv = app.listen(0);
+  const port = srv.address().port;
+  const err = async (p) => JSON.parse(Buffer.from((await fetch(`http://127.0.0.1:${port}${p}`, { headers: { 'payment-signature': 'eyJ4NDAyVmVyc2lvbiI6Mn0=' } })).headers.get('payment-required'), 'base64')).error;
+  try {
+    assert.match(await err('/js'), /^invalid_payment_payload: /);
+    assert.equal(await err('/fac'), 'invalid_exact_svm_payload_transaction_simulation_failed: x');
+  } finally {
+    srv.close();
+  }
+});

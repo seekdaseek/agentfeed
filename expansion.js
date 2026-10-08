@@ -18,6 +18,7 @@ const OV = require('./tools/overhang');
 const B = require('./tools/base');
 const PX = require('./tools/prices');
 const EN = require('./tools/entry');
+const FR = require('./tools/fundingradar');
 
 const sym = (d) => z.string().optional().describe(`USDT perp symbol e.g. SOLUSDT, BTCUSDT (default ${d})`);
 // Twelve routes -- liq-heatmap, squeeze-score, six derivatives and four
@@ -42,10 +43,10 @@ const EXP = [
     tags: ['liquidations', 'history', 'crypto', 'trading', 'exclusive'],
     schema: { symbol: sym('SOLUSDT'), scope: z.enum(['symbol', 'all']).optional().describe('all = whole universe'), hours: z.number().optional().describe('lookback 1-168, default 24'), bucket_min: z.number().optional().describe('bucket minutes 5-1440, default 60') },
     run: (a) => L.getLiqHistory(a) },
-  { name: 'get_liq_heatmap', route: 'GET /api/liq-heatmap', usd: 0.05,
-    desc: 'Liquidation heatmap by PRICE LEVEL: where leverage actually got flushed in the last N hours — USD, prints and long/short split per price zone, with the hottest zone flagged. Built from real liquidation prints, not entry-price estimates.',
+  { name: 'get_liq_heatmap', route: 'GET /api/liq-heatmap', usd: 0.02,
+    desc: 'Liquidation heatmap by PRICE LEVEL: where leverage actually got flushed in the last N hours — USD, prints and long/short split per price zone, with the hottest zone flagged. Built from real liquidation prints, not entry-price estimates. BTC, ETH, SOL, HYPE or any other USDT perp on our Bybit, OKX and Binance tape.',
     tags: ['liquidations', 'heatmap', 'levels', 'trading', 'exclusive'],
-    schema: { symbol: symDefault, hours: z.number().optional().describe('lookback 1-168, default 24'), buckets: z.number().optional().describe('price buckets 5-50, default 20') },
+    schema: { symbol: z.string().optional().describe(`BTC, ETH, SOL, HYPE or any USDT perp e.g. BTCUSDT (default ${SYM_DEFAULT})`), hours: z.number().optional().describe('lookback 1-168, default 24'), buckets: z.number().optional().describe('price buckets 5-50, default 20') },
     run: (a) => L.getLiqHeatmap(a) },
   { name: 'get_cascade_history', route: 'GET /api/cascade-history', usd: 0.03,
     desc: 'Liquidation cascade history: past clustered same-side flush events reconstructed from our own tape, with start and end, prints, USD total and peak print, up to 72h back. /api/cascade tells you what is happening NOW; this tells you what already happened.',
@@ -73,6 +74,14 @@ const EXP = [
     tags: ['funding', 'screener', 'crowding', 'trading'],
     schema: { limit: z.number().optional().describe('top N each side, 1-25, default 10'), min_turnover_usd: z.number().optional().describe('liquidity floor, default 1M') },
     run: (a) => D.getFundingExtremes(a) },
+  // Served from a snapshot the cron collector (bin/funding-radar-collect.js)
+  // writes every 5 minutes; a paid request never calls a venue.
+  { name: 'get_funding_radar', route: 'GET /api/funding-radar', usd: 0.02,
+    desc: "Funding rates radar across Bybit, OKX and Hyperliquid: for every USDT perp listed on at least two of them with $5M+ combined open interest, the current funding per venue at its 8h equivalent, each venue's 30-day z-score against its own settled history, the cross-venue spread, and a flag on any |z| of 2 or more, sorted by how extreme the reading is. Precomputed every 5 minutes; every answer carries as_of, stale and the window each z-score actually used.",
+    tags: ['funding', 'perps', 'screener', 'cross-exchange', 'z-score', 'trading'],
+    schema: { top: z.number().optional().describe('symbols returned, most extreme first, 1-100, default 20'),
+              min_oi_usd: z.number().optional().describe('minimum combined open interest in USD across the venues, default 10000000; the radar tracks 5000000 and up') },
+    run: (a) => FR.getFundingRadar(a) },
   { name: 'get_open_interest', route: 'GET /api/open-interest', usd: 0.01,
     desc: 'Open interest for ANY USDT perp: Bybit OI in base units and in USD with 1h and 24h change, plus OKX open interest and the mark price. /api/positioning covers SOL and BTC only.',
     tags: ['open-interest', 'perps', 'crypto', 'trading'],
@@ -196,17 +205,17 @@ const EXP = [
   // wallet balance on Base, and the Base gas price. They lived only in
   // telegraph.js and were never on the paid rail, so they are registered here
   // rather than lost when that mirror is unmounted.
-  { name: 'get_eth_price', route: 'GET /api/eth-price', usd: 0.001,
+  { name: 'get_eth_price', route: 'GET /api/eth-price', usd: 0.005,
     desc: 'ETH spot price in USD, aggregated across seven independent venues (CoinGecko, Coinbase, Kraken, Binance, OKX, Gemini, DefiLlama). Returns the lead figure plus every venue quote that answered, so a caller can see the spread rather than trust one exchange. Venues are ranked in a fixed declared order, not completion order, so identical market state always returns the same lead price.',
     tags: ['price', 'eth', 'ethereum', 'crypto', 'multi-venue'],
     schema: {},
     run: () => PX.getPriceQuotes('ETH') },
-  { name: 'get_base_gas', route: 'GET /api/base-gas', usd: 0.001,
+  { name: 'get_base_gas', route: 'GET /api/base-gas', usd: 0.005,
     desc: 'Base gas price (chain 8453) in BOTH gwei and wei, with base fee, priority fee and block number when the node supplies them. Both units are returned because a caller asking in wei and a caller asking in gwei are asking the same question. Served from keyless public RPC with three-node fallback, so there is no API key to rotate or expire.',
     tags: ['base', 'gas', 'l2', 'ethereum', 'evm'],
     schema: {},
     run: () => B.getBaseGas() },
-  { name: 'get_base_balance', route: 'GET /api/base-balance', usd: 0.002,
+  { name: 'get_base_balance', route: 'GET /api/base-balance', usd: 0.005,
     desc: 'ERC20 and native ETH wallet balance on Base or Ethereum mainnet, for a 0x address or an ENS name. decimals() and symbol() are read from the contract at request time rather than assumed, because assuming 18 reports a USDC balance a trillion times too large. ENS is resolved through two independent resolvers and the answer is used only when they agree, so a wrong address can never produce a confident balance for the wrong wallet. An unsupported chain is refused rather than silently answered from the wrong one.',
     tags: ['base', 'ethereum', 'wallet', 'balance', 'erc20', 'evm', 'ens'],
     schema: { address: z.string().describe('0x address (40 hex) or an ENS name ending .eth'),
@@ -214,29 +223,31 @@ const EXP = [
               chain: z.string().optional().describe('base (default) or ethereum') },
     run: (a) => B.getBaseBalance({ query: a }) },
 
-  // ---- ENTRY TIER: four $0.001 routes, composed from functions above ----
+  // ---- ENTRY TIER: four routes, composed from functions above ----
+  // $0.001 until 2026-10-08, now $0.005: the CDP facilitator charges $0.001 per
+  // settlement past 1,000 a month, so a $0.001 route earns nothing at volume.
   // The niche's six best-selling routes are all $0.001 and the single
   // most-bought is a universal primitive. These are the cheap front door;
   // the premium tape tools above keep their prices.
-  { name: 'get_perp', route: 'GET /api/perp', usd: 0.001,
+  { name: 'get_perp', route: 'GET /api/perp', usd: 0.005,
     tags: ['perps', 'funding', 'open-interest', 'liquidations', 'crypto', 'trading'],
     desc: 'Use when an agent needs one perp market in a single call. Returns cross-venue funding (Bybit, OKX, Hyperliquid), open interest with 1h/24h change, long/short ratio, and 24h liquidations with long/short split and biggest print from our own tape.',
     schema: { symbol: z.string().optional().describe('USDT perp symbol e.g. SOLUSDT, BTCUSDT (default SOLUSDT)') },
     run: (a) => EN.getPerp(a) },
 
-  { name: 'get_liq_pulse', route: 'GET /api/liq-pulse', usd: 0.001,
+  { name: 'get_liq_pulse', route: 'GET /api/liq-pulse', usd: 0.005,
     tags: ['liquidations', 'realtime', 'crypto', 'trading', 'exclusive'],
     desc: 'Use when an agent needs to know what is being liquidated right now. Returns the last 60 minutes across every USDT perp we record: total USD, long/short split, prints and the top 5 symbols. Declines with the tape age if our recording is stale.',
     schema: {},
     run: () => EN.getLiqPulse() },
 
-  { name: 'get_funding_pulse', route: 'GET /api/funding-pulse', usd: 0.001,
+  { name: 'get_funding_pulse', route: 'GET /api/funding-pulse', usd: 0.005,
     tags: ['funding', 'perps', 'screener', 'crowding', 'trading'],
     desc: 'Use when an agent needs the most extreme funding rates right now. Returns the 5 largest absolute annualised rates across the whole Bybit USDT perp universe, each with venue, 8h rate, open interest and 24h price move. One call, not a full screen.',
     schema: {},
     run: () => EN.getFundingPulse() },
 
-  { name: 'get_spot', route: 'GET /api/price', usd: 0.001,
+  { name: 'get_spot', route: 'GET /api/price', usd: 0.005,
     tags: ['price', 'spot', 'crypto', 'multi-venue'],
     desc: 'Use when an agent needs a spot price without choosing a venue. Returns the price, the venue that actually served it, and a Pyth confidence when Pyth served. Coinbase, then Kraken, then Pyth Hermes. Serves SOL, BTC and ETH; anything else is declined.',
     schema: { symbol: z.string().optional().describe('SOL, BTC or ETH (default SOL). Anything else is declined with the supported list') },

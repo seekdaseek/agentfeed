@@ -45,7 +45,7 @@ function getLiqHistory(p = {}) {
   };
 }
 
-// ---- get_liq_heatmap ($0.05) — where leverage actually got flushed, by price level
+// ---- get_liq_heatmap ($0.02) — where leverage actually got flushed, by price level
 function getLiqHeatmap(p = {}) {
   const sym = normSym(p.symbol); // heatmap is per-symbol by design (price axis)
   const hours = clampInt(p.hours, 1, 168, 24);

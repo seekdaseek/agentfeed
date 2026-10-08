@@ -29,16 +29,16 @@ const { challengeDesc, ICON_URL } = require('./payments');
 const SERVER_VERSION = (() => { try { return require('./server.json').version; } catch { return '1.0.0'; } })();
 
 const TOOL_DEFS = [
-  { name: 'get_sol_price', usd: 0.001, desc: 'Live SOL/USD spot price (multi-source: Coinbase, Kraken, Pyth Hermes fallback). The confidence and publish_time fields are null unless Pyth Hermes served the request; Coinbase and Kraken publish neither.',
+  { name: 'get_sol_price', usd: 0.005, desc: 'Live SOL/USD spot price (multi-source: Coinbase, Kraken, Pyth Hermes fallback). The confidence and publish_time fields are null unless Pyth Hermes served the request; Coinbase and Kraken publish neither.',
     schema: {}, run: () => getPrice('SOL') },
-  { name: 'get_btc_price', usd: 0.001, desc: 'Live BTC/USD spot price (multi-source: Coinbase, Kraken, Pyth Hermes fallback). The confidence and publish_time fields are null unless Pyth Hermes served the request; Coinbase and Kraken publish neither.',
+  { name: 'get_btc_price', usd: 0.005, desc: 'Live BTC/USD spot price (multi-source: Coinbase, Kraken, Pyth Hermes fallback). The confidence and publish_time fields are null unless Pyth Hermes served the request; Coinbase and Kraken publish neither.',
     schema: {}, run: () => getPrice('BTC') },
-  { name: 'get_funding_rate', usd: 0.002, desc: 'Funding rate for any USDT perp on Bybit, OKX and Hyperliquid, each at its own interval: raw rate, interval hours, 8h equivalent, annualised rate, next funding time and mark price per venue. Without a symbol, SOL and BTC from Hyperliquid with open interest.',
+  { name: 'get_funding_rate', usd: 0.005, desc: 'Funding rate for any USDT perp on Bybit, OKX and Hyperliquid, each at its own interval: raw rate, interval hours, 8h equivalent, annualised rate, next funding time and mark price per venue. Without a symbol, SOL and BTC from Hyperliquid with open interest.',
     schema: { symbol: z.string().optional().describe('USDT perp symbol e.g. ETHUSDT, ONDOUSDT (omit for SOL and BTC from Hyperliquid)') },
     run: (a) => getFundingRate(a) },
   { name: 'get_fear_greed', usd: 0, desc: 'Crypto Fear & Greed index (0-100) with classification.',
     schema: {}, run: () => getFearGreed() },
-  { name: 'get_market_snapshot', usd: 0.003, desc: 'SOL+BTC prices, funding rates, and Fear & Greed in one call.',
+  { name: 'get_market_snapshot', usd: 0.005, desc: 'SOL+BTC prices, funding rates, and Fear & Greed in one call.',
     schema: {}, run: async () => {
       const [sol, btc, fs_, fb, fg] = await Promise.all([
         getPrice('SOL'), getPrice('BTC'), getFunding('SOL'), getFunding('BTC'), getFearGreed()]);
@@ -50,7 +50,7 @@ const TOOL_DEFS = [
   { name: 'get_token_metadata', usd: 0.005, desc: 'SPL token metadata: name, symbol, decimals, supply, price (Helius DAS).',
     schema: { mint: z.string().describe('SPL token mint address (base58)') },
     run: (a) => getTokenMetadata(a.mint) },
-  { name: 'get_recent_liquidations', usd: 0.003, desc: 'Recent perp liquidations across Bybit (complete unthrottled tape), OKX and Binance: timestamp, long/short, size, price, USD value. Any USDT perp we record, not just majors.',
+  { name: 'get_recent_liquidations', usd: 0.005, desc: 'Recent perp liquidations across Bybit (complete unthrottled tape), OKX and Binance: timestamp, long/short, size, price, USD value. Any USDT perp we record, not just majors.',
     schema: { symbol: z.string().optional().describe('SOL, BTC, ETH, XRP, DOGE, or any USDT perp e.g. SXTUSDT (omit for majors)'),
               scope: z.enum(['core', 'all']).optional().describe('core = the 5 majors (default), all = every recorded USDT perp'),
               limit: z.number().optional().describe('max rows, 1-100, default 25'),
@@ -79,11 +79,11 @@ const TOOL_DEFS = [
     schema: { window_min: z.number().optional().describe('lookback minutes, 5-1440, default 60'),
               limit: z.number().optional().describe('top N symbols, 1-50, default 10') },
     run: (a) => getLiquidationLeaders({ query: a }) },
-  { name: 'get_liquidation_stats', usd: 0.004, desc: 'Liquidation aggregates for the 5 majors (SOL, BTC, ETH, XRP, DOGE): 1h and 24h totals, longs vs shorts USD split, biggest print, broken out per exchange.',
+  { name: 'get_liquidation_stats', usd: 0.01, desc: 'Liquidation aggregates for the 5 majors (SOL, BTC, ETH, XRP, DOGE): 1h and 24h totals, longs vs shorts USD split, biggest print, broken out per exchange.',
     schema: {}, run: () => getLiquidationStats() },
   { name: 'get_last_liquidation', usd: 0, desc: 'FREE taster: last liquidation for SOL, BTC, ETH, XRP and DOGE (15-min delayed). Real-time via get_recent_liquidations.',
     schema: {}, run: () => getLastLiquidation() },
-  { name: 'get_positioning', usd: 0.004, desc: 'SOL+BTC positioning: long/short account ratio (retail crowding) + open interest with 1h/24h change (Bybit).',
+  { name: 'get_positioning', usd: 0.005, desc: 'SOL+BTC positioning: long/short account ratio (retail crowding) + open interest with 1h/24h change (Bybit).',
     schema: {}, run: () => getPositioning() },
   { name: 'get_trade_context', usd: 0.01, desc: 'Full market state in one call: SOL+BTC prices, funding, Fear & Greed, long/short positioning, open interest, and liquidation stats. The complete pre-trade picture.',
     schema: {}, run: () => getTradeContext() },
@@ -115,8 +115,8 @@ const DISPLAY_FIRST = [
 const INSTRUCTIONS = [
   'AgentFeed serves live crypto market data: a complete Bybit, OKX and Binance liquidation tape, tokenized-equity peg data and Solana on-chain reads.',
   'Free, start here: get_fear_greed, get_last_liquidation, get_cascade_forecast_free, get_forecast_question, get_forecast_record, get_exit_method, pricing.',
-  'Cheapest paid calls at $0.001: get_perp, get_liq_pulse, get_funding_pulse, get_spot. Call pricing for the full price list.',
-  'A paid tool answers with an x402 payment request, payable in USDC on Solana or Base. No API key.',
+  'Cheapest paid calls at $0.005: get_perp, get_liq_pulse, get_funding_pulse, get_spot. Call pricing for the full price list.',
+  `A paid tool answers with an x402 payment request, payable in USDC on ${require('./lib/rails').railNames()}. No API key.`,
   'Same tools as HTTPS endpoints at https://x402.ochinimus.app; see /openapi.json.',
 ].join(' ');
 
@@ -180,10 +180,10 @@ async function initMcp(app) {
     ? require('@coinbase/x402').facilitator
     : { url: facilitatorUrl };
   const payToEvm = process.env.PAY_TO_EVM;
-  const EVM_NETWORK = 'eip155:8453'; // Base mainnet
+  const EVM = require('./lib/rails').evmRails();
   const rs = new x402ResourceServer(new HTTPFacilitatorClient(facilitatorCfg))
     .register(network, new ExactSvmScheme());
-  if (payToEvm) rs.register(EVM_NETWORK, new ExactEvmScheme());
+  for (const r of EVM) rs.register(r.network, new ExactEvmScheme());
   await rs.initialize();
 
   const wrappers = {};
@@ -192,9 +192,9 @@ async function initMcp(app) {
     const accepts = await rs.buildPaymentRequirements({
       scheme: 'exact', network, payTo, price: `$${def.usd}`,
     });
-    if (payToEvm) {
+    for (const r of EVM) {
       const evmAccepts = await rs.buildPaymentRequirements({
-        scheme: 'exact', network: EVM_NETWORK, payTo: payToEvm, price: `$${def.usd}`,
+        scheme: 'exact', network: r.network, payTo: payToEvm, price: `$${def.usd}`,
       });
       accepts.push(...evmAccepts);
     }
@@ -226,12 +226,10 @@ async function initMcp(app) {
   }
 
   // Built from the rails registered on THIS resource server above: Solana
-  // always, Base only when PAY_TO_EVM is set. An unpaid tools/call really does
-  // return accepts for both, so naming only Solana understated the server to
-  // every agent reading tools/list.
-  const RAILS = ['Solana' + (networkName === 'mainnet' ? '' : ' ' + networkName)]
-    .concat(payToEvm ? ['Base'] : []);
-  const RAILS_TEXT = '(x402, USDC on ' + RAILS.join(' or ') + ')';
+  // always, the EVM rails of lib/rails.js only when PAY_TO_EVM is set. An
+  // unpaid tools/call really does return accepts for every one of them, so
+  // naming only Solana understated the server to every agent reading tools/list.
+  const RAILS_TEXT = '(x402, USDC on ' + require('./lib/rails').railNames('Solana' + (networkName === 'mainnet' ? '' : ' ' + networkName)) + ')';
 
   function buildServer() {
     const s = new McpServer({

@@ -77,7 +77,7 @@ const SHARED = [
   {
     status: 405,
     name: 'Method Not Allowed',
-    when: 'Any method other than GET on a paid route. The response has an Allow: GET header and an empty body.',
+    when: 'HEAD on a free /api route. The response has an Allow: GET header and an empty body. HEAD on a paid route answers 402 with the challenge in PAYMENT-REQUIRED and no body.',
     body: null,
   },
 ];

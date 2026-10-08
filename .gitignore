@@ -72,3 +72,9 @@ mpp/node_modules/
 # macOS AppleDouble sidecars, created by tar/scp from the Mac. `._server.js`
 # is a byte-carrying sidecar of a real file, so this is not cosmetic.
 ._*
+
+# ---- 2026-10-08: funding radar ----
+# Written by bin/funding-radar-collect.js every 5 minutes; fundingradar.db is
+# covered by *.db above, the snapshot and its atomic-rename temp are not.
+funding-radar.json
+funding-radar.json.tmp

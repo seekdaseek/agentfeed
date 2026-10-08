@@ -335,7 +335,9 @@ function schemasOnly() {
     const old = prev.routes[r.pattern];
     if (!old) { console.error(`FATAL: ${r.pattern} has no existing entry; run the full generator`); process.exit(1); }
     const { query, pathP, input, pathParams } = splitSchema(r.zodSchema, r.pathParamKeys, r.tool);
-    const entry = { ...old, input, inputSchema: query };
+    // price_usd is part of the declaration the table owns, like the schema: a
+    // repriced route must not keep publishing its old price in /api/sample.
+    const entry = { ...old, price_usd: r.usd, input, inputSchema: query };
     if (r.pathParamKeys.length) { entry.pathParamsSchema = pathP; entry.pathParams = pathParams; }
     if (JSON.stringify(entry) !== JSON.stringify(old)) changed.push(r.pattern);
     prev.routes[r.pattern] = entry;
@@ -387,8 +389,10 @@ async function captureExample(r, callArgs) {
 /**
  * --recapture=get_a,get_b: a fresh output example for the named tools, every
  * other byte of the file kept, the output-half twin of --schemas-only. Each entry
- * is rebuilt on top of the existing one, so its key order stays put. Nothing is
- * written unless every named route captured cleanly.
+ * is rebuilt on top of the existing one, so its key order stays put. A NEW route
+ * has no entry yet; it gets one built the way the full run builds it, so adding
+ * one route does not drag 52 fresh captures into every other challenge. Nothing
+ * is written unless every named route captured cleanly.
  */
 async function recapture(tools) {
   const rows = buildRoutes().filter((r) => tools.includes(r.tool));
@@ -397,9 +401,13 @@ async function recapture(tools) {
   const prev = JSON.parse(fs.readFileSync(OUT_FILE, 'utf8'));
   const next = [];
   for (const r of rows) {
-    const old = prev.routes[r.pattern];
-    if (!old) { console.error(`FATAL: ${r.pattern} has no existing entry; run the full generator`); process.exit(1); }
-    const { input, pathParams } = splitSchema(r.zodSchema, r.pathParamKeys, r.tool);
+    const { query, pathP, input, pathParams } = splitSchema(r.zodSchema, r.pathParamKeys, r.tool);
+    let old = prev.routes[r.pattern];
+    if (!old) {
+      old = { tool: r.tool, price_usd: r.usd, input, inputSchema: query };
+      if (r.pathParamKeys.length) { old.pathParamsSchema = pathP; old.pathParams = pathParams; }
+      console.log(`  new route: ${r.pattern}`);
+    }
     const c = await captureExample(r, { ...input, ...pathParams });
     process.stdout.write(`  ${c.status.padEnd(5)} ${r.pattern.replace('GET ', '').padEnd(30)} ex=${String(c.example ? bytes(c.example) : 0).padStart(4)}B  ${c.note}\n`);
     if (c.status !== 'OK' || !c.example) { console.error(`FATAL: ${r.pattern} did not capture cleanly; nothing written`); process.exit(1); }

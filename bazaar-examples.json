@@ -5,7 +5,7 @@
  "routes": {
   "GET /api/sol-price": {
    "tool": "get_sol_price",
-   "price_usd": 0.001,
+   "price_usd": 0.005,
    "input": {},
    "inputSchema": {
     "properties": {},
@@ -54,7 +54,7 @@
   },
   "GET /api/btc-price": {
    "tool": "get_btc_price",
-   "price_usd": 0.001,
+   "price_usd": 0.005,
    "input": {},
    "inputSchema": {
     "properties": {},
@@ -103,7 +103,7 @@
   },
   "GET /api/funding-rate": {
    "tool": "get_funding_rate",
-   "price_usd": 0.002,
+   "price_usd": 0.005,
    "input": {
     "symbol": "ETHUSDT"
    },
@@ -184,7 +184,7 @@
   },
   "GET /api/market-snapshot": {
    "tool": "get_market_snapshot",
-   "price_usd": 0.003,
+   "price_usd": 0.005,
    "input": {},
    "inputSchema": {
     "properties": {},
@@ -435,7 +435,7 @@
   },
   "GET /api/liquidations": {
    "tool": "get_recent_liquidations",
-   "price_usd": 0.003,
+   "price_usd": 0.005,
    "input": {
     "symbol": "SOLUSDT"
    },
@@ -846,7 +846,7 @@
   },
   "GET /api/liquidation-stats": {
    "tool": "get_liquidation_stats",
-   "price_usd": 0.004,
+   "price_usd": 0.01,
    "input": {},
    "inputSchema": {
     "properties": {},
@@ -958,7 +958,7 @@
   },
   "GET /api/positioning": {
    "tool": "get_positioning",
-   "price_usd": 0.004,
+   "price_usd": 0.005,
    "input": {},
    "inputSchema": {
     "properties": {},
@@ -1534,14 +1534,14 @@
   },
   "GET /api/liq-heatmap": {
    "tool": "get_liq_heatmap",
-   "price_usd": 0.05,
+   "price_usd": 0.02,
    "input": {
     "symbol": "SOLUSDT"
    },
    "inputSchema": {
     "properties": {
      "symbol": {
-      "description": "USDT perp symbol e.g. SOLUSDT, BTCUSDT (default SOLUSDT)",
+      "description": "BTC, ETH, SOL, HYPE or any USDT perp e.g. BTCUSDT (default SOLUSDT)",
       "type": "string"
      },
      "hours": {
@@ -4085,7 +4085,7 @@
   },
   "GET /api/eth-price": {
    "tool": "get_eth_price",
-   "price_usd": 0.001,
+   "price_usd": 0.005,
    "input": {},
    "inputSchema": {
     "properties": {},
@@ -4151,7 +4151,7 @@
   },
   "GET /api/base-gas": {
    "tool": "get_base_gas",
-   "price_usd": 0.001,
+   "price_usd": 0.005,
    "input": {},
    "inputSchema": {
     "properties": {},
@@ -4224,7 +4224,7 @@
   },
   "GET /api/base-balance": {
    "tool": "get_base_balance",
-   "price_usd": 0.002,
+   "price_usd": 0.005,
    "input": {
     "address": "0x22DB3A9686EE5261e7Bf3ed4f91277232E8076e6"
    },
@@ -4302,7 +4302,7 @@
   },
   "GET /api/perp": {
    "tool": "get_perp",
-   "price_usd": 0.001,
+   "price_usd": 0.005,
    "input": {
     "symbol": "SOLUSDT"
    },
@@ -4424,7 +4424,7 @@
   },
   "GET /api/liq-pulse": {
    "tool": "get_liq_pulse",
-   "price_usd": 0.001,
+   "price_usd": 0.005,
    "input": {},
    "inputSchema": {
     "properties": {},
@@ -4530,7 +4530,7 @@
   },
   "GET /api/funding-pulse": {
    "tool": "get_funding_pulse",
-   "price_usd": 0.001,
+   "price_usd": 0.005,
    "input": {},
    "inputSchema": {
     "properties": {},
@@ -4620,7 +4620,7 @@
   },
   "GET /api/price": {
    "tool": "get_spot",
-   "price_usd": 0.001,
+   "price_usd": 0.005,
    "input": {
     "symbol": "SOL"
    },
@@ -4681,8 +4681,161 @@
      }
     }
    }
+  },
+  "GET /api/funding-radar": {
+   "tool": "get_funding_radar",
+   "price_usd": 0.02,
+   "input": {},
+   "inputSchema": {
+    "properties": {
+     "top": {
+      "description": "symbols returned, most extreme first, 1-100, default 20",
+      "type": "number"
+     },
+     "min_oi_usd": {
+      "description": "minimum combined open interest in USD across the venues, default 10000000; the radar tracks 5000000 and up",
+      "type": "number"
+     }
+    },
+    "required": []
+   },
+   "output": {
+    "example": {
+     "tool": "get_funding_radar",
+     "data": {
+      "as_of": "2026-10-08T14:45:23.…",
+      "age_s": 199,
+      "stale": false,
+      "venues": [
+       "bybit"
+      ],
+      "window_target_days": 30,
+      "z_flag_abs": 2,
+      "min_oi_usd": 10000000,
+      "universe_size": 183,
+      "matched": 122,
+      "returned": 20,
+      "coverage": {
+       "series_total": 468,
+       "series_with_history": 453,
+       "series_full_window": 452
+      },
+      "symbols": [
+       {
+        "symbol": "VVVUSDT",
+        "oi_usd": {
+         "bybit": 28904055,
+         "okx": 4017252,
+         "hyperliquid": 71924565,
+         "total": 104845872
+        },
+        "venues": {
+         "bybit": {
+          "funding_rate_8h": 0.00224778,
+          "funding_rate_raw": 0.00112389,
+          "funding_interval_hours": 4,
+          "next_funding_time": 1791475200000,
+          "z_30d": 21.9,
+          "mean_8h_30d": 0.0000953,
+          "std_8h_30d": 0.00009827,
+          "samples": 180,
+          "window_days": 29.9
+         },
+         "okx": {
+          "funding_rate_8h": 0.00095087,
+          "funding_rate_raw": 0.0004754342088605,
+          "funding_interval_hours": 4,
+          "next_funding_time": 1791475200000,
+          "z_30d": 18.57,
+          "mean_8h_30d": 0.00011067,
+          "std_8h_30d": 0.00004525,
+          "samples": 180,
+          "window_days": 29.9
+         },
+         "hyperliquid": {
+          "funding_rate_8h": 0.00208054,
+          "funding_rate_raw": 0.0002600676,
+          "funding_interval_hours": 1,
+          "z_30d": 6.81,
+          "mean_8h_30d": 0.00020886,
+          "std_8h_30d": 0.00027498,
+          "samples": 720,
+          "window_days": 30
+         }
+        },
+        "spread_8h": 0.00129691,
+        "spread_high_venue": "bybit",
+        "spread_low_venue": "okx",
+        "max_abs_z": 21.9,
+        "extreme_venue": "bybit",
+        "flag": true,
+        "flagged_venues": [
+         "bybit"
+        ]
+       }
+      ],
+      "method": "funding_rate_8h is e…"
+     },
+     "paid": true
+    },
+    "schema": {
+     "type": "object",
+     "properties": {
+      "tool": {
+       "type": "string"
+      },
+      "data": {
+       "type": "object",
+       "properties": {
+        "as_of": {
+         "type": "string"
+        },
+        "age_s": {
+         "type": "number"
+        },
+        "stale": {
+         "type": "boolean"
+        },
+        "venues": {
+         "type": "array"
+        },
+        "window_target_days": {
+         "type": "number"
+        },
+        "z_flag_abs": {
+         "type": "number"
+        },
+        "min_oi_usd": {
+         "type": "number"
+        },
+        "universe_size": {
+         "type": "number"
+        },
+        "matched": {
+         "type": "number"
+        },
+        "returned": {
+         "type": "number"
+        },
+        "coverage": {
+         "type": "object"
+        },
+        "symbols": {
+         "type": "array"
+        },
+        "method": {
+         "type": "string"
+        }
+       }
+      },
+      "paid": {
+       "type": "boolean"
+      }
+     }
+    }
+   }
   }
  },
- "_schemas_regenerated_at": "2026-09-28T09:48:10.547Z",
- "_outputs_recaptured_at": "2026-09-28T10:04:56.587Z"
+ "_schemas_regenerated_at": "2026-10-08T14:48:43.318Z",
+ "_outputs_recaptured_at": "2026-10-08T14:48:42.966Z"
 }

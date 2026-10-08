@@ -125,7 +125,7 @@ function getLastLiquidation() {
   }
   return {
     source: 'multi_exchange_collector',
-    delay_notice: 'Data delayed 15 minutes. Real-time via get_recent_liquidations ($0.003) or get_liquidation_stats ($0.004).',
+    delay_notice: 'Data delayed 15 minutes. Real-time via get_recent_liquidations ($0.005) or get_liquidation_stats ($0.01).',
     last,
   };
 }

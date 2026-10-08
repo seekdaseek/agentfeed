@@ -19,6 +19,12 @@
 'use strict';
 
 const ORIGIN = 'https://x402.ochinimus.app';
+const { evmRails, railNames } = require('../lib/rails');
+// Address poisoning: on 2026-07-31 a lookalike of the Base treasury (same first
+// and last characters as 0x22DB...76e6) sent zero-value transfers to this
+// service's biggest buyer, so a wallet's history now shows a fake payee next to
+// the real one. The only safe source for payTo is a fresh 402.
+const PAYTO_WARNING = 'Copy payTo only from a fresh 402 response, never from transaction history: a lookalike of the treasury address has sent address-poisoning transfers to our buyers.';
 
 // Mirrors server.js. Named here so llms.txt, SKILL.md and openapi.json all
 // state the same two numbers, and so a change there is a one-line change here.
@@ -311,19 +317,20 @@ function buildOpenApi({ PRICES, META, FREE_TOOLS, mpp }) {
     info: {
       title: 'AgentFeed',
       version: '1.0.0',
-      description: 'Live crypto market, liquidation, tokenized-equity and Solana on-chain data for AI agents. Paid per call in USDC over x402 on Solana or Base. No API keys, no accounts.',
+      description: `Live crypto market, liquidation, tokenized-equity and Solana on-chain data for AI agents. Paid per call in USDC over x402 on ${railNames()}. No API keys, no accounts.`,
       'x-generated-from': 'payments.PRICES + bazaar-examples.json, at boot',
       // x402scan verifies ownership from info.contact; it names the operator, a
       // reachable address and the studio site, not the repository.
       contact: { name: 'ochinimus', email: 'ochinimus@gmail.com', url: 'https://ochinimus.app' },
       'x-guidance': [
         'Every route is a GET that returns JSON. There are no API keys and no accounts.',
-        'Paid routes answer 402 with the challenge base64-encoded in the PAYMENT-REQUIRED response header (x402 v2, not the body). Pay it and repeat the request with an X-PAYMENT header. USDC on Solana mainnet or Base.',
+        `Paid routes answer 402 with the challenge base64-encoded in the PAYMENT-REQUIRED response header (x402 v2, not the body). Pay it and repeat the request with a PAYMENT-SIGNATURE header (x402 v2; the v1 X-PAYMENT header is not read). USDC on ${railNames('Solana mainnet')}.`,
+        PAYTO_WARNING,
         'Response shape is always { "tool": "<name>", "data": { ... }, "paid": true }.',
         'Before paying, GET /api/sample/<route> for that route\'s real captured response, free. GET /api/sample lists them.',
-        'Start cheap: /api/perp, /api/liq-pulse, /api/funding-pulse and /api/price are $0.001 each and cover most questions. The premium routes are the liquidation tape, cascade detection and the tokenized-equity peg tape.',
+        'Start cheap: /api/perp, /api/liq-pulse, /api/funding-pulse and /api/price are $0.005 each and cover most questions. The premium routes are the liquidation tape, cascade detection and the tokenized-equity peg tape.',
         'A route that cannot answer returns 200 with a decline field naming the reason; it never returns fabricated or zero-filled data.',
-        `Limits: GET only on /api/* (HEAD answers 405); per caller per minute ${LIMIT_GET} GET or POST /mcp and ${LIMIT_OTHER} of any other method; a 429 carries Retry-After.`,
+        `Limits: GET only on /api/* (HEAD on a paid route answers the 402 challenge headers with no body, on a free route 405); per caller per minute ${LIMIT_GET} GET or POST /mcp and ${LIMIT_OTHER} of any other method; a 429 carries Retry-After.`,
       ].join(' '),
     },
     externalDocs: { description: 'AgentFeed agent skill: when to use each route, what it answers and what it costs', url: `${ORIGIN}/SKILL.md` },
@@ -402,13 +409,14 @@ function buildLlmsTxt({ PRICES, TAGS, META, FREE_TOOLS, mpp, network }) {
     'There are no API keys and no accounts. Payment is per call, in USDC, over x402 v2.',
     '',
     '1. GET the route. Unpaid, it answers 402 and carries the payment challenge in the PAYMENT-REQUIRED response header, base64-encoded JSON. The challenge is in the HEADER, not the body.',
-    '2. Pay the challenge and repeat the request with the X-PAYMENT header.',
+    '2. Pay the challenge and repeat the request with the PAYMENT-SIGNATURE header (x402 v2; the v1 X-PAYMENT header is not read).',
+    `   ${PAYTO_WARNING}`,
     '3. The response body is `{ "tool": "<name>", "data": { ... }, "paid": true }`.',
     '',
-    'Two rails are accepted on every paid route:',
+    `${evmRails().length + 1} rails are accepted on every paid route:`,
     '',
     `- Solana ${network === 'mainnet' ? 'mainnet' : network} — USDC`,
-    '- Base (eip155:8453) — USDC',
+    ...evmRails().map((r) => `- ${r.name} (${r.network}) — USDC`),
     '',
     ...(mpp && mpp.active ? [`MPP (solana/charge) is also offered on the same 402, in WWW-Authenticate, for: ${mpp.routes.join(', ')}.`, ''] : []),
     'Machine-readable:',
@@ -431,7 +439,7 @@ function buildLlmsTxt({ PRICES, TAGS, META, FREE_TOOLS, mpp, network }) {
     '## Notes',
     '',
     '- Path-parameter routes also accept the parameter as a query string: /api/token-risk?mint=<mint> is rewritten to the canonical path form before the paywall.',
-    '- HEAD is not served on /api/*; it answers 405. The paid surface is GET-only.',
+    '- HEAD on a paid route answers the 402 challenge headers with no body; it never pays and never reaches a handler. HEAD on a free route answers 405. The paid surface is GET-only.',
     `- Rate limit, per caller per minute: ${LIMIT_GET} for GET and POST /mcp, ${LIMIT_OTHER} for every other method. A 429 carries Retry-After.`,
     '- A route that cannot reach its upstream returns an error rather than a stale or invented value.',
     '',
@@ -487,9 +495,11 @@ function buildSkillMd({ PRICES, TAGS, META, FREE_TOOLS, mpp, network }) {
     '',
     '## How to pay',
     '',
-    'Call the route. Unpaid, it answers **402** with the challenge base64-encoded in the **`PAYMENT-REQUIRED` response header** — not in the body. Decode it, pay it, and repeat the request with an `X-PAYMENT` header.',
+    'Call the route. Unpaid, it answers **402** with the challenge base64-encoded in the **`PAYMENT-REQUIRED` response header** — not in the body. Decode it, pay it, and repeat the request with a `PAYMENT-SIGNATURE` header (x402 v2; the v1 `X-PAYMENT` header is not read).',
     '',
-    `Two rails are accepted on every paid route: **USDC on ${solana}** and **USDC on Base** (\`eip155:8453\`).`,
+    `${evmRails().length + 1} rails are accepted on every paid route: **USDC on ${solana}**${evmRails().map((r) => `, **USDC on ${r.name}** (\`${r.network}\`)`).join('')}.`,
+    '',
+    `**${PAYTO_WARNING}**`,
     ...(mpp && mpp.active
       ? ['', `**MPP** (\`solana/charge\`) is offered alongside x402 on ${mpp.routes.map((r) => `\`${r.replace('GET ', '')}\``).join(' and ')}, carried in the \`WWW-Authenticate\` header of the same 402. Clients that speak only x402 never see it.`]
       : []),

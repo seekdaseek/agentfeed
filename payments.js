@@ -20,18 +20,18 @@ const { ExactEvmScheme } = require('@x402/evm/exact/server');
 // paying customer, not a docs typo. The price tools said "via Pyth" until
 // 2026-08-27, by which point prices.js had been multi-source for a day.
 const PRICES = {
-  'GET /api/sol-price':                { usd: 0.001, tool: 'get_sol_price',       desc: 'SOL price / Solana spot price in USD, live. Multi-source with a fixed fallback order — Coinbase, then Kraken, then Pyth Hermes — first finite quote wins. Returns the price, the venue that served it, and a Pyth confidence interval when Pyth did.' },
-  'GET /api/btc-price':                { usd: 0.001, tool: 'get_btc_price',       desc: 'BTC price / Bitcoin spot price in USD, live. Multi-source with a fixed fallback order — Coinbase, then Kraken, then Pyth Hermes — first finite quote wins. Returns the price, the venue that served it, and a Pyth confidence interval when Pyth did.' },
-  'GET /api/funding-rate':             { usd: 0.002, tool: 'get_funding_rate',    desc: 'Funding rate for any USDT perp on Bybit, OKX and Hyperliquid: per venue the raw rate, its interval in hours, the 8h equivalent, the annualised rate, next funding time and mark price. Without a symbol: funding rates for the SOL and BTC perps on Hyperliquid, with open interest. Cross-venue spread and crowding: /api/funding-cross.' },
-  'GET /api/market-snapshot':          { usd: 0.003, tool: 'get_market_snapshot', desc: 'Crypto market snapshot in one call: SOL and BTC spot prices, both perp funding rates with mark price and open interest, and the Fear & Greed index with its classification. Five reads, one payment.' },
+  'GET /api/sol-price':                { usd: 0.005, tool: 'get_sol_price',       desc: 'SOL price / Solana spot price in USD, live. Multi-source with a fixed fallback order — Coinbase, then Kraken, then Pyth Hermes — first finite quote wins. Returns the price, the venue that served it, and a Pyth confidence interval when Pyth did.' },
+  'GET /api/btc-price':                { usd: 0.005, tool: 'get_btc_price',       desc: 'BTC price / Bitcoin spot price in USD, live. Multi-source with a fixed fallback order — Coinbase, then Kraken, then Pyth Hermes — first finite quote wins. Returns the price, the venue that served it, and a Pyth confidence interval when Pyth did.' },
+  'GET /api/funding-rate':             { usd: 0.005, tool: 'get_funding_rate',    desc: 'Funding rate for any USDT perp on Bybit, OKX and Hyperliquid: per venue the raw rate, its interval in hours, the 8h equivalent, the annualised rate, next funding time and mark price. Without a symbol: funding rates for the SOL and BTC perps on Hyperliquid, with open interest. Cross-venue spread and crowding: /api/funding-cross.' },
+  'GET /api/market-snapshot':          { usd: 0.005, tool: 'get_market_snapshot', desc: 'Crypto market snapshot in one call: SOL and BTC spot prices, both perp funding rates with mark price and open interest, and the Fear & Greed index with its classification. Five reads, one payment.' },
   'GET /api/wallet-holdings/:wallet':  { usd: 0.008, tool: 'get_wallet_holdings', desc: 'Solana wallet holdings / portfolio for any address: native SOL with its USD value, every SPL token with amount, unit price and USD value, and an NFT count. Helius DAS getAssetsByOwner, up to 100 assets.' },
   'GET /api/token-metadata/:mint':     { usd: 0.005, tool: 'get_token_metadata',  desc: 'SPL token metadata for any Solana mint: name, symbol, decimals, total supply, current USD price, interface type, and whether the metadata is still mutable. Helius DAS.' },
-  'GET /api/liquidations':             { usd: 0.003, tool: 'get_recent_liquidations', desc: 'Crypto liquidations, live tape: recent perp liquidation prints across Bybit, OKX and Binance with timestamp, side liquidated, size, price and USD value. Any USDT perp we record, not just majors. The Bybit tape is complete and unthrottled.' },
+  'GET /api/liquidations':             { usd: 0.005, tool: 'get_recent_liquidations', desc: 'Crypto liquidations, live tape: recent perp liquidation prints across Bybit, OKX and Binance with timestamp, side liquidated, size, price and USD value. Any USDT perp we record, not just majors. The Bybit tape is complete and unthrottled.' },
   'GET /api/cascade':                  { usd: 0.01,  tool: 'get_cascade_alert',      desc: 'Liquidation cascade detector, live: clustered same-side liquidations happening NOW on SOL, BTC, ETH, XRP and DOGE across Bybit, OKX and Binance, with side, USD total, prints, duration and severity. For every perp we record use /api/cascade-scan.' },
   'GET /api/cascade-scan':             { usd: 0.05,  tool: 'get_cascade_scan',       desc: 'Liquidation cascade scan across EVERY USDT perp we record on Bybit, OKX and Binance at once, not just the majors: symbol, side liquidated, USD total, prints, duration, severity. Bybit is the only complete unthrottled liquidation tape in crypto.' },
   'GET /api/liquidation-leaders':      { usd: 0.02,  tool: 'get_liquidation_leaders', desc: 'Liquidation leaderboard: top symbols by liquidation USD right now across every USDT perp we record on Bybit, OKX and Binance, with long/short split, biggest single print and venue count. What is blowing up, ranked.' },
-  'GET /api/liquidation-stats':        { usd: 0.004, tool: 'get_liquidation_stats',   desc: 'Liquidation stats, 1h and 24h totals for SOL, BTC, ETH, XRP and DOGE: long vs short USD split, biggest single print, and a per-exchange breakdown across Bybit, OKX and Binance.' },
-  'GET /api/positioning':              { usd: 0.004, tool: 'get_positioning',        desc: 'Open interest and long/short ratio for SOL and BTC perps: the retail long/short account ratio plus Bybit open interest with 1h and 24h change. For any other USDT perp use /api/open-interest and /api/long-short.' },
+  'GET /api/liquidation-stats':        { usd: 0.01,  tool: 'get_liquidation_stats',   desc: 'Liquidation stats, 1h and 24h totals for SOL, BTC, ETH, XRP and DOGE: long vs short USD split, biggest single print, and a per-exchange breakdown across Bybit, OKX and Binance.' },
+  'GET /api/positioning':              { usd: 0.005, tool: 'get_positioning',        desc: 'Open interest and long/short ratio for SOL and BTC perps: the retail long/short account ratio plus Bybit open interest with 1h and 24h change. For any other USDT perp use /api/open-interest and /api/long-short.' },
   'GET /api/trade-context':            { usd: 0.01,  tool: 'get_trade_context',      desc: 'Crypto trading context in one call: SOL and BTC prices, perp funding rates, Fear & Greed, long/short positioning, open interest and 1h/24h liquidation stats. The whole pre-trade picture, one payment.' },
   'GET /api/token-risk/:mint':         { usd: 0.01,  tool: 'get_token_risk',         desc: 'Solana token rug check / risk signals for any SPL mint: mint and freeze authority status (revoked is safer), top-1 and top-10 holder concentration, supply, price, and a list of risk flags. Not a honeypot or LP-lock checker.' },
 };
@@ -219,10 +219,12 @@ function buildPaymentLayer() {
       : { url: facilitatorUrl },
   );
   const payToEvm = process.env.PAY_TO_EVM;
-  const EVM_NETWORK = 'eip155:8453'; // Base mainnet
+  // Base, Polygon and Arbitrum USDC, same payTo, same exact scheme, same
+  // facilitator. One list (lib/rails.js) for every surface that names a rail.
+  const EVM = require('./lib/rails').evmRails();
   const resourceServer = new x402ResourceServer(facilitator)
     .register(network, new ExactSvmScheme());
-  if (payToEvm) resourceServer.register(EVM_NETWORK, new ExactEvmScheme());
+  for (const r of EVM) resourceServer.register(r.network, new ExactEvmScheme());
   resourceServer
     .registerExtension(bazaarResourceServerExtension);
 
@@ -236,12 +238,12 @@ function buildPaymentLayer() {
           network,
           payTo,
         },
-        ...(payToEvm ? [{
+        ...EVM.map((r) => ({
           scheme: 'exact',
           price: `$${p.usd}`,
-          network: EVM_NETWORK,     // Base mainnet, USDC auto-resolved
+          network: r.network,       // USDC auto-resolved per chain
           payTo: payToEvm,
-        }] : []),
+        })),
       ],
       description: challengeDesc(challengeLead(p)), // challenge only; p.desc stays whole
       // NO errors key. MEASURED 2026-09-26: @x402/extensions strips unknown keys
@@ -267,7 +269,7 @@ function buildPaymentLayer() {
   const middleware = paymentMiddleware(routes, resourceServer);
 
   const withOutput = Object.keys(routes).filter((r) => BAZAAR_META[r] && BAZAAR_META[r].output).length;
-  console.log(`[payments] x402 active: network=${networkName} facilitator=${facilitatorUrl} payTo=${payTo}`);
+  console.log(`[payments] x402 active: network=${networkName} facilitator=${facilitatorUrl} payTo=${payTo} evm=${EVM.map((r) => r.name).join(',') || 'none'}`);
   console.log(`[payments] bazaar: ${Object.keys(routes).length} routes declared, ${withOutput} with an output example, icon=${ICON_URL}`);
   return { middleware, PRICES, network: networkName };
 }

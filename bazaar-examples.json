@@ -858,67 +858,69 @@
      "data": {
       "source": "multi_exchange_colle…",
       "exchanges": [
-       "bybit"
+       "bybit",
+       "okx",
+       "binance"
       ],
       "collecting_since": 1783528952067,
       "sol": {
        "1h": {
-        "events": 111,
-        "total_usd": 551818.07,
-        "longs_liquidated_usd": 19962.17,
-        "shorts_liquidated_usd": 531855.9,
-        "biggest_print_usd": 100573.77,
+        "events": 474,
+        "total_usd": 6674773.67,
+        "longs_liquidated_usd": 6443900.69,
+        "shorts_liquidated_usd": 230872.98,
+        "biggest_print_usd": 565140.68,
         "by_exchange": {
          "bybit": {
-          "events": 32,
-          "total_usd": 244917.79,
-          "longs_liquidated_usd": 445.55,
-          "shorts_liquidated_usd": 244472.23,
-          "biggest_print_usd": 100573.77
-         },
-         "binance": {
-          "events": 46,
-          "total_usd": 185867.75,
-          "longs_liquidated_usd": 5269.3,
-          "shorts_liquidated_usd": 180598.45,
-          "biggest_print_usd": 87563.06
+          "events": 246,
+          "total_usd": 924074.2,
+          "longs_liquidated_usd": 857833.57,
+          "shorts_liquidated_usd": 66240.63,
+          "biggest_print_usd": 67330.17
          },
          "okx": {
-          "events": 33,
-          "total_usd": 121032.53,
-          "longs_liquidated_usd": 14247.32,
-          "shorts_liquidated_usd": 106785.21,
-          "biggest_print_usd": 53474.45
+          "events": 85,
+          "total_usd": 611411.23,
+          "longs_liquidated_usd": 583604.52,
+          "shorts_liquidated_usd": 27806.71,
+          "biggest_print_usd": 132626.52
+         },
+         "binance": {
+          "events": 143,
+          "total_usd": 5139288.24,
+          "longs_liquidated_usd": 5002462.6,
+          "shorts_liquidated_usd": 136825.64,
+          "biggest_print_usd": 565140.68
          }
         }
        },
        "24h": {
-        "events": 1808,
-        "total_usd": 16129696.9,
-        "longs_liquidated_usd": 3920645.3,
-        "shorts_liquidated_usd": 12209051.6,
-        "biggest_print_usd": 915882,
+        "events": 3160,
+        "total_usd": 35593650,
+        "longs_liquidated_usd": 34649734.64,
+        "shorts_liquidated_usd": 943915.35,
+        "biggest_print_usd": 1858611.82,
         "by_exchange": {
+         "okx": {
+          "events": 566,
+          "total_usd": 3740852.51,
+          "longs_liquidated_usd": 3458924.73,
+          "shorts_liquidated_usd": 281927.78,
+          "biggest_print_usd": 382358.02
+         },
          "binance": {
-          "events": 705,
-          "total_usd": 9445111.62,
-          "longs_liquidated_usd": 2343782.62,
-          "shorts_liquidated_usd": 7101329,
-          "biggest_print_usd": 915882
+          "events": 911,
+          "total_usd": 24296622.41,
+          "longs_liquidated_usd": 23797984.96,
+          "shorts_liquidated_usd": 498637.46,
+          "biggest_print_usd": 1858611.82
          },
          "bybit": {
-          "events": 637,
-          "total_usd": 2953284.27,
-          "longs_liquidated_usd": 635875.59,
-          "shorts_liquidated_usd": 2317408.68,
-          "biggest_print_usd": 100573.77
-         },
-         "okx": {
-          "events": 466,
-          "total_usd": 3731301.02,
-          "longs_liquidated_usd": 940987.1,
-          "shorts_liquidated_usd": 2790313.92,
-          "biggest_print_usd": 585023.37
+          "events": 1683,
+          "total_usd": 7556175.07,
+          "longs_liquidated_usd": 7392824.96,
+          "shorts_liquidated_usd": 163350.11,
+          "biggest_print_usd": 99431.77
          }
         }
        }
@@ -1043,18 +1045,18 @@
     "example": {
      "tool": "get_trade_context",
      "data": {
-      "ts": 1790355177366,
+      "ts": 1791476635017,
       "prices": {
        "sol": {
         "symbol": "SOL",
-        "price": 121.35,
+        "price": 108.745,
         "confidence": null,
         "publish_time": null,
         "source": "coinbase"
        },
        "btc": {
         "symbol": "BTC",
-        "price": 83868.13,
+        "price": 81255.52,
         "confidence": null,
         "publish_time": null,
         "source": "coinbase"
@@ -1063,27 +1065,27 @@
       "funding": {
        "sol": {
         "symbol": "SOL",
-        "funding_rate_hourly": 0.0000125,
-        "funding_rate_8h_equiv": 0.0001,
-        "funding_rate_pct_hourly": 0.00125,
-        "mark_price": 121.42,
-        "open_interest": 6103405.560000007,
+        "funding_rate_hourly": 0.0000061104,
+        "funding_rate_8h_equiv": 0.00004888,
+        "funding_rate_pct_hourly": 0.000611,
+        "mark_price": 108.68,
+        "open_interest": 5571356.6,
         "source": "hyperliquid"
        },
        "btc": {
         "symbol": "BTC",
-        "funding_rate_hourly": 0.0000125,
-        "funding_rate_8h_equiv": 0.0001,
-        "funding_rate_pct_hourly": 0.00125,
-        "mark_price": 83875,
-        "open_interest": 39511.1646,
+        "funding_rate_hourly": 0.0000057443,
+        "funding_rate_8h_equiv": 0.00004595,
+        "funding_rate_pct_hourly": 0.000574,
+        "mark_price": 81231,
+        "open_interest": 40268.2770399999,
         "source": "hyperliquid"
        }
       },
       "fear_greed": {
-       "value": 71,
+       "value": 64,
        "classification": "Greed",
-       "timestamp": 1790294400,
+       "timestamp": 1791417600,
        "source": "alternative.me"
       },
       "positioning": {
@@ -1091,97 +1093,99 @@
        "period": "1h",
        "sol": {
         "long_short_ratio": {
-         "long_pct": 68.86,
-         "short_pct": 31.14,
-         "long_pct_prev_hour": 68.74,
-         "ts": 1790352000000
+         "long_pct": 73.49,
+         "short_pct": 26.51,
+         "long_pct_prev_hour": 73.19,
+         "ts": 1791475200000
         },
         "open_interest": {
-         "base": 6478924.1,
-         "usd": 809589831,
-         "change_1h_pct": -1.3,
-         "change_24h_pct": 9.93
+         "base": 6326412.6,
+         "usd": 692973021,
+         "change_1h_pct": -4.32,
+         "change_24h_pct": 5.55
         }
        },
        "btc": {
         "long_short_ratio": {
-         "long_pct": 57.02,
-         "short_pct": 42.98,
-         "long_pct_prev_hour": 57,
-         "ts": 1790352000000
+         "long_pct": 63.17,
+         "short_pct": 36.83,
+         "long_pct_prev_hour": 63.2,
+         "ts": 1791475200000
         },
         "open_interest": {
-         "base": 58663.035,
-         "usd": 4907625052,
-         "change_1h_pct": 0.19,
-         "change_24h_pct": -1.31
+         "base": 58495.439,
+         "usd": 4810687095,
+         "change_1h_pct": -0.38,
+         "change_24h_pct": 0.4
         }
        }
       },
       "liquidations": {
        "source": "multi_exchange_colle…",
        "exchanges": [
-        "bybit"
+        "bybit",
+        "okx",
+        "binance"
        ],
        "collecting_since": 1783528952067,
        "sol": {
         "1h": {
-         "events": 111,
-         "total_usd": 551818.07,
-         "longs_liquidated_usd": 19962.17,
-         "shorts_liquidated_usd": 531855.9,
-         "biggest_print_usd": 100573.77,
+         "events": 474,
+         "total_usd": 6674773.67,
+         "longs_liquidated_usd": 6443900.69,
+         "shorts_liquidated_usd": 230872.98,
+         "biggest_print_usd": 565140.68,
          "by_exchange": {
           "bybit": {
-           "events": 32,
-           "total_usd": 244917.79,
-           "longs_liquidated_usd": 445.55,
-           "shorts_liquidated_usd": 244472.23,
-           "biggest_print_usd": 100573.77
-          },
-          "binance": {
-           "events": 46,
-           "total_usd": 185867.75,
-           "longs_liquidated_usd": 5269.3,
-           "shorts_liquidated_usd": 180598.45,
-           "biggest_print_usd": 87563.06
+           "events": 246,
+           "total_usd": 924074.2,
+           "longs_liquidated_usd": 857833.57,
+           "shorts_liquidated_usd": 66240.63,
+           "biggest_print_usd": 67330.17
           },
           "okx": {
-           "events": 33,
-           "total_usd": 121032.53,
-           "longs_liquidated_usd": 14247.32,
-           "shorts_liquidated_usd": 106785.21,
-           "biggest_print_usd": 53474.45
+           "events": 85,
+           "total_usd": 611411.23,
+           "longs_liquidated_usd": 583604.52,
+           "shorts_liquidated_usd": 27806.71,
+           "biggest_print_usd": 132626.52
+          },
+          "binance": {
+           "events": 143,
+           "total_usd": 5139288.24,
+           "longs_liquidated_usd": 5002462.6,
+           "shorts_liquidated_usd": 136825.64,
+           "biggest_print_usd": 565140.68
           }
          }
         },
         "24h": {
-         "events": 1808,
-         "total_usd": 16129696.9,
-         "longs_liquidated_usd": 3920645.3,
-         "shorts_liquidated_usd": 12209051.6,
-         "biggest_print_usd": 915882,
+         "events": 3160,
+         "total_usd": 35593650,
+         "longs_liquidated_usd": 34649734.64,
+         "shorts_liquidated_usd": 943915.35,
+         "biggest_print_usd": 1858611.82,
          "by_exchange": {
+          "okx": {
+           "events": 566,
+           "total_usd": 3740852.51,
+           "longs_liquidated_usd": 3458924.73,
+           "shorts_liquidated_usd": 281927.78,
+           "biggest_print_usd": 382358.02
+          },
           "binance": {
-           "events": 705,
-           "total_usd": 9445111.62,
-           "longs_liquidated_usd": 2343782.62,
-           "shorts_liquidated_usd": 7101329,
-           "biggest_print_usd": 915882
+           "events": 911,
+           "total_usd": 24296622.41,
+           "longs_liquidated_usd": 23797984.96,
+           "shorts_liquidated_usd": 498637.46,
+           "biggest_print_usd": 1858611.82
           },
           "bybit": {
-           "events": 637,
-           "total_usd": 2953284.27,
-           "longs_liquidated_usd": 635875.59,
-           "shorts_liquidated_usd": 2317408.68,
-           "biggest_print_usd": 100573.77
-          },
-          "okx": {
-           "events": 466,
-           "total_usd": 3731301.02,
-           "longs_liquidated_usd": 940987.1,
-           "shorts_liquidated_usd": 2790313.92,
-           "biggest_print_usd": 585023.37
+           "events": 1683,
+           "total_usd": 7556175.07,
+           "longs_liquidated_usd": 7392824.96,
+           "shorts_liquidated_usd": 163350.11,
+           "biggest_print_usd": 99431.77
           }
          }
         }
@@ -3385,22 +3389,22 @@
       "chains": [
        "Solana"
       ],
-      "tvl_usd": 1272938092,
-      "change_1d_pct": 3.86,
-      "change_7d_pct": 10.66,
+      "tvl_usd": 1191075811,
+      "change_1d_pct": -3.61,
+      "change_7d_pct": -3.65,
       "deployments": 2,
       "components": [
        {
         "name": "Jito Liquid Staking",
         "slug": "jito-liquid-staking",
-        "tvl_usd": 1252493242,
-        "change_1d_pct": 3.83
+        "tvl_usd": 1171815631,
+        "change_1d_pct": -3.65
        },
        {
         "name": "Jito Restaking",
         "slug": "jito-restaking",
-        "tvl_usd": 20444850,
-        "change_1d_pct": 5.86
+        "tvl_usd": 19260179,
+        "change_1d_pct": -1.11
        }
       ],
       "note": "aggregate of 2 deployment(s); change is TVL-weighted. Query a component slug for one deployment.",
@@ -3568,8 +3572,8 @@
       "input_mint": "So11111111111111111111111111111111111111112",
       "output_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
       "in_amount": "1000000000",
-      "out_amount": "121197247",
-      "other_amount_threshold": "120591261",
+      "out_amount": "108691257",
+      "other_amount_threshold": "108147801",
       "price_impact_pct": 0,
       "route": [
        "BisonFi"
@@ -3975,23 +3979,23 @@
       "mint": "XsoCS1TfEyfFhfvj8EtZ…",
       "gated_from_ts": 1786406400,
       "confidence": "measured",
-      "measurement_age_sec": 383,
+      "measurement_age_sec": 533,
       "current_sample_withheld": null,
       "measurement": {
-       "as_of": 1790354804,
-       "as_of_utc": "2026-09-25T16:46:44.…",
+       "as_of": 1791476102,
+       "as_of_utc": "2026-10-08T16:15:02.…",
        "session": "regular",
-       "marked_usd": 4249843.81,
-       "oracle_price": 775.647297,
+       "marked_usd": 4372796.94,
+       "oracle_price": 779.036556,
        "oracle_source": "kamino_implied_live",
        "oracle_age_sec": null,
-       "mark_generated_at": 1790354804,
+       "mark_generated_at": 1791476102,
        "mark_is_live": true,
-       "max_exitable_usd": 1727094,
-       "exitable_fraction": 0.40639,
-       "max_exitable_cons_usd": 1544526,
-       "unbacked_usd_lower_bound": 2522749.81,
-       "resolution_usd": 66388,
+       "max_exitable_usd": 1708735,
+       "exitable_fraction": 0.390765,
+       "max_exitable_cons_usd": 1025641,
+       "unbacked_usd_lower_bound": 2664061.94,
+       "resolution_usd": 68309,
        "status": "partial",
        "observation": "cleared",
        "corroboration": null,
@@ -4001,13 +4005,13 @@
       },
       "exit_blocked": null,
       "nearest_measured_clip": {
-       "requested_size_usd": 1727094,
-       "measured_clip_usd": 1727094,
+       "requested_size_usd": 1708735,
+       "measured_clip_usd": 1708735,
        "is_exact_match": true,
        "routed": true,
-       "realised_usd": 1677924.11,
-       "haircut_bps": 284.7,
-       "liq_margin_bps": 215.3,
+       "realised_usd": 1631818.42,
+       "haircut_bps": 450.14,
+       "liq_margin_bps": 49.86,
        "reason": null,
        "clips_measured_usd": [
         1000
@@ -4542,37 +4546,37 @@
      "data": {
       "extremes": [
        {
-        "symbol": "SAGAUSDT",
+        "symbol": "ORCAUSDT",
         "venue": "bybit",
-        "funding_rate_8h": -0.0053745,
-        "funding_rate_raw": -0.00268725,
+        "funding_rate_8h": -0.00963784,
+        "funding_rate_raw": -0.00481892,
         "funding_interval_hours": 4,
-        "annualized_pct": -588.51,
-        "oi_usd": 3283608,
-        "price_24h_pct": -4.43
+        "annualized_pct": -1055.34,
+        "oi_usd": 7303411,
+        "price_24h_pct": -10.83
        },
        {
-        "symbol": "BLASTUSDT",
+        "symbol": "SKLUSDT",
         "venue": "bybit",
-        "funding_rate_8h": -0.00224282,
-        "funding_rate_raw": -0.00224282,
+        "funding_rate_8h": -0.00745625,
+        "funding_rate_raw": -0.00745625,
         "funding_interval_hours": 8,
-        "annualized_pct": -245.59,
-        "oi_usd": 1149802,
-        "price_24h_pct": -12.27
+        "annualized_pct": -816.46,
+        "oi_usd": 807732,
+        "price_24h_pct": 6.94
        },
        {
-        "symbol": "SAMSUNGUSDT",
+        "symbol": "ZKCUSDT",
         "venue": "bybit",
-        "funding_rate_8h": -0.00191945,
-        "funding_rate_raw": -0.00191945,
-        "funding_interval_hours": 8,
-        "annualized_pct": -210.18,
-        "oi_usd": 9646288,
-        "price_24h_pct": -5.43
+        "funding_rate_8h": -0.00744792,
+        "funding_rate_raw": -0.00372396,
+        "funding_interval_hours": 4,
+        "annualized_pct": -815.55,
+        "oi_usd": 1195906,
+        "price_24h_pct": -4.57
        }
       ],
-      "universe_size": 299,
+      "universe_size": 304,
       "min_turnover_usd": 1000000,
       "venue_scope": [
        "bybit"
@@ -4693,7 +4697,7 @@
       "type": "number"
      },
      "min_oi_usd": {
-      "description": "minimum combined open interest in USD across the venues, default 10000000; the radar tracks 5000000 and up",
+      "description": "minimum combined open interest in USD across the venues: default 10000000 ($10M); the radar tracks pairs from 5000000 ($5M), and lower values return that floor",
       "type": "number"
      }
     },
@@ -4703,74 +4707,77 @@
     "example": {
      "tool": "get_funding_radar",
      "data": {
-      "as_of": "2026-10-08T14:45:23.…",
-      "age_s": 199,
+      "as_of": "2026-10-08T16:20:02.…",
+      "age_s": 233,
       "stale": false,
       "venues": [
-       "bybit"
+       "bybit",
+       "okx",
+       "hyperliquid"
       ],
       "window_target_days": 30,
       "z_flag_abs": 2,
       "min_oi_usd": 10000000,
-      "universe_size": 183,
-      "matched": 122,
+      "universe_size": 179,
+      "matched": 119,
       "returned": 20,
       "coverage": {
-       "series_total": 468,
-       "series_with_history": 453,
-       "series_full_window": 452
+       "series_total": 459,
+       "series_with_history": 459,
+       "series_full_window": 458
       },
       "symbols": [
        {
         "symbol": "VVVUSDT",
         "oi_usd": {
-         "bybit": 28904055,
-         "okx": 4017252,
-         "hyperliquid": 71924565,
-         "total": 104845872
+         "bybit": 29725355,
+         "okx": 3966527,
+         "hyperliquid": 72525719,
+         "total": 106217601
         },
         "venues": {
          "bybit": {
-          "funding_rate_8h": 0.00224778,
-          "funding_rate_raw": 0.00112389,
+          "funding_rate_8h": 0.00318944,
+          "funding_rate_raw": 0.00159472,
           "funding_interval_hours": 4,
-          "next_funding_time": 1791475200000,
-          "z_30d": 21.9,
-          "mean_8h_30d": 0.0000953,
-          "std_8h_30d": 0.00009827,
+          "next_funding_time": 1791489600000,
+          "z_30d": 8.66,
+          "mean_8h_30d": 0.0001165,
+          "std_8h_30d": 0.00035473,
           "samples": 180,
-          "window_days": 29.9
+          "window_days": 29.8
          },
          "okx": {
-          "funding_rate_8h": 0.00095087,
-          "funding_rate_raw": 0.0004754342088605,
+          "funding_rate_8h": 0.00156427,
+          "funding_rate_raw": 0.0007821356052997,
           "funding_interval_hours": 4,
-          "next_funding_time": 1791475200000,
-          "z_30d": 18.57,
-          "mean_8h_30d": 0.00011067,
-          "std_8h_30d": 0.00004525,
+          "next_funding_time": 1791489600000,
+          "z_30d": 12.15,
+          "mean_8h_30d": 0.00011762,
+          "std_8h_30d": 0.00011909,
           "samples": 180,
-          "window_days": 29.9
+          "window_days": 29.8
          },
          "hyperliquid": {
-          "funding_rate_8h": 0.00208054,
-          "funding_rate_raw": 0.0002600676,
+          "funding_rate_8h": 0.00049902,
+          "funding_rate_raw": 0.0000623772,
           "funding_interval_hours": 1,
-          "z_30d": 6.81,
-          "mean_8h_30d": 0.00020886,
-          "std_8h_30d": 0.00027498,
+          "z_30d": 1.19,
+          "mean_8h_30d": 0.00020534,
+          "std_8h_30d": 0.00024768,
           "samples": 720,
           "window_days": 30
          }
         },
-        "spread_8h": 0.00129691,
+        "spread_8h": 0.00269042,
         "spread_high_venue": "bybit",
-        "spread_low_venue": "okx",
-        "max_abs_z": 21.9,
-        "extreme_venue": "bybit",
+        "spread_low_venue": "hyperliquid",
+        "max_abs_z": 12.15,
+        "extreme_venue": "okx",
         "flag": true,
         "flagged_venues": [
-         "bybit"
+         "bybit",
+         "okx"
         ]
        }
       ],
@@ -4836,6 +4843,6 @@
    }
   }
  },
- "_schemas_regenerated_at": "2026-10-08T14:48:43.318Z",
- "_outputs_recaptured_at": "2026-10-08T14:48:42.966Z"
+ "_schemas_regenerated_at": "2026-10-08T16:23:46.495Z",
+ "_outputs_recaptured_at": "2026-10-08T16:24:03.958Z"
 }

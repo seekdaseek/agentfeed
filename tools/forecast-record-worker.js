@@ -42,7 +42,14 @@ const { DatabaseSync } = require('node:sqlite');
 
   try {
     const summary = rec.tally(log, symbol ? { symbol } : {});
-    const rows = rec.exportRows(log, limit).map((r) => ({
+    // exportRows() has no symbol filter, so a ?symbol= request used to return
+    // the newest rows of EVERY symbol under one symbol's score. Filtered here,
+    // read-only, on caliper's UNIQUE(symbol, window_start) index; caliper's
+    // library is left as it is.
+    const raw = symbol
+      ? log.prepare('SELECT * FROM forecasts WHERE symbol = ? ORDER BY window_start DESC LIMIT ?').all(symbol, limit)
+      : rec.exportRows(log, limit);
+    const rows = raw.map((r) => ({
       symbol: r.symbol,
       window: new Date(r.window_start).toISOString(),
       madeAt: new Date(r.made_at).toISOString(),

@@ -78,3 +78,7 @@ mpp/node_modules/
 # covered by *.db above, the snapshot and its atomic-rename temp are not.
 funding-radar.json
 funding-radar.json.tmp
+
+# ---- 2026-10-08: directory claim values (lib/well-known-claims.js) ----
+# A verification hash or challenge token, written during a claim. Not source.
+well-known/

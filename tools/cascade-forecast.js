@@ -234,7 +234,12 @@ function recordRowLimit(raw) {
  * the score on trust.
  */
 async function getForecastRecord({ query = {} } = {}) {
-  const symbol = query.symbol ? String(query.symbol).toUpperCase() : '';
+  // record.db stores USDT-quoted symbols (SOLUSDT). The paid forecast accepts
+  // SOL as well, so the free record must too: before 2026-10-08 ?symbol=SOL
+  // tallied zero rows and published "nothing has settled yet" next to 6,081
+  // settled SOLUSDT forecasts. Same normalise() as the paid route, so SOL and
+  // SOLUSDT are one key in the cache as well as in the query.
+  const symbol = query.symbol ? normalise(query.symbol) || '' : '';
   const limit = recordRowLimit(query.rows);
   const key = `${symbol}|${limit}`;
 

@@ -263,7 +263,7 @@ Sampled every 5 minutes since 19 July 2026. Deviation is measured against the un
 | Tool | Price | Route | What you get |
 |---|---|---|---|
 | `get_funding_cross` | $0.01 | `/api/funding-cross` | Funding for ANY USDT perp across Bybit + OKX + Hyperliquid in one call, with cross-venue spread and crowding read. |
-| `get_funding_radar` | $0.02 | `/api/funding-radar` | Funding rates radar across Bybit, OKX and Hyperliquid: every USDT perp listed on at least two of them with $5M+ combined OI, current 8h-equivalent funding per venue, each venue's 30-day z-score, the cross-venue spread and a flag on any \|z\| ≥ 2, most extreme first. Precomputed every 5 min, with `as_of` and `stale`. |
+| `get_funding_radar` | $0.02 | `/api/funding-radar` | Funding rates radar across Bybit, OKX and Hyperliquid: tracks every USDT perp listed on at least two of them from $5M combined OI and shows $10M and up by default; current 8h-equivalent funding per venue, each venue's 30-day z-score, the cross-venue spread and a flag on any \|z\| ≥ 2, most extreme first. Precomputed every 5 min, with `as_of` and `stale`. |
 | `get_funding_extremes` | $0.02 | `/api/funding-extremes` | Most crowded trades across every Bybit USDT perp: top most-positive and most-negative funding with annualized %, 24h price move and OI. Crowded shorts = squeeze candidates. |
 | `get_open_interest` | $0.01 | `/api/open-interest` | Open interest for ANY USDT perp: Bybit OI in base + USD with 1h/24h change, plus OKX OI. (get_positioning covers SOL+BTC only.) |
 | `get_oi_spike_scan` | $0.02 | `/api/oi-spike-scan` | Abnormal open-interest jumps across every Bybit USDT perp vs a 30min+ baseline — where new leverage is piling in, with funding and price context. Squeeze/flush precursor screener. |

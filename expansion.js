@@ -77,10 +77,10 @@ const EXP = [
   // Served from a snapshot the cron collector (bin/funding-radar-collect.js)
   // writes every 5 minutes; a paid request never calls a venue.
   { name: 'get_funding_radar', route: 'GET /api/funding-radar', usd: 0.02,
-    desc: "Funding rates radar across Bybit, OKX and Hyperliquid: for every USDT perp listed on at least two of them with $5M+ combined open interest, the current funding per venue at its 8h equivalent, each venue's 30-day z-score against its own settled history, the cross-venue spread, and a flag on any |z| of 2 or more, sorted by how extreme the reading is. Precomputed every 5 minutes; every answer carries as_of, stale and the window each z-score actually used.",
+    desc: "Funding rates radar across Bybit, OKX and Hyperliquid. It tracks every USDT perp listed on at least two of them from $5M combined open interest and, by default, shows the ones with $10M and up; min_oi_usd changes that. Per symbol: the current funding per venue at its 8h equivalent, each venue's 30-day z-score against its own settled history, the cross-venue spread, and a flag on any |z| of 2 or more, most extreme first. Precomputed every 5 minutes, with as_of and stale.",
     tags: ['funding', 'perps', 'screener', 'cross-exchange', 'z-score', 'trading'],
     schema: { top: z.number().optional().describe('symbols returned, most extreme first, 1-100, default 20'),
-              min_oi_usd: z.number().optional().describe('minimum combined open interest in USD across the venues, default 10000000; the radar tracks 5000000 and up') },
+              min_oi_usd: z.number().optional().describe('minimum combined open interest in USD across the venues: default 10000000 ($10M); the radar tracks pairs from 5000000 ($5M), and lower values return that floor') },
     run: (a) => FR.getFundingRadar(a) },
   { name: 'get_open_interest', route: 'GET /api/open-interest', usd: 0.01,
     desc: 'Open interest for ANY USDT perp: Bybit OI in base units and in USD with 1h and 24h change, plus OKX open interest and the mark price. /api/positioning covers SOL and BTC only.',

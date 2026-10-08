@@ -283,7 +283,11 @@ function buildOpenApi({ PRICES, META, FREE_TOOLS, mpp }) {
       parameters: [{
         in: 'path', name: 'route', required: true,
         description: 'A paid route slug or tool name, e.g. liq-pulse, perp, or get_liq_pulse. GET /api/sample lists them.',
-        schema: { type: 'string', enum: [...new Set(Object.keys(PRICES).map((k) => k.replace('GET /api/', '').replace(/\/:.*$/, '')))].sort() },
+        // A concrete value for checkers that probe path params: without one,
+        // `pay catalog check` probed a placeholder, got this route's honest 404
+        // and reported the whole provider as "passed with warnings".
+        example: 'liq-pulse',
+        schema: { type: 'string', example: 'liq-pulse', enum: [...new Set(Object.keys(PRICES).map((k) => k.replace('GET /api/', '').replace(/\/:.*$/, '')))].sort() },
       }],
       responses: {
         200: { content: { 'application/json': { schema: { type: 'object' } } }, description: 'Free response. This endpoint is not payment-gated.' },

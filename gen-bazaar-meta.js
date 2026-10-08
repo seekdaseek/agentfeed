@@ -140,6 +140,8 @@ function mapGroup(v) {
   return best.length > 3 ? new Set(best) : new Set();
 }
 
+const SCALAR_LIST_MAX = 8;
+
 function trim(v, p, depth = 0) {
   if (v === null || v === undefined) return v ?? null;
   if (typeof v === 'string') return v.length > p.str ? v.slice(0, p.str).trimEnd() + '…' : v;
@@ -150,6 +152,13 @@ function trim(v, p, depth = 0) {
   // {"1h":{},"24h":{}}, which reads as "this endpoint returns nothing".
   // Breadth is reduced instead, and hollowPaths() below fails the route loudly
   // if anything still comes out empty.
+  // A short list of plain values -- the venues a route reads, the exchanges a
+  // tape covers -- is kept whole. Cutting it to p.arr published
+  // "venues":["bybit"] for a three-venue radar and "exchanges":["bybit"] for a
+  // three-exchange tape: a few bytes saved for a false statement about coverage.
+  if (Array.isArray(v) && v.length <= SCALAR_LIST_MAX && v.every((x) => x === null || typeof x !== 'object')) {
+    return v.map((x) => trim(x, p, depth + 1));
+  }
   if (Array.isArray(v)) return v.slice(0, p.arr).map((x) => trim(x, p, depth + 1));
   const group = mapGroup(v);
   let seen = 0;

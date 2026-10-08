@@ -405,6 +405,8 @@ app.get('/openapi.json', (_req, res) => res.json(docs().openapi));
 app.get('/.well-known/x402', (_req, res) => res.json(docs().wellKnown));
 app.get('/llms.txt', (_req, res) => res.type('text/plain; charset=utf-8').send(docs().llms));
 app.get('/SKILL.md', (_req, res) => res.type('text/markdown; charset=utf-8').send(docs().skill));
+// Directory domain claims (402index, nohumans): inert 404s until a claim writes a value.
+require('./lib/well-known-claims').mountWellKnownClaims(app);
 
 // The Bazaar reads iconUrl off each route's resource object; payments.js points
 // every route at this path. Read once at boot -- a 256x256 PNG is 8 KB and

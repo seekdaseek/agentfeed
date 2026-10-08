@@ -5,7 +5,7 @@
 
 **Crypto liquidations, cascade detection, positioning and market data for AI agents. Pay per call in USDC. No API keys, no accounts, no subscriptions.**
 
-AgentFeed sells live trading data through the [x402 payment protocol](https://solana.com/x402) on Solana and Base. An agent hits an endpoint, gets a `402 Payment Required` with the price, pays a fraction of a cent in USDC from its own wallet, and receives the data — in about two seconds, gas sponsored by the facilitator.
+AgentFeed sells live trading data through the [x402 payment protocol](https://solana.com/x402) on Solana, Base, Polygon and Arbitrum. An agent hits an endpoint, gets a `402 Payment Required` with the price, pays a fraction of a cent in USDC from its own wallet, and receives the data — in about two seconds, gas sponsored by the facilitator.
 
 Two rails, same data:
 
@@ -83,16 +83,15 @@ Notional uses `filled_qty × avg_fill_price` — what actually executed — not 
 
 Every paid route, cheapest question last. Generated from
 [`/.well-known/x402.json`](https://x402.ochinimus.app/.well-known/x402.json),
-read 2026-09-28 — names, prices and routes are the manifest's, not a copy kept
+read 2026-10-08 — names, prices and routes are the manifest's, not a copy kept
 in sync by hand. What each one returns is under
-[59 tools](#59-tools-52-paid-http-routes--7-free--pricing), word for word as
+[60 tools](#60-tools-53-paid-http-routes--7-free--pricing), word for word as
 the service publishes it.
 
 | Tool | Price | Route |
 |---|---|---|
 | `get_squeeze_score` | $0.1 | `/api/squeeze-score` |
 | `get_cascade_scan` | $0.05 | `/api/cascade-scan` |
-| `get_liq_heatmap` | $0.05 | `/api/liq-heatmap` |
 | `get_liq_history` | $0.05 | `/api/liq-history` |
 | `get_peg_universe` | $0.05 | `/api/peg-universe` |
 | `get_cascade_history` | $0.03 | `/api/cascade-history` |
@@ -100,6 +99,8 @@ the service publishes it.
 | `get_cascade_forecast` | $0.02 | `/api/cascade-forecast` |
 | `get_exit_quote` | $0.02 | `/api/exit-quote` |
 | `get_funding_extremes` | $0.02 | `/api/funding-extremes` |
+| `get_funding_radar` | $0.02 | `/api/funding-radar` |
+| `get_liq_heatmap` | $0.02 | `/api/liq-heatmap` |
 | `get_liquidation_leaders` | $0.02 | `/api/liquidation-leaders` |
 | `get_oi_spike_scan` | $0.02 | `/api/oi-spike-scan` |
 | `get_peg_deviation` | $0.02 | `/api/peg-deviation` |
@@ -111,6 +112,7 @@ the service publishes it.
 | `get_basis` | $0.01 | `/api/basis` |
 | `get_cascade_alert` | $0.01 | `/api/cascade` |
 | `get_funding_cross` | $0.01 | `/api/funding-cross` |
+| `get_liquidation_stats` | $0.01 | `/api/liquidation-stats` |
 | `get_long_short` | $0.01 | `/api/long-short` |
 | `get_open_interest` | $0.01 | `/api/open-interest` |
 | `get_orderbook_imbalance` | $0.01 | `/api/orderbook-imbalance` |
@@ -121,27 +123,26 @@ the service publishes it.
 | `get_trade_context` | $0.01 | `/api/trade-context` |
 | `get_volatility` | $0.01 | `/api/volatility` |
 | `get_wallet_holdings` | $0.008 | `/api/wallet-holdings/:wallet` |
+| `get_base_balance` | $0.005 | `/api/base-balance` |
+| `get_base_gas` | $0.005 | `/api/base-gas` |
+| `get_btc_price` | $0.005 | `/api/btc-price` |
 | `get_dex_quote` | $0.005 | `/api/dex-quote` |
+| `get_eth_price` | $0.005 | `/api/eth-price` |
 | `get_funding_history` | $0.005 | `/api/funding-history` |
+| `get_funding_pulse` | $0.005 | `/api/funding-pulse` |
+| `get_funding_rate` | $0.005 | `/api/funding-rate` |
 | `get_jito_tips` | $0.005 | `/api/jito-tips` |
+| `get_liq_pulse` | $0.005 | `/api/liq-pulse` |
+| `get_market_snapshot` | $0.005 | `/api/market-snapshot` |
+| `get_perp` | $0.005 | `/api/perp` |
+| `get_positioning` | $0.005 | `/api/positioning` |
 | `get_priority_fees` | $0.005 | `/api/priority-fees` |
+| `get_recent_liquidations` | $0.005 | `/api/liquidations` |
 | `get_sol_network` | $0.005 | `/api/sol-network` |
+| `get_sol_price` | $0.005 | `/api/sol-price` |
+| `get_spot` | $0.005 | `/api/price` |
 | `get_token_metadata` | $0.005 | `/api/token-metadata/:mint` |
 | `get_tvl` | $0.005 | `/api/tvl` |
-| `get_liquidation_stats` | $0.004 | `/api/liquidation-stats` |
-| `get_positioning` | $0.004 | `/api/positioning` |
-| `get_market_snapshot` | $0.003 | `/api/market-snapshot` |
-| `get_recent_liquidations` | $0.003 | `/api/liquidations` |
-| `get_base_balance` | $0.002 | `/api/base-balance` |
-| `get_funding_rate` | $0.002 | `/api/funding-rate` |
-| `get_base_gas` | $0.001 | `/api/base-gas` |
-| `get_btc_price` | $0.001 | `/api/btc-price` |
-| `get_eth_price` | $0.001 | `/api/eth-price` |
-| `get_funding_pulse` | $0.001 | `/api/funding-pulse` |
-| `get_liq_pulse` | $0.001 | `/api/liq-pulse` |
-| `get_perp` | $0.001 | `/api/perp` |
-| `get_sol_price` | $0.001 | `/api/sol-price` |
-| `get_spot` | $0.001 | `/api/price` |
 
 ## Two payment protocols on one 402
 
@@ -209,12 +210,12 @@ The pay-kit fix ships here as `mpp/patches/@solana+mpp+0.7.0.patch`, applied by
 dependency, not a dev one, because a `--omit=dev` install would otherwise complete silently
 *unpatched*.
 
-## 59 tools (52 paid HTTP routes + 7 free) & pricing
+## 60 tools (53 paid HTTP routes + 7 free) & pricing
 
-**52 paid + 7 free**, 59 total on the MCP rail. Every call is metered individually in USDC over
-x402 — no bundles, no minimums. Calling all 52 paid tools once costs **$0.769** — the entire
-market read for 77 cents. Counts and prices are summed from
-[the live manifest](https://x402.ochinimus.app/.well-known/x402.json), read 2026-09-25.
+**53 paid + 7 free**, 60 total on the MCP rail. Every call is metered individually in USDC over
+x402 — no bundles, no minimums. Calling all 53 paid tools once costs **$0.808** — the entire
+market read for 81 cents. Counts and prices are summed from
+[the live manifest](https://x402.ochinimus.app/.well-known/x402.json), read 2026-10-08.
 
 The flagship is [`get_squeeze_score`](#the-moat--our-own-liquidation-tape) — a 0-100 short-squeeze / long-flush composite built from funding, crowding, OI build and the liq-skew of our exclusive tape. One number, one dime, answers "is this trade crowded and about to hurt someone."
 
@@ -224,7 +225,7 @@ The flagship is [`get_squeeze_score`](#the-moat--our-own-liquidation-tape) — a
 |---|---|---|---|
 | `get_squeeze_score` | $0.1 | `/api/squeeze-score` | FLAGSHIP: short-squeeze / long-flush score 0-100 for any USDT perp. Composite of funding, long/short crowding, 24h OI build, and liq-skew from our exclusive tape. One number that answers "is this trade crowded and about to hurt someone". |
 | `get_liq_history` | $0.05 | `/api/liq-history` | HISTORICAL liquidation tape, time-bucketed: total/long/short USD, prints, biggest print per bucket. Any USDT perp or the whole recorded universe, up to 7 days back. Bybit is the only complete liq tape in crypto and no exchange publishes history of it — this data exists nowhere else. |
-| `get_liq_heatmap` | $0.05 | `/api/liq-heatmap` | Liquidation heatmap by PRICE LEVEL from our own tape: where leverage actually got flushed in the last N hours — USD, prints, long/short split per price zone, hottest zone flagged. Real prints, not entry-price estimates. |
+| `get_liq_heatmap` | $0.02 | `/api/liq-heatmap` | Liquidation heatmap by PRICE LEVEL from our own tape: where leverage actually got flushed in the last N hours — USD, prints, long/short split per price zone, hottest zone flagged. Real prints, not entry-price estimates. |
 | `get_cascade_history` | $0.03 | `/api/cascade-history` | PAST liquidation cascades reconstructed from our tape: clustered same-side flush events with start/end, prints, USD total, peak print. get_cascade_alert tells you NOW; this tells you what already happened, up to 72h back. |
 | `get_venue_liq_share` | $0.02 | `/api/venue-liq-share` | Which venue is flushing whom: per-exchange liquidation share (Bybit/OKX/Binance) with long/short split and biggest print, any symbol or whole universe. |
 | `get_cascade_forecast` | $0.02 | `/api/cascade-forecast` | FORWARD-LOOKING liquidation forecast, not a description of what already happened. Returns the probability that a symbol will liquidate more in the NEXT 15 minutes than its own 90th-percentile 15-minute window. Calibrated on a 28-day tape of 1.4M Bybit liquidations across 799 symbols, which cannot be reconstructed by anyone starting today because no exchange publishes liquidation history. Every answer carries the exact question, the threshold in USD, the window it read, the number of historical occurrences behind the number, and instructions for settling it yourself from the public feed. When a state has too little history the tool DECLINES rather than guessing, and says why. |
@@ -250,18 +251,19 @@ Sampled every 5 minutes since 19 July 2026. Deviation is measured against the un
 
 | Tool | Price | Route | What you get |
 |---|---|---|---|
-| `get_recent_liquidations` | $0.003 | `/api/liquidations` | Recent liquidations across the USDT perps we record on Bybit (complete unthrottled tape), OKX and Binance. Any symbol, not just majors; defaults to majors. The measured market count is published live at / under coverage.perp_markets_7d |
+| `get_recent_liquidations` | $0.005 | `/api/liquidations` | Recent liquidations across the USDT perps we record on Bybit (complete unthrottled tape), OKX and Binance. Any symbol, not just majors; defaults to majors. The measured market count is published live at / under coverage.perp_markets_7d |
 | `get_cascade_alert` | $0.01 | `/api/cascade` | Liquidation cascade detector for the 5 majors (SOL/BTC/ETH/XRP/DOGE) across Bybit+OKX+Binance. For every perp we record use /api/cascade-scan |
 | `get_cascade_scan` | $0.05 | `/api/cascade-scan` | FULL-UNIVERSE cascade scan: every USDT perp we record across Bybit+OKX+Binance. Bybit is the only complete unthrottled liquidation tape in crypto and no exchange publishes history of it |
 | `get_liquidation_leaders` | $0.02 | `/api/liquidation-leaders` | What is blowing up right now: top symbols by liquidation USD across every USDT perp we record, with long/short split, biggest print and venue count |
-| `get_liquidation_stats` | $0.004 | `/api/liquidation-stats` | 1h/24h liquidation totals for the 5 majors (SOL/BTC/ETH/XRP/DOGE), long/short split, biggest print, per-exchange breakdown |
-| `get_liq_pulse` | $0.001 | `/api/liq-pulse` | Use when an agent needs to know what is being liquidated right now. Returns the last 60 minutes across every USDT perp we record: total USD, long/short split, prints and the top 5 symbols. Declines with the tape age if our recording is stale. |
+| `get_liquidation_stats` | $0.01 | `/api/liquidation-stats` | 1h/24h liquidation totals for the 5 majors (SOL/BTC/ETH/XRP/DOGE), long/short split, biggest print, per-exchange breakdown |
+| `get_liq_pulse` | $0.005 | `/api/liq-pulse` | Use when an agent needs to know what is being liquidated right now. Returns the last 60 minutes across every USDT perp we record: total USD, long/short split, prints and the top 5 symbols. Declines with the tape age if our recording is stale. |
 
 ### Derivatives
 
 | Tool | Price | Route | What you get |
 |---|---|---|---|
 | `get_funding_cross` | $0.01 | `/api/funding-cross` | Funding for ANY USDT perp across Bybit + OKX + Hyperliquid in one call, with cross-venue spread and crowding read. |
+| `get_funding_radar` | $0.02 | `/api/funding-radar` | Funding rates radar across Bybit, OKX and Hyperliquid: every USDT perp listed on at least two of them with $5M+ combined OI, current 8h-equivalent funding per venue, each venue's 30-day z-score, the cross-venue spread and a flag on any \|z\| ≥ 2, most extreme first. Precomputed every 5 min, with `as_of` and `stale`. |
 | `get_funding_extremes` | $0.02 | `/api/funding-extremes` | Most crowded trades across every Bybit USDT perp: top most-positive and most-negative funding with annualized %, 24h price move and OI. Crowded shorts = squeeze candidates. |
 | `get_open_interest` | $0.01 | `/api/open-interest` | Open interest for ANY USDT perp: Bybit OI in base + USD with 1h/24h change, plus OKX OI. (get_positioning covers SOL+BTC only.) |
 | `get_oi_spike_scan` | $0.02 | `/api/oi-spike-scan` | Abnormal open-interest jumps across every Bybit USDT perp vs a 30min+ baseline — where new leverage is piling in, with funding and price context. Squeeze/flush precursor screener. |
@@ -270,8 +272,8 @@ Sampled every 5 minutes since 19 July 2026. Deviation is measured against the un
 | `get_volatility` | $0.01 | `/api/volatility` | Realized volatility for any USDT perp: 7d and 30d annualized from daily closes, plus today's range. Position-sizing input. |
 | `get_funding_history` | $0.005 | `/api/funding-history` | Funding-rate history for any USDT perp (up to 200 intervals): average, annualized, share of positive intervals — what the carry has actually been. |
 | `get_top_movers` | $0.01 | `/api/top-movers` | 24h top gainers and losers across every Bybit USDT perp with a liquidity floor, funding attached. The "what moved" screener. |
-| `get_perp` | $0.001 | `/api/perp` | Use when an agent needs one perp market in a single call. Returns cross-venue funding (Bybit, OKX, Hyperliquid), open interest with 1h/24h change, long/short ratio, and 24h liquidations with long/short split and biggest print from our own tape. |
-| `get_funding_pulse` | $0.001 | `/api/funding-pulse` | Use when an agent needs the most extreme funding rates right now. Returns the 5 largest absolute annualised rates across the whole Bybit USDT perp universe, each with venue, 8h rate, open interest and 24h price move. One call, not a full screen. |
+| `get_perp` | $0.005 | `/api/perp` | Use when an agent needs one perp market in a single call. Returns cross-venue funding (Bybit, OKX, Hyperliquid), open interest with 1h/24h change, long/short ratio, and 24h liquidations with long/short split and biggest print from our own tape. |
+| `get_funding_pulse` | $0.005 | `/api/funding-pulse` | Use when an agent needs the most extreme funding rates right now. Returns the 5 largest absolute annualised rates across the whole Bybit USDT perp universe, each with venue, 8h rate, open interest and 24h price move. One call, not a full screen. |
 
 ### Microstructure
 
@@ -286,13 +288,13 @@ Sampled every 5 minutes since 19 July 2026. Deviation is measured against the un
 
 | Tool | Price | Route | What you get |
 |---|---|---|---|
-| `get_spot` | $0.001 | `/api/price` | Use when an agent needs a spot price without choosing a venue. Returns the price, the venue that actually served it, and a Pyth confidence when Pyth served. Coinbase, then Kraken, then Pyth Hermes. Serves SOL, BTC and ETH; anything else is declined. |
-| `get_sol_price` | $0.001 | `/api/sol-price` | SOL spot price (multi-source: Coinbase, Kraken, Pyth Hermes fallback) |
-| `get_btc_price` | $0.001 | `/api/btc-price` | BTC spot price (multi-source: Coinbase, Kraken, Pyth Hermes fallback) |
-| `get_eth_price` | $0.001 | `/api/eth-price` | ETH spot price in USD, aggregated across seven independent venues (CoinGecko, Coinbase, Kraken, Binance, OKX, Gemini, DefiLlama). Returns the lead figure plus every venue quote that answered, so a caller can see the spread rather than trust one exchange. Venues are ranked in a fixed declared order, not completion order, so identical market state always returns the same lead price. |
-| `get_funding_rate` | $0.002 | `/api/funding-rate` | Funding rate for any USDT perp on Bybit + OKX + Hyperliquid, each at its own interval: raw rate, interval hours, 8h equivalent, annualised, next funding time, mark price. No symbol: SOL+BTC from Hyperliquid |
-| `get_market_snapshot` | $0.003 | `/api/market-snapshot` | Full market snapshot in one call |
-| `get_positioning` | $0.004 | `/api/positioning` | SOL+BTC long/short account ratio + open interest with 1h/24h OI change |
+| `get_spot` | $0.005 | `/api/price` | Use when an agent needs a spot price without choosing a venue. Returns the price, the venue that actually served it, and a Pyth confidence when Pyth served. Coinbase, then Kraken, then Pyth Hermes. Serves SOL, BTC and ETH; anything else is declined. |
+| `get_sol_price` | $0.005 | `/api/sol-price` | SOL spot price (multi-source: Coinbase, Kraken, Pyth Hermes fallback) |
+| `get_btc_price` | $0.005 | `/api/btc-price` | BTC spot price (multi-source: Coinbase, Kraken, Pyth Hermes fallback) |
+| `get_eth_price` | $0.005 | `/api/eth-price` | ETH spot price in USD, aggregated across seven independent venues (CoinGecko, Coinbase, Kraken, Binance, OKX, Gemini, DefiLlama). Returns the lead figure plus every venue quote that answered, so a caller can see the spread rather than trust one exchange. Venues are ranked in a fixed declared order, not completion order, so identical market state always returns the same lead price. |
+| `get_funding_rate` | $0.005 | `/api/funding-rate` | Funding rate for any USDT perp on Bybit + OKX + Hyperliquid, each at its own interval: raw rate, interval hours, 8h equivalent, annualised, next funding time, mark price. No symbol: SOL+BTC from Hyperliquid |
+| `get_market_snapshot` | $0.005 | `/api/market-snapshot` | Full market snapshot in one call |
+| `get_positioning` | $0.005 | `/api/positioning` | SOL+BTC long/short account ratio + open interest with 1h/24h OI change |
 | `get_trade_context` | $0.01 | `/api/trade-context` | Full market state in one call: prices, funding, fear/greed, positioning, liquidations |
 
 ### Solana on-chain
@@ -312,8 +314,8 @@ Sampled every 5 minutes since 19 July 2026. Deviation is measured against the un
 
 | Tool | Price | Route | What you get |
 |---|---|---|---|
-| `get_base_gas` | $0.001 | `/api/base-gas` | Current gas price on Base (chain 8453) in BOTH gwei and wei, with base fee, priority fee and block number when the node supplies them. Both units are returned because a caller asking in wei and a caller asking in gwei are asking the same question. Served from keyless public RPC with three-node fallback, so there is no API key to rotate or expire. |
-| `get_base_balance` | $0.002 | `/api/base-balance` | Native ETH or any ERC20 balance for an address on Base or Ethereum mainnet. decimals() and symbol() are read from the contract at request time rather than assumed, because assuming 18 reports a USDC balance a trillion times too large. Accepts a 0x address or an ENS name; ENS is resolved through two independent resolvers and the answer is used only when they agree, so a wrong address can never produce a confident balance for the wrong wallet. An unsupported chain is refused rather than silently answered from the wrong one. |
+| `get_base_gas` | $0.005 | `/api/base-gas` | Current gas price on Base (chain 8453) in BOTH gwei and wei, with base fee, priority fee and block number when the node supplies them. Both units are returned because a caller asking in wei and a caller asking in gwei are asking the same question. Served from keyless public RPC with three-node fallback, so there is no API key to rotate or expire. |
+| `get_base_balance` | $0.005 | `/api/base-balance` | Native ETH or any ERC20 balance for an address on Base or Ethereum mainnet. decimals() and symbol() are read from the contract at request time rather than assumed, because assuming 18 reports a USDC balance a trillion times too large. Accepts a 0x address or an ENS name; ENS is resolved through two independent resolvers and the answer is used only when they agree, so a wrong address can never produce a confident balance for the wrong wallet. An unsupported chain is refused rather than silently answered from the wrong one. |
 
 ### DeFi / macro
 
@@ -342,7 +344,7 @@ Two more free HTTP endpoints carry no tool of their own:
 | Endpoint | What you get |
 |---|---|
 | `GET /api/sample` | Lists every paid route that has a stored sample response |
-| `GET /api/sample/<route>` | The real captured response for one of the 52 paid routes — the same example its Bazaar listing carries — with its price, input schema and paid URL. See what a route returns before paying for it. |
+| `GET /api/sample/<route>` | The real captured response for one of the 53 paid routes — the same example its Bazaar listing carries — with its price, input schema and paid URL. See what a route returns before paying for it. |
 
 A free route answers `"paid": false`, and a paid one `"paid": true`, because that field is
 per-request: it reports whether the route you called is priced. `curl`ing either of the two
@@ -369,6 +371,11 @@ curl https://x402.ochinimus.app/api/cascade-scan    # returns 402 + payment term
 x402 clients pay and retry automatically.
 
 ## Pay for a call
+
+**Copy `payTo` only from a fresh 402 response, never from transaction history.** On
+2026-07-31 a lookalike of the Base treasury (same first and last characters as
+`0x22DB…76e6`) sent zero-value address-poisoning transfers to our biggest buyer, so a
+wallet's history can show a fake payee next to the real one.
 
 ### x402 — the client that ships in this repo
 
@@ -445,7 +452,8 @@ on — `MPP_SECRET_KEY` have no working default.
 | `X402_MODE` | `on` | `off` serves every route free |
 | `X402_NETWORK` | `devnet` | set `mainnet` in production |
 | `PAY_TO` | — | **required**; Solana treasury that receives USDC |
-| `PAY_TO_EVM` | — | Base treasury; unset drops the Base rail from the challenge |
+| `PAY_TO_EVM` | — | EVM treasury for Base, Polygon and Arbitrum USDC; unset drops every EVM rail from the challenge |
+| `X402_EVM_NETWORKS` | unset (all) | comma-separated CAIP-2 ids to narrow the EVM rails, e.g. `eip155:8453` for Base only |
 | `FACILITATOR_URL` | `https://facilitator.x402.org` | |
 | `MPP_ENABLED` | unset (off) | `true` mounts the `solana/charge` layer |
 | `MPP_SECRET_KEY` | — | **required when `MPP_ENABLED=true`; must be 32 characters or longer** — mppx HMAC-binds the challenge id so verification is stateless, and init refuses anything shorter |

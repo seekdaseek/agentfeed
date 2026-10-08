@@ -237,7 +237,7 @@ async function initMcp(app) {
       name: 'agentfeed',
       title: 'AgentFeed',
       version: SERVER_VERSION,
-      description: 'Live crypto market data, a complete Bybit/OKX/Binance liquidation tape, tokenized-equity peg data and Solana on-chain reads. Paid per call in USDC over x402, no API key.',
+      description: 'Live crypto market data, a complete Bybit/OKX/Binance liquidation tape, Deribit options IV and dealer gamma, stock and index perps, a macro calendar, tokenized-equity peg data and Solana on-chain reads. Paid per call in USDC over x402, no API key.',
       websiteUrl: 'https://x402.ochinimus.app',
       icons: [{ src: ICON_URL, mimeType: 'image/png' }],
     }, { instructions: INSTRUCTIONS });

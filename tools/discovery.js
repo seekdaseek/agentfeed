@@ -66,7 +66,7 @@ function openApiErrors(pattern, mpp) {
       );
     }
     if (e.status === 402) r.headers = { 'PAYMENT-REQUIRED': { description: 'Base64 x402 v2 challenge.', schema: { type: 'string' } } };
-    if (e.status === 429) r.headers = { 'Retry-After': { description: 'Seconds to wait.', schema: { type: 'integer' } } };
+    if (e.status === 429 || e.status === 503) r.headers = { 'Retry-After': { description: 'Seconds to wait.', schema: { type: 'integer' } } };
     if (e.status === 405) r.headers = { Allow: { description: 'Always GET.', schema: { type: 'string' } } };
     if (e.status === 400 && route.callerError) {
       r.description += ` Observed: ${route.callerError.violated}.`;
@@ -202,6 +202,11 @@ function protocolsFor(pattern, mpp) {
 }
 
 // ---- /openapi.json -------------------------------------------------------
+// Free routes whose generated one-liner would drop what a caller must know.
+const FREE_DESC = {
+  get_last_liquidation: 'Free. Last liquidation for SOL, BTC, ETH, XRP and DOGE, delayed by 15 minutes. For real-time data, use /api/liquidations.',
+};
+
 function buildOpenApi({ PRICES, META, FREE_TOOLS, mpp }) {
   const paths = {};
 
@@ -287,7 +292,10 @@ function buildOpenApi({ PRICES, META, FREE_TOOLS, mpp }) {
         // `pay catalog check` probed a placeholder, got this route's honest 404
         // and reported the whole provider as "passed with warnings".
         example: 'liq-pulse',
-        schema: { type: 'string', example: 'liq-pulse', enum: [...new Set(Object.keys(PRICES).map((k) => k.replace('GET /api/', '').replace(/\/:.*$/, '')))].sort() },
+        schema: { type: 'string', example: 'liq-pulse', enum: [...new Set([
+          ...Object.keys(PRICES).map((k) => k.replace('GET /api/', '').replace(/\/:.*$/, '')),
+          ...Object.values(PRICES).map((p) => p.tool).filter(Boolean),
+        ])].sort() },
       }],
       responses: {
         200: { content: { 'application/json': { schema: { type: 'object' } } }, description: 'Free response. This endpoint is not payment-gated.' },
@@ -306,7 +314,7 @@ function buildOpenApi({ PRICES, META, FREE_TOOLS, mpp }) {
     if (paths[path]) continue;
     paths[path] = {
       get: {
-        description: `Free. ${humanize(tool)}.`,
+        description: FREE_DESC[tool] || `Free. ${humanize(tool)}.`,
         operationId: tool,
         responses: { 200: { content: { 'application/json': { schema: { type: 'object' } } }, description: 'Free response. This endpoint is not payment-gated.' } },
         security: [],

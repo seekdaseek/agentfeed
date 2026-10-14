@@ -289,13 +289,16 @@ function buildPaymentLayer(deps = {}) {
   // R10 Phase A: the networks added after the first thirteen accepts (lib/ext-rails.js), each with its own facilitator.
   const { extRails, extAccept, extAllowed, FACILITATOR_URLS, UV, CDP, PAYAI } = require('./lib/ext-rails');
   const EXT = extRails();
-  const extNets = (f) => new Set(EXT.filter((r) => r.facilitator === f).map((r) => r.network));
+  // R10 Phase B: XRPL, Stellar, Sui, NEAR, Hedera, Fogo (lib/nonevm-rails.js), only those whose payTo is set, through Ultravioleta.
+  const { nonEvmRails, nonEvmAccept, schemeFor } = require('./lib/nonevm-rails');
+  const NONEVM = nonEvmRails();
+  const extNets = (f) => new Set([...EXT, ...NONEVM].filter((r) => r.facilitator === f).map((r) => r.network));
   // CDP first: it keeps every network it supports, minus the networks another facilitator owns (Arc: Circle; Algorand:
   // GoPlausible; the Ultravioleta and PayAI rows). CDP lists none of them today, so this changes no routing; it makes sure a
   // later CDP addition cannot take one over. Circle is added only for Arc, and its client advertises Arc alone (lib/circle-arc.js).
   const arc = EVM.find((r) => r.facilitator === 'circle');
   const algoOwned = require('./lib/rails').algoRail();
-  const notCdp = new Set([...EXT.filter((r) => r.facilitator !== CDP).map((r) => r.network), ...(arc ? [arc.network] : []), ...(algoOwned ? [algoOwned.network] : [])]);
+  const notCdp = new Set([...EXT.filter((r) => r.facilitator !== CDP).map((r) => r.network), ...NONEVM.map((r) => r.network), ...(arc ? [arc.network] : []), ...(algoOwned ? [algoOwned.network] : [])]);
   const facilitators = [notCdp.size ? onlyKinds(facilitator, (k) => !notCdp.has(k.network)) : facilitator];
   if (arc) {
     const { CircleArcFacilitator } = require('./lib/circle-arc');
@@ -331,6 +334,7 @@ function buildPaymentLayer(deps = {}) {
     .register(network, new ExactSvmScheme());
   for (const r of EVM) resourceServer.register(r.network, new ExactEvmScheme());
   for (const r of EXT) resourceServer.register(r.network, new ExactEvmScheme());
+  for (const r of NONEVM) resourceServer.register(r.network, schemeFor(r));
   if (ALGO) resourceServer.register(ALGO.network, new ExactAvmScheme());
   if (HF.batch) {
     for (const { network: n, scheme } of batchSchemes(HF.batch, require('./db').db)) resourceServer.register(n, scheme);
@@ -346,7 +350,7 @@ function buildPaymentLayer(deps = {}) {
   for (const [pattern, p] of Object.entries(PRICES)) {
     // Today's accepts stay first and in the same order (Agent402 pays the first exact accept on a chain); the ext rows follow.
     const base = routeAccepts(p, { network, payTo, EVM, ALGO, HF, railPrice, railPayTo, hfAccepts });
-    const ext = EXT.filter((r) => extAllowed(r, p.usd)).map((r) => extAccept(r, p.usd, payToEvm));
+    const ext = [...EXT.filter((r) => extAllowed(r, p.usd)).map((r) => extAccept(r, p.usd, payToEvm)), ...NONEVM.map((r) => nonEvmAccept(r, p.usd))];
     routes[pattern] = {
       // read per request (lib/rail-ctx.js): every accept outside a request, the default list or one asked-for network inside one
       get accepts() { return acceptsFor(base, ext, isDefault); },
@@ -374,9 +378,9 @@ function buildPaymentLayer(deps = {}) {
   const middleware = paymentMiddleware(routes, resourceServer);
 
   const withOutput = Object.keys(routes).filter((r) => BAZAAR_META[r] && BAZAAR_META[r].output).length;
-  console.log(`[payments] x402 active: network=${networkName} facilitator=${facilitatorUrl} payTo=${payTo} evm=${EVM.map((r) => r.name).join(',') || 'none'}${ALGO ? ' algorand=GoPlausible' : ''} ext=${EXT.length} (${EXT.filter((r) => r.inDefault).map((r) => r.name).join(',')} in every 402, ${EXT.filter((r) => !r.inDefault).length} on request)`);
+  console.log(`[payments] x402 active: network=${networkName} facilitator=${facilitatorUrl} payTo=${payTo} evm=${EVM.map((r) => r.name).join(',') || 'none'}${ALGO ? ' algorand=GoPlausible' : ''} ext=${EXT.length} (${EXT.filter((r) => r.inDefault).map((r) => r.name).join(',')} in every 402, ${EXT.filter((r) => !r.inDefault).length} on request) non-evm=${NONEVM.map((r) => r.name).join(',') || 'none'}`);
   console.log(`[payments] bazaar: ${Object.keys(routes).length} routes declared, ${withOutput} with an output example, icon=${ICON_URL}`);
-  return { middleware, PRICES, network: networkName, resourceServer, routes, facilitator, HF, ALGO, EXT };
+  return { middleware, PRICES, network: networkName, resourceServer, routes, facilitator, HF, ALGO, EXT, NONEVM };
 }
 
 // decode X-PAYMENT-RESPONSE / PAYMENT-RESPONSE header (base64 JSON) for audit logging

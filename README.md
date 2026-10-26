@@ -1,7 +1,7 @@
 <!-- mcp-name: io.github.seekdaseek/agentfeed -->
 # AgentFeed
 
-[![smithery badge](https://smithery.ai/badge/ochinimus/agentfeed)](https://smithery.ai/servers/ochinimus/agentfeed)
+[![LightNow capabilities](https://lightnow.ai/badge/io.github.seekdaseek/agentfeed)](https://lightnow.ai/servers/io.github.seekdaseek/agentfeed)
 
 **Crypto market data for AI agents (liquidations, funding, open interest, prices), Solana pre-trade checks, OFAC sanctions screening, scholarly papers, utilities and fixed-purpose language tasks (OCR, translate, summarize, extract, classify, prompt-injection check, transcribe). Pay per call in USDC. No accounts, no subscriptions, and no API key needed (prepaid keys are optional, for bots that cannot pay x402).**
 

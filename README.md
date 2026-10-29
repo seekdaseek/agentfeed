@@ -107,7 +107,7 @@ the service publishes it.
 | `get_cascade_history` | $0.03 | `/api/cascade-history` |
 | `get_peg_sessions` | $0.03 | `/api/peg-sessions` |
 | `get_extract` | $0.025 | `/api/extract` |
-| `get_sol_token_check` | $0.025 | `/api/sol-token-check/:mint` |
+| `get_sol_token_check` | $0.025 | `/api/sol-token-check/{mint}` |
 | `get_base_launches` | $0.02 | `/api/base-launches` |
 | `get_cascade_forecast` | $0.02 | `/api/cascade-forecast` |
 | `get_exit_quote` | $0.02 | `/api/exit-quote` |
@@ -120,11 +120,11 @@ the service publishes it.
 | `get_oi_spike_scan` | $0.02 | `/api/oi-spike-scan` |
 | `get_peg_deviation` | $0.02 | `/api/peg-deviation` |
 | `get_summarize` | $0.02 | `/api/summarize` |
-| `get_token_holders` | $0.02 | `/api/token-holders/:mint` |
+| `get_token_holders` | $0.02 | `/api/token-holders/{mint}` |
 | `get_tradfi_radar` | $0.02 | `/api/tradfi-radar` |
 | `get_transcribe` | $0.02 | `/api/transcribe` |
 | `get_venue_liq_share` | $0.02 | `/api/venue-liq-share` |
-| `get_wallet_activity` | $0.02 | `/api/wallet-activity/:wallet` |
+| `get_wallet_activity` | $0.02 | `/api/wallet-activity/{wallet}` |
 | `get_papers` | $0.015 | `/api/papers` |
 | `get_basis` | $0.01 | `/api/basis` |
 | `get_cascade_alert` | $0.01 | `/api/cascade` |
@@ -138,19 +138,19 @@ the service publishes it.
 | `get_pdf_markdown` | $0.01 | `/api/pdf-markdown` |
 | `get_sec_8k` | $0.01 | `/api/sec-8k` |
 | `get_signal_board` | $0.01 | `/api/signal-board` |
-| `get_token_risk` | $0.01 | `/api/token-risk/:mint` |
+| `get_token_risk` | $0.01 | `/api/token-risk/{mint}` |
 | `get_top_movers` | $0.01 | `/api/top-movers` |
 | `get_trade_context` | $0.01 | `/api/trade-context` |
 | `get_volatility` | $0.01 | `/api/volatility` |
-| `get_sanctions_check` | $0.008 | `/api/sanctions-check/:address` |
-| `get_sol_holder_clusters` | $0.008 | `/api/sol-holder-clusters/:mint` |
-| `get_sol_token_flow` | $0.008 | `/api/sol-token-flow/:mint` |
-| `get_wallet_holdings` | $0.008 | `/api/wallet-holdings/:wallet` |
+| `get_sanctions_check` | $0.008 | `/api/sanctions-check/{address}` |
+| `get_sol_holder_clusters` | $0.008 | `/api/sol-holder-clusters/{mint}` |
+| `get_sol_token_flow` | $0.008 | `/api/sol-token-flow/{mint}` |
+| `get_wallet_holdings` | $0.008 | `/api/wallet-holdings/{wallet}` |
 | `get_base_balance` | $0.005 | `/api/base-balance` |
 | `get_base_gas` | $0.005 | `/api/base-gas` |
 | `get_classify` | $0.005 | `/api/classify` |
 | `get_convert` | $0.005 | `/api/convert` |
-| `get_domain` | $0.005 | `/api/domain/:domain` |
+| `get_domain` | $0.005 | `/api/domain/{domain}` |
 | `get_email_verify` | $0.005 | `/api/email-verify` |
 | `get_funding_history` | $0.005 | `/api/funding-history` |
 | `get_funding_pulse` | $0.005 | `/api/funding-pulse` |
@@ -160,7 +160,7 @@ the service publishes it.
 | `get_liq_pulse` | $0.005 | `/api/liq-pulse` |
 | `get_macro_calendar` | $0.005 | `/api/macro-calendar` |
 | `get_market_snapshot` | $0.005 | `/api/market-snapshot` |
-| `get_paper` | $0.005 | `/api/paper/:doi` |
+| `get_paper` | $0.005 | `/api/paper/{doi}` |
 | `get_perp` | $0.005 | `/api/perp` |
 | `get_positioning` | $0.005 | `/api/positioning` |
 | `get_priority_fees` | $0.005 | `/api/priority-fees` |
@@ -169,11 +169,11 @@ the service publishes it.
 | `get_sec_filings` | $0.005 | `/api/sec-filings` |
 | `get_sol_network` | $0.005 | `/api/sol-network` |
 | `get_time` | $0.005 | `/api/time` |
-| `get_token_metadata` | $0.005 | `/api/token-metadata/:mint` |
+| `get_token_metadata` | $0.005 | `/api/token-metadata/{mint}` |
 | `get_tradfi_perps` | $0.005 | `/api/tradfi-perps` |
 | `get_web_markdown` | $0.005 | `/api/web-markdown` |
 | `get_wiki` | $0.005 | `/api/wiki` |
-| `get_coin_signal` | $0.004 | `/api/coin-signal/:coin` |
+| `get_coin_signal` | $0.004 | `/api/coin-signal/{coin}` |
 | `get_injection_check` | $0.004 | `/api/injection-check` |
 | `get_fx_rates` | $0.002 | `/api/fx-rates` |
 | `get_btc_price` | $0.001 | `/api/btc-price` |
@@ -274,6 +274,25 @@ A bot that calls often pays half the route's price, minimum $0.0005, through eit
 | Unspent money | comes back through the channel's timed withdrawal (24 h delay) | stays in the buyer's Gateway balance |
 
 A call that answers 400 or more is never charged on either scheme.
+
+### Path parameters
+
+Twelve routes take their argument as the last path segment: `/api/wallet-activity/{wallet}`, `/api/token-risk/{mint}`, `/api/coin-signal/{coin}`,
+`/api/sanctions-check/{address}`, `/api/domain/{domain}`, `/api/paper/{doi}` and the other six. In this README, in `llms.txt` and in
+`openapi.json`, `{wallet}` marks the part you replace; it is not a URL. Every URL the service publishes for a caller to GET is a working example
+instead: [`/.well-known/x402.json`](https://x402.ochinimus.app/.well-known/x402.json) lists
+`https://x402.ochinimus.app/api/wallet-activity/Gack9UtqfeZxFA1LqeqjLgC3JGuD7rS6CsSHKoXsD4Tu` as the `resource` and the `{wallet}` form as
+`resource_template`; `openapi.json` gives each path parameter an `example` and the `pattern`, `minLength` and `maxLength` it must satisfy; the 402's Bazaar
+declaration carries the same schema.
+
+A value that can never be served is refused **before** the paywall. `GET /api/wallet-activity/:wallet` and `GET /api/wallet-activity/notawallet` answer
+`400` with the reason, the shape expected, a working example URL and `"charged": false`: no 402, no challenge, no prepaid-key reserve, nothing sent to a
+facilitator (`lib/param-guard.js`, before every payment layer). The check is shape only and uses the validator the handler itself uses: a Solana wallet or
+mint is 32 to 44 base58 characters, a coin 1 to 20 letters or digits, an address 14 to 120 letters and digits, a domain a public hostname, a DOI
+`10.xxxx/...`. Whether the address has an account, the coin is listed or the DOI exists is still answered after payment, and a call that then answers 400 or
+more is never settled on any rail (`test/param-guard-real-server.test.js`). Over MCP the same patterns are in each tool's input schema, so an impossible
+argument is rejected before the payment prompt. MPP `solana/charge` settles on chain before the handler runs, so it is offered only on the two routes that take
+no input (`/api/sol-price`, `/api/btc-price`); MPP `tempo/charge` and every x402 scheme settle after it.
 
 ### batch-settlement, on Base
 
@@ -526,17 +545,17 @@ Sampled every 5 minutes. Deviation is measured against the underlying's last rea
 
 | Tool | Price | Route | What you get |
 |---|---|---|---|
-| `get_wallet_holdings` | $0.008 | `/api/wallet-holdings/:wallet` | Solana wallet holdings for any address: native SOL with its USD value at AgentFeed's own on-chain SOL price, every SPL token with mint, symbol and amount (no token prices), and an NFT count. Balances and on-chain metadata via Helius DAS getAssetsByOwner, up to 100 assets. |
-| `get_token_metadata` | $0.005 | `/api/token-metadata/:mint` | SPL token metadata for any Solana mint: name, symbol, URI, decimals, total supply, mint and freeze authority, token program, and whether the metadata is still mutable. Read from the mint account and its metadata account. |
-| `get_token_risk` | $0.01 | `/api/token-risk/:mint` | Solana token rug check / risk signals for any SPL mint: mint and freeze authority status (revoked is safer), top-1 and top-10 holder concentration, supply, and a list of risk flags. Not a honeypot or LP-lock checker. |
-| `get_token_holders` | $0.02 | `/api/token-holders/:mint` | Top holders of any SPL token: per-account share with top-1, top-5 and top-10 concentration for a Solana mint. A deeper cut than the summary in /api/token-risk. |
-| `get_wallet_activity` | $0.02 | `/api/wallet-activity/:wallet` | Solana wallet activity: recent transactions for any address, each with the wallet's SOL and token balance changes, the fee, failures and the programs invoked. Read from the chain and summarised by us. |
+| `get_wallet_holdings` | $0.008 | `/api/wallet-holdings/{wallet}` | Solana wallet holdings for any address: native SOL with its USD value at AgentFeed's own on-chain SOL price, every SPL token with mint, symbol and amount (no token prices), and an NFT count. Balances and on-chain metadata via Helius DAS getAssetsByOwner, up to 100 assets. |
+| `get_token_metadata` | $0.005 | `/api/token-metadata/{mint}` | SPL token metadata for any Solana mint: name, symbol, URI, decimals, total supply, mint and freeze authority, token program, and whether the metadata is still mutable. Read from the mint account and its metadata account. |
+| `get_token_risk` | $0.01 | `/api/token-risk/{mint}` | Solana token rug check / risk signals for any SPL mint: mint and freeze authority status (revoked is safer), top-1 and top-10 holder concentration, supply, and a list of risk flags. Not a honeypot or LP-lock checker. |
+| `get_token_holders` | $0.02 | `/api/token-holders/{mint}` | Top holders of any SPL token: per-account share with top-1, top-5 and top-10 concentration for a Solana mint. A deeper cut than the summary in /api/token-risk. |
+| `get_wallet_activity` | $0.02 | `/api/wallet-activity/{wallet}` | Solana wallet activity: recent transactions for any address, each with the wallet's SOL and token balance changes, the fee, failures and the programs invoked. Read from the chain and summarised by us. |
 | `get_priority_fees` | $0.005 | `/api/priority-fees` | Solana priority fees right now: percentiles from min to max of the per-slot minimum fee paid on the busiest SOL/USDC pools over the last ~150 slots, in micro-lamports per compute unit, with a recommended level. For bots that need their transactions to land. |
 | `get_jito_tips` | $0.005 | `/api/jito-tips` | Jito tips sampled on-chain: p25 to p99 in SOL of the newest transfers into Jito's tip accounts, what landed bundles actually paid, refreshed every 15 minutes (the age is in the answer), with a landing recommendation. |
 | `get_sol_network` | $0.005 | `/api/sol-network` | Solana network health: recent average TPS, the current slot, the current epoch and epoch progress in %. |
-| `get_sol_token_check` | $0.025 | `/api/sol-token-check/:mint` | Use when an agent needs a pre-trade check on a Solana token. Returns mint and freeze authority, Token-2022 traps, top holders, deepest pool and USD depth, the price impact of $100 and $1,000 buys, pump.fun progress, and a verdict with every rule. |
-| `get_sol_token_flow` | $0.008 | `/api/sol-token-flow/:mint` | Use when an agent needs to know who is trading a Solana token. Returns the unique traders over its latest swaps, top-5 share of volume, round-trip wallets, share of brand-new buyer wallets and launch-slot bundle size for mints under 7 days. |
-| `get_sol_holder_clusters` | $0.008 | `/api/sol-holder-clusters/:mint` | Use when an agent needs to know whether a Solana token's holders are one owner. Returns the account that first funded each of the top 20 wallets, the clusters sharing a funder and their supply share. A shared funder can be an exchange. |
+| `get_sol_token_check` | $0.025 | `/api/sol-token-check/{mint}` | Use when an agent needs a pre-trade check on a Solana token. Returns mint and freeze authority, Token-2022 traps, top holders, deepest pool and USD depth, the price impact of $100 and $1,000 buys, pump.fun progress, and a verdict with every rule. |
+| `get_sol_token_flow` | $0.008 | `/api/sol-token-flow/{mint}` | Use when an agent needs to know who is trading a Solana token. Returns the unique traders over its latest swaps, top-5 share of volume, round-trip wallets, share of brand-new buyer wallets and launch-slot bundle size for mints under 7 days. |
+| `get_sol_holder_clusters` | $0.008 | `/api/sol-holder-clusters/{mint}` | Use when an agent needs to know whether a Solana token's holders are one owner. Returns the account that first funded each of the top 20 wallets, the clusters sharing a funder and their supply share. A shared funder can be an exchange. |
 
 ### Base / EVM
 
@@ -577,11 +596,11 @@ Sampled every 5 minutes. Deviation is measured against the underlying's last rea
 
 | Tool | Price | Route | What you get |
 |---|---|---|---|
-| `get_sanctions_check` | $0.008 | `/api/sanctions-check/:address` | Use when an agent needs to screen a crypto wallet before paying or being paid. Returns an exact match of a Bitcoin, Ethereum, Tron, Solana or other address against the OFAC SDN list, with entry, program and list date. No match is not a clearance. |
+| `get_sanctions_check` | $0.008 | `/api/sanctions-check/{address}` | Use when an agent needs to screen a crypto wallet before paying or being paid. Returns an exact match of a Bitcoin, Ethereum, Tron, Solana or other address against the OFAC SDN list, with entry, program and list date. No match is not a clearance. |
 | `get_email_verify` | $0.005 | `/api/email-verify` | Use when an agent needs to know whether an email address can plausibly receive mail. Returns syntax, MX, disposable-domain, role-account and free-provider checks with a deliverable_likely, risky or undeliverable verdict and its reasons. No SMTP probe. |
-| `get_domain` | $0.005 | `/api/domain/:domain` | Use when an agent needs the basic facts about a domain. Returns its DNS A, AAAA, MX, NS and TXT records and the live TLS certificate: issuer, alternative names, validity dates and days to expiry. Public hosts only; no registrar data. |
+| `get_domain` | $0.005 | `/api/domain/{domain}` | Use when an agent needs the basic facts about a domain. Returns its DNS A, AAAA, MX, NS and TXT records and the live TLS certificate: issuer, alternative names, validity dates and days to expiry. Public hosts only; no registrar data. |
 | `get_papers` | $0.015 | `/api/papers` | Use when an agent needs scholarly papers on a topic. Returns OpenAlex works (CC0 data) for a search: title, year, DOI, authors, venue, citation count and open-access link, up to 25, optionally from a given year. Cached 24 hours. |
-| `get_paper` | $0.005 | `/api/paper/:doi` | Use when an agent needs the paper behind a DOI. Returns title, year, authors, venue, citation count, open-access URL and the abstract where OpenAlex holds it (CC0 data). The DOI goes in the path as written, slash included: /api/paper/10.1038/nature14539. |
+| `get_paper` | $0.005 | `/api/paper/{doi}` | Use when an agent needs the paper behind a DOI. Returns title, year, authors, venue, citation count, open-access URL and the abstract where OpenAlex holds it (CC0 data). The DOI goes in the path as written, slash included: /api/paper/10.1038/nature14539. |
 | `get_wiki` | $0.005 | `/api/wiki` | Use when an agent needs a reliable plain-text summary of a topic. Returns the Wikipedia summary and lead section for a page title in any language, with the CC BY-SA 4.0 licence, the article URL and the authors link. Cached 24 hours. |
 | `get_qr` | $0.005 | `/api/qr` | Use when an agent needs a QR code for a link, address or payment string. Returns an SVG or PNG (base64 and data URI) at error-correction level M, scaled for scanning. Input up to 2 KB; over that is a 400, never billed. |
 | `get_hash` | $0.005 | `/api/hash` | Use when an agent needs a hash it should not compute itself. Returns SHA-256, Keccak-256 (the Ethereum hash) or BLAKE2b-512 of UTF-8 text or hex bytes, as hex and 0x-hex. Input up to 2 KB; over that is a 400, never billed. |
@@ -614,7 +633,7 @@ elsewhere they answer 451 before any payment.
 | Tool | Price | Route | What you get |
 |---|---|---|---|
 | `get_signal_board` | $0.01 | `/api/signal-board` | The Hyperliquid perp market in one table, ranked by open interest: price change, funding, OI and its change, last-hour liquidations with a z-score against the coin's own 7 days, whale net position and tilt, and the flags crowded_long, crowded_short, squeeze_risk, liq_spike (rules in the description). Poll every 1-5 minutes. |
-| `get_coin_signal` | $0.004 | `/api/coin-signal/:coin` | The same row for one coin plus the 15-minute cascade probability, the nearest liquidation clusters above and below price and the top 3 whale positions. |
+| `get_coin_signal` | $0.004 | `/api/coin-signal/{coin}` | The same row for one coin plus the 15-minute cascade probability, the nearest liquidation clusters above and below price and the top 3 whale positions. |
 
 Both read only data this service records itself (the Hyperliquid OI sampler, the liquidation tape, the whale snapshot) and name every source with its `as_of`; a stale source answers 503 and is never billed. With a [prepaid key](#prepaid-keys-for-bots-that-cannot-pay-x402) they cost $0.005 and $0.002.
 
@@ -651,7 +670,7 @@ Two more free HTTP endpoints carry no tool of their own:
 | Endpoint | What you get |
 |---|---|
 | `GET /api/sample` | Lists every paid route that has a stored sample response |
-| `GET /api/sample/<route>` | The real captured response for one of the paid routes — the same example its Bazaar listing carries — with its price, input schema and paid URL. See what a route returns before paying for it. |
+| `GET /api/sample/liq-pulse` | (`liq-pulse` is an example: any route name from `GET /api/sample` works) The real captured response for one of the paid routes — the same example its Bazaar listing carries — with its price, input schema and paid URL. See what a route returns before paying for it. |
 
 A free route answers `"paid": false`, and a paid one `"paid": true`, because that field is
 per-request: it reports whether the route you called is priced. `curl`ing either of the two

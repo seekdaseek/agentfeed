@@ -207,11 +207,17 @@ function sources(st, liq, wh) {
 }
 
 /** case-insensitive coin lookup over the sampler's universe; accepts SOL, sol, SOLUSDT, SOL-PERP, 1000PEPE, kpepe */
+/** The shape a coin must have before the universe is consulted: upper-cased, an optional USDT / -PERP / PERP suffix removed, 1-20 letters or digits. -> the stripped ticker or null. lib/param-guard.js applies it before anyone is asked to pay. */
+function coinShape(raw) {
+  const s = String(raw || '').trim().toUpperCase().replace(/(USDT|-PERP|PERP)$/, '');
+  return /^[A-Z0-9]{1,20}$/.test(s) ? s : null;
+}
+
 function resolver(universe) {
   const up = new Map([...universe].map((c) => [c.toUpperCase(), c]));
   return (raw) => {
-    let s = String(raw || '').trim().toUpperCase().replace(/(USDT|-PERP|PERP)$/, '');
-    if (!/^[A-Z0-9]{1,20}$/.test(s)) return null;
+    const s = coinShape(raw);
+    if (!s) return null;
     if (up.has(s)) return up.get(s);
     const m = /^10{3,}([A-Z0-9]+)$/.exec(s);
     if (m && up.has('K' + m[1])) return up.get('K' + m[1]);
@@ -327,5 +333,5 @@ async function getCoinSignal(p = {}, deps = {}) {
   });
 }
 
-module.exports = { getSignalBoard, getCoinSignal, liqBaseline, RULES, _tapeSymbol: tapeSymbol, _resolver: resolver, _clustersAround: clustersAround, _reset: () => { _tape = null; _wh = null; _base = null; },
+module.exports = { getSignalBoard, getCoinSignal, liqBaseline, RULES, coinShape, _tapeSymbol: tapeSymbol, _resolver: resolver, _clustersAround: clustersAround, _reset: () => { _tape = null; _wh = null; _base = null; },
   _setClock: (f) => { clock = f || (() => Date.now()); }, _memo: (on) => { memoOn = !!on; } };

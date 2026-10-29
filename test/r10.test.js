@@ -159,7 +159,9 @@ test('F3: openapi, llms.txt, SKILL.md, the agent card and GET / chains name ever
   assert.ok(src.includes("chains: require('./lib/rails').httpRails().map((r) => r.network)"), 'GET / chains from the rail table');
 });
 
-test('F4: /.well-known/x402 lists one resource per priced route; path parameters are {name} templates, the example sits beside', () => {
+test('F4 (reversed by R20e, 29 Oct 2026): /.well-known/x402 lists one resource per priced route; a path-parameter route is its CONCRETE example URL, the {name} template and the example values sit beside', () => {
+  // R10 F4 published the {name} template only, so an indexer would not list a route twice. The param guard (lib/param-guard.js) now answers a 400 to a template
+  // spelling, so a flat list that names one would hand every validator a dead URL: the list carries the URL that works and the template beside it.
   const wk = discovery.buildWellKnown({ PRICES, META: BAZAAR_META });
   assert.equal(wk.resources.length, Object.keys(PRICES).length);
   assert.equal(new Set(wk.resources).size, wk.resources.length);
@@ -167,14 +169,16 @@ test('F4: /.well-known/x402 lists one resource per priced route; path parameters
   const pp = Object.keys(PRICES).filter((r) => r.includes('/:'));
   assert.equal(pp.length, 12);
   for (const r of pp) {
-    const url = discovery.ORIGIN + r.replace('GET ', '').replace(/:([A-Za-z0-9_]+)/g, '{$1}');
-    assert.ok(wk.resources.includes(url), url);
-    const c = wk.resourceCatalog.find((e) => e.url === url);
-    assert.ok(c && c.path_params_example && typeof c.path_params_example === 'object', `${url} keeps its example`);
+    const template = discovery.ORIGIN + r.replace('GET ', '').replace(/:([A-Za-z0-9_]+)/g, '{$1}');
+    const c = wk.resourceCatalog.find((e) => e.url_template === template);
+    assert.ok(c, `${template} is kept as url_template`);
+    assert.ok(wk.resources.includes(c.url), `${c.url} is in the flat list`);
+    assert.ok(!/[{}:]/.test(c.url.replace('https://', '')), `${c.url} is a working URL, not a template`);
+    assert.ok(c.path_params_example && typeof c.path_params_example === 'object', `${c.url} keeps its example values`);
+    assert.ok(c.path_params && Object.keys(c.path_params).length, `${c.url} publishes the schema of its path parameter`);
   }
-  // nothing concrete is left that an indexer could read as a second resource
+  assert.ok(!wk.resources.some((u) => /\{[A-Za-z]+\}/.test(u)), 'no {template} in the flat list');
   const json = JSON.stringify(wk.resources) + JSON.stringify(wk.resourceCatalog.map((c) => c.url));
-  assert.ok(!/DezXAZ8z|Gack9Utq|\/coin-signal\/BTC|wikipedia\.org|10\.1038/.test(json));
   assert.ok(!/\/:[A-Za-z]/.test(json), 'no :param form');
 });
 

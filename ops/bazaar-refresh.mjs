@@ -39,8 +39,11 @@ const J = async (u, init) => { const r = await fetch(u, { ...init, signal: Abort
 const examples = JSON.parse(fs.readFileSync(new URL('../bazaar-examples.json', import.meta.url), 'utf8')).routes;
 const wk = await J(`${ORIGIN}/.well-known/x402.json`);
 // data routes only: a key purchase is not a data route and is never paid here
+// R20e (29 Oct 2026): for a path-parameter route the manifest's `resource` is a CONCRETE example URL and `resource_template` is its {name} form. This script
+// keys everything on the :name pattern (the bazaar-examples.json key, the index-record matcher, the payment URL), so the pattern is rebuilt from the template.
+const patternPath = (r) => decodeURIComponent(new URL(r.resource_template || r.resource).pathname).replace(/\{([A-Za-z0-9_]+)\}/g, ':$1');
 const manifest = wk.resources
-  .map((r) => ({ path: new URL(r.resource).pathname, price: Number(r.price_usd) }))
+  .map((r) => ({ path: patternPath(r), price: Number(r.price_usd) }))
   .filter((r) => !r.path.startsWith('/api/keys/'));
 const rx = (p) => new RegExp('^' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/:[A-Za-z_]+/g, '[^/]+') + '$');
 for (const m of manifest) m.re = rx(m.path);
@@ -88,10 +91,15 @@ const { recs, declared } = await readIndex();
 console.log(`index: ${recs.size} records on ${ORIGIN} (CDP states ${declared} for the payTo(s)); manifest data routes: ${manifest.length}`);
 const byRoute = new Map(); // manifest path -> [{resource, indexed, live, status}]
 const orphans = [];
+const retiredTemplates = [];
 let n = 0;
 for (const r of recs.values()) {
   const pathname = new URL(r.resource).pathname;
   if (pathname.startsWith('/api/keys/')) continue; // key purchases: never paid or judged here
+  // R20e: an index record whose URL is a literal template (/api/wallet-activity/:wallet, indexed in October from the old manifest) is retired: the server answers it
+  // with a 400 now, so it can never validate. It is not judged, and it does not hide the route: with no other record the route is ABSENT and gets one paid call on its
+  // concrete example URL, which creates the record that replaces it.
+  if (/\/:[A-Za-z_]|%7B|\{/.test(pathname)) { retiredTemplates.push(pathname); continue; }
   const m = routeOf(pathname);
   if (!m) { orphans.push(pathname); continue; }
   const v = await validate(r.resource);
@@ -101,6 +109,7 @@ for (const r of recs.values()) {
   (byRoute.get(m.path) || byRoute.set(m.path, []).get(m.path)).push(row);
 }
 console.log(`validated ${n} records (CDP /validate simulates, never settles); ${orphans.length} index records are for routes no longer in the manifest (left to age out)`);
+if (retiredTemplates.length) console.log(`  ${retiredTemplates.length} index records are literal template URLs (retired, not judged): ${retiredTemplates.map((t) => t.replace('/api/', '')).join(', ')}`);
 
 const plan = []; // {m, why}
 let match = 0, known = 0, unknown = 0;

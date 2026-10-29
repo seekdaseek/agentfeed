@@ -25,7 +25,8 @@ const readDay = new Date().toISOString().slice(0, 10);
 const rows = (manifest.resources || []).map((r) => ({
   name: r.name,
   usd: Number(r.price_usd),
-  route: new URL(r.resource).pathname,
+  // R20e: for a path-parameter route `resource` is a concrete example URL; the table shows the {name} template (a form, not a URL)
+  route: decodeURIComponent(new URL(r.resource_template || r.resource).pathname),
 }));
 if (!rows.length || rows.some((r) => !r.name || !Number.isFinite(r.usd) || !r.route.startsWith('/api/'))) {
   throw new Error('manifest resources are missing a name, a price_usd or an /api/ route');

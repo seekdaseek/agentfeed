@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const { db, logCall } = require('./db');
-const { buildPaymentLayer, decodeSettlement, PRICES } = require('./payments');
+const { buildPaymentLayer, decodeSettlement, PRICES, BAZAAR_META } = require('./payments');
 const { makeRefusalRecorder, sanitizeChallengeErrors, aliasXPayment, aliasAuthorizationPayment, makeMppOnX402Only, _headerShape } = require('./lib/refusals');
 const { makeDemand } = require('./lib/demand');
 const { makeV1 } = require('./lib/x402v1');
@@ -159,6 +159,16 @@ app.use((req, _res, next) => {
   next();
 });
 
+// ---- an impossible path parameter is refused before anyone is asked to pay (R20e, lib/param-guard.js)
+// GET /api/wallet-activity/:wallet, .../notawallet and a real address used to answer the same 402; the handler judged the value only after the
+// payer had signed. Here, after every path rewrite (so the guard sees the canonical form of /api/x?wallet=..., of a DOI with a literal slash and
+// of /api/x|network) and BEFORE the key reserve, the refusal recorder, x402 v1 and v2, tempo and MPP, a value the handler would reject is a 400:
+// no challenge, no price, no reserve, nothing to sign. Shape only, with the handler's own validator; existence is still the handler's answer.
+const routeUrls = require('./lib/route-urls').makeRouteUrls({ ORIGIN: require('./tools/discovery').ORIGIN, meta: BAZAAR_META });
+const paramGuard = require('./lib/param-guard').makeParamGuard({ PRICES, routeUrls, db });
+app.use(paramGuard.middleware);
+console.log(`[param-guard] ${paramGuard.rules.length} path-parameter routes refuse an impossible value before the paywall${paramGuard.unguarded.length ? ` (${paramGuard.unguarded.length} unguarded)` : ''}`);
+
 // ---- prepaid keys: refusals that must come before anyone pays (a duplicate key_hash is a 409, a top-up needs its key),
 // then the atomic reserve for a call that carries a valid key. A key never reaches x402: an unknown, pending or revoked
 // key is a 401 here. The key routes themselves are excluded from charge (credit cannot buy credit).
@@ -275,7 +285,7 @@ if (mppOn) {
 // to be a literal inside the `/` handler that had already gone wrong once.
 const FREE_TOOLS = ['get_fear_greed', 'get_last_liquidation', 'get_exit_method', 'get_forecast_record'];
 const discovery = require('./tools/discovery');
-const { TAGS, BAZAAR_META } = require('./payments');
+const { TAGS } = require('./payments');
 
 let _docs = null;
 function docs() {
@@ -321,7 +331,7 @@ app.get('/api/sample', (_req, res) => res.json({
   service: 'agentfeed',
   what: 'A real captured response for any paid route, free. The same example the Bazaar listing carries.',
   usage: 'GET /api/sample/<route>  e.g. /api/sample/liq-pulse or /api/sample/get_liq_pulse',
-  routes: [...new Set([...sampleIndex.values()].map((v) => v.path))].sort(),
+  routes: [...new Set([...sampleIndex.values()].map((v) => routeUrls.template(v.pattern)))].sort(),
 }));
 app.get('/api/sample/:route', (req, res) => {
   const hit = sampleIndex.get(String(req.params.route || '').toLowerCase()) || sampleIndex.get(String(req.params.route || ''));
@@ -332,11 +342,11 @@ app.get('/api/sample/:route', (req, res) => {
   }
   const m = hit.meta;
   res.json({
-    route: hit.path,
+    route: routeUrls.template(hit.pattern),
     tool: m.tool,
     price_usd: m.price_usd,
-    paid_url: 'https://x402.ochinimus.app' + hit.path,
-    how_to_pay: 'GET the paid_url; the 402 carries the challenge in the PAYMENT-REQUIRED response header (x402 v2).',
+    paid_url: routeUrls.concrete(hit.pattern),
+    how_to_pay: `GET the paid_url${routeUrls.isTemplated(hit.pattern) ? ` (it is an example: replace ${routeUrls.names(hit.pattern).map((n) => `{${n}}`).join(', ')} with your own value, see path_params_example and input_schema)` : ''}; the 402 carries the challenge in the PAYMENT-REQUIRED response header (x402 v2).`,
     input_example: m.input || {},
     ...(m.pathParams ? { path_params_example: m.pathParams } : {}),
     input_schema: m.inputSchema || { properties: {} },
@@ -552,7 +562,7 @@ app.get('/', (_req, res) => res.json({
     studio: 'https://ochinimus.app',
   },
   tools: Object.entries(PRICES).map(([route, p]) => ({
-    name: p.tool, route, price_usdc: p.usd, description: p.desc,
+    name: p.tool, route: routeUrls.isTemplated(route) ? `GET ${routeUrls.template(route)}` : route, ...(routeUrls.isTemplated(route) ? { example_url: routeUrls.concrete(route) } : {}), price_usdc: p.usd, description: p.desc,
   })),
 }));
 
@@ -582,7 +592,8 @@ app.get('/.well-known/x402.json', async (_req, res) => {
   mpp: { active: mppOn, intent: 'solana/charge', routes: mppOn ? MPP_ROUTES : [], tempo: tempoInfo() },
   mcp: 'https://x402.ochinimus.app/mcp',
   resources: Object.entries(PRICES).map(([route, p]) => ({
-    resource: 'https://x402.ochinimus.app' + route.replace('GET ', ''),
+    resource: routeUrls.concrete(route),
+    ...(routeUrls.isTemplated(route) ? { resource_template: routeUrls.templateUrl(route), path_params_example: Object.fromEntries(routeUrls.params(route).map((q) => [q.name, q.example])) } : {}),
     method: 'GET',
     name: p.tool,
     description: p.desc,
@@ -598,17 +609,12 @@ app.get('/.well-known/x402.json', async (_req, res) => {
 app.get('/mcp', compat.mcpGet405);
 // The CDP Bazaar discovery shape at the paths crawlers probe, from the payment layer itself.
 {
-  const concreteUrl = (pattern) => {
-    let p = pattern.replace('GET ', '');
-    const ex = (BAZAAR_META[pattern] && BAZAAR_META[pattern].pathParams) || {};
-    for (const [n, v] of Object.entries(ex)) p = p.replace(`:${n}`, encodeURIComponent(String(v)).replace(/%2F/gi, '/'));   // R17: a DOI's slash stays literal
-    return discovery.ORIGIN + p;
-  };
+  const concreteUrl = (pattern) => routeUrls.concrete(pattern);
   const handler = compat.makeDiscovery({ getLayer: () => paymentLayer, concreteUrl });
   for (const p of compat.DISCOVERY_PATHS) app.get(p, handler);
 }
 const agentCard = compat.makeAgentCard({
-  PRICES, TAGS, TITLES: require('./tools/titles').TOOL_TITLES, questionFor: require('./tools/questions').questionFor,
+  PRICES, TAGS, routeUrls, TITLES: require('./tools/titles').TOOL_TITLES, questionFor: require('./tools/questions').questionFor,
   version: (() => { try { return require('./server.json').version; } catch { return '1.0.0'; } })(),
   ORIGIN: discovery.ORIGIN, railNames: () => require('./lib/rails').httpRailNames(), mpp: { get active() { return mppOn; }, get routes() { return mppOn ? MPP_ROUTES : []; } }, tempo: { get active() { return !!(tempo && tempo.isReady()); } },
 });
@@ -625,7 +631,7 @@ app.get('/sitemap.xml', compat.sitemapXml);
 }
 app.get('/api/sharp-move', compat.makeSharpMoveGone({ PRICES, ORIGIN: discovery.ORIGIN }));
 for (const p of compat.WITHDRAWN) app.all(p, compat.makeWithdrawn({ ORIGIN: discovery.ORIGIN }));
-app.get('/pricing', compat.makePricing({ PRICES, FREE_TOOLS, ORIGIN: discovery.ORIGIN, railNames, mpp: { get active() { return mppOn; }, get routes() { return mppOn ? MPP_ROUTES : []; } }, tempo: { get active() { return !!(tempo && tempo.isReady()); } } }));
+app.get('/pricing', compat.makePricing({ PRICES, FREE_TOOLS, routeUrls, ORIGIN: discovery.ORIGIN, railNames, mpp: { get active() { return mppOn; }, get routes() { return mppOn ? MPP_ROUTES : []; } }, tempo: { get active() { return !!(tempo && tempo.isReady()); } } }));
 app.get('/terms', compat.termsHandler);
 
 // ---- MCP rail (Session 3): same tools at POST /mcp for agents in Claude/Cursor/frameworks

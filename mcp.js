@@ -1,6 +1,7 @@
 // mcp.js — Session 3/4: MCP rail. 6 paid tools + 2 free (pricing, fear_greed taster).
 const express = require('express');
 const { z } = require('zod');
+const PS = require('./lib/param-schemas');
 const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
 const { StreamableHTTPServerTransport } = require('@modelcontextprotocol/sdk/server/streamableHttp.js');
 const { createPaymentWrapper, x402ResourceServer } = require('@x402/mcp');
@@ -48,10 +49,10 @@ const TOOL_DEFS = [
       return { sol, btc, funding: { sol: fs_, btc: fb }, fear_greed: fg };
     } },
   { name: 'get_wallet_holdings', usd: 0.008, desc: 'Solana wallet holdings: native SOL with its USD value at AgentFeed\'s own on-chain SOL price, SPL tokens with mint, symbol and amount (no token prices), NFT count (Helius DAS balances).',
-    schema: { wallet: z.string().describe('Solana wallet address (base58)') },
+    schema: { wallet: PS.wallet('Solana wallet address (base58)') },
     run: (a) => getWalletHoldings(a.wallet) },
   { name: 'get_token_metadata', usd: 0.005, desc: 'SPL token metadata: name, symbol, URI, decimals, supply, mint and freeze authority, mutability. Read from the mint account and its metadata account.',
-    schema: { mint: z.string().describe('SPL token mint address (base58)') },
+    schema: { mint: PS.mint('SPL token mint address (base58)') },
     run: (a) => getTokenMetadata(a.mint) },
   { name: 'get_recent_liquidations', usd: 0.005, desc: 'Recent perp liquidations across Bybit (complete unthrottled tape), OKX and Binance: timestamp, long/short, size, price, USD value. Any USDT perp we record, not just majors.',
     schema: { symbol: z.string().optional().describe('SOL, BTC, ETH, XRP, DOGE, or any USDT perp e.g. SXTUSDT (omit for majors)'),
@@ -91,7 +92,7 @@ const TOOL_DEFS = [
   { name: 'get_trade_context', usd: 0.01, desc: 'Full market state in one call: SOL+BTC prices, funding, Fear & Greed, positioning (open interest and whale net-long share), and liquidation stats. The complete pre-trade picture.',
     schema: {}, run: () => getTradeContext() },
   { name: 'get_token_risk', usd: 0.01, desc: 'SPL token rug-risk signals: mint/freeze authority status (revoked = safer), top-1/top-10 holder concentration, and risk flags. Not a honeypot/LP-lock checker.',
-    schema: { mint: z.string().describe('SPL token mint address (base58)') },
+    schema: { mint: PS.mint('SPL token mint address (base58)') },
     run: (a) => getTokenRisk(a.mint) },
   { name: 'get_exit_method', usd: 0, desc: "FREE: how overhang measures exit liquidity on lending collateral, and the counts behind every paid answer - computed from the tape at request time, nothing hardcoded. Returns what is measured (the protocol's own live-refetched mark vs realisable value from sell-direction quotes at real clip sizes), the corroboration rule in plain terms (a terminal verdict needs six consecutive agreeing floor observations from the symbol's own tape; one sample is never enough; a contradicted floor buys a fresh probe rather than writing a hole), the full status vocabulary including why a router refusal and an empty book are different facts, the size-matched control design and its results, the gated sweep and row counts, covered symbols and markets, and the measured cadence. Read this before paying for get_exit_quote, and to check the claim rather than trust it.",
     schema: {}, run: async () => ({ ...(await getExitMethod()), related: require('./lib/related').relatedFor('get_exit_method', require('./payments').PRICES) }) },

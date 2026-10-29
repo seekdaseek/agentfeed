@@ -268,6 +268,9 @@
     "properties": {
      "wallet": {
       "type": "string",
+      "minLength": 32,
+      "maxLength": 44,
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
       "description": "Solana wallet address (base58)"
      }
     },
@@ -363,6 +366,9 @@
     "properties": {
      "mint": {
       "type": "string",
+      "minLength": 32,
+      "maxLength": 44,
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
       "description": "SPL token mint address (base58)"
      }
     },
@@ -1252,6 +1258,9 @@
     "properties": {
      "mint": {
       "type": "string",
+      "minLength": 32,
+      "maxLength": 44,
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
       "description": "SPL token mint address (base58)"
      }
     },
@@ -3479,6 +3488,9 @@
     "properties": {
      "mint": {
       "type": "string",
+      "minLength": 32,
+      "maxLength": 44,
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
       "description": "SPL token mint address (base58)"
      }
     },
@@ -3579,6 +3591,9 @@
     "properties": {
      "wallet": {
       "type": "string",
+      "minLength": 32,
+      "maxLength": 44,
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
       "description": "Solana wallet address (base58)"
      }
     },
@@ -6140,6 +6155,9 @@
     "properties": {
      "coin": {
       "type": "string",
+      "minLength": 1,
+      "maxLength": 30,
+      "pattern": "^[A-Za-z0-9-]+$",
       "description": "a Hyperliquid perp, e.g. BTC, ETH, SOL, HYPE, kPEPE"
      }
     },
@@ -6775,6 +6793,9 @@
     "properties": {
      "address": {
       "type": "string",
+      "minLength": 14,
+      "maxLength": 130,
+      "pattern": "^\\s*[A-Za-z0-9:]{14,120}\\s*$",
       "description": "a crypto address of any family: bitcoin, ethereum, tron, solana, xrp, litecoin and so on"
      }
     },
@@ -6979,6 +7000,8 @@
     "properties": {
      "domain": {
       "type": "string",
+      "minLength": 3,
+      "maxLength": 253,
       "description": "a hostname such as example.com (no URL, no IP address)"
      }
     },
@@ -7627,6 +7650,9 @@
     "properties": {
      "mint": {
       "type": "string",
+      "minLength": 32,
+      "maxLength": 44,
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
       "description": "the SPL token mint address"
      }
     },
@@ -7826,6 +7852,9 @@
     "properties": {
      "mint": {
       "type": "string",
+      "minLength": 32,
+      "maxLength": 44,
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
       "description": "the SPL token mint address"
      }
     },
@@ -7981,6 +8010,9 @@
     "properties": {
      "mint": {
       "type": "string",
+      "minLength": 32,
+      "maxLength": 44,
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
       "description": "the SPL token mint address"
      }
     },
@@ -8737,6 +8769,9 @@
     "properties": {
      "doi": {
       "type": "string",
+      "minLength": 7,
+      "maxLength": 300,
+      "pattern": "10\\.\\d{4,9}(?:\\/|%2[Ff])\\S+",
       "description": "a DOI such as 10.1038/nature14539, sent in the path as written (its slash as %2F also works)"
      }
     },
@@ -9138,7 +9173,7 @@
  },
  "_outputs_recaptured_at": "2026-10-18T21:10:47.317Z",
  "_pruned_at": "2026-10-13T04:50:31.410Z",
- "_schemas_regenerated_at": "2026-10-13T04:50:31.953Z",
+ "_schemas_regenerated_at": "2026-10-29T18:46:31.898Z",
  "_outputs_dropped_at": "2026-10-13T04:50:35.546Z",
  "_f6_recaptured_at": "2026-10-14T12:13Z injection-check: plain example input (R10 F6), output captured on the box from tools/injection.js"
 }

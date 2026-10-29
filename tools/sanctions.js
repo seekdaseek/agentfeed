@@ -30,6 +30,9 @@ const file = () => process.env.SANCTIONS_FILE || path.join(__dirname, '..', 'dat
 const ENT = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&apos;': "'" };
 const unxml = (s) => s.replace(/&(amp|lt|gt|quot|apos);/g, (m) => ENT[m]).replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n));
 
+// the shape a request must have before the list is read; lib/param-guard.js applies the same regex before anyone is asked to pay
+const ADDRESS_SHAPE = /^[A-Za-z0-9:]{14,120}$/;
+
 // ---- address normal form ----
 // EVM addresses are case-insensitive (checksum casing is a typo guard); bech32 is case-insensitive by
 // spec. Everything else (base58 families) is case-sensitive and compared exactly.
@@ -119,7 +122,7 @@ function sanctionsCheck(p = {}, { now = Date.now() } = {}) {
   const raw = p.address;
   if (raw == null || String(raw).trim() === '') throw bad('missing required parameter: address');
   const s = String(raw).trim();
-  if (s.length > 120 || !/^[A-Za-z0-9:]{14,120}$/.test(s)) throw bad('address must be 14-120 letters and digits (a Bitcoin, Ethereum, Tron, Solana, XRP, Litecoin or similar address)');
+  if (s.length > 120 || !ADDRESS_SHAPE.test(s)) throw bad('address must be 14-120 letters and digits (a Bitcoin, Ethereum, Tron, Solana, XRP, Litecoin or similar address)');
   const { doc, index } = load();
   const age = now - Date.parse(doc.fetched_at);
   if (!Number.isFinite(age) || age > MAX_AGE_MS) throw unavailable(`the sanctions list copy is older than 48 hours (fetched ${doc.fetched_at}). Not charged.`);
@@ -182,7 +185,7 @@ async function refresh({ url = SDN_URL, fetchImpl, get, now = Date.now() } = {})
   }
 }
 
-module.exports = { sanctionsCheck, refresh, parseSdn, normalize, family, NOTICE, MAX_AGE_MS };
+module.exports = { sanctionsCheck, refresh, parseSdn, normalize, family, NOTICE, MAX_AGE_MS, ADDRESS_SHAPE };
 
 if (require.main === module && process.argv.includes('--refresh')) {
   refresh().then((r) => { console.log(JSON.stringify(r)); }, (e) => { console.error(`sanctions refresh failed, last good copy kept: ${e.message}`); process.exit(1); });

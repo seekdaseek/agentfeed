@@ -19,6 +19,7 @@
 'use strict';
 
 const ORIGIN = 'https://x402.ochinimus.app';
+const { makeRouteUrls } = require('../lib/route-urls');
 const { httpRails, httpRailNames, onRequestSentence } = require('../lib/rails');
 // Address poisoning: on 2026-07-31 a lookalike of the Base treasury (same first
 // and last characters as 0x22DB...76e6) sent zero-value transfers to this
@@ -134,6 +135,10 @@ function schemaFor(prop) {
   if (prop.enum) out.enum = prop.enum;
   if (prop.description) out.description = prop.description;
   if (prop.default !== undefined) out.default = prop.default;
+  // R20e: a path parameter publishes the shape it must have (the same pattern the guard and the MCP schema enforce)
+  if (prop.pattern) out.pattern = prop.pattern;
+  if (prop.minLength != null) out.minLength = prop.minLength;
+  if (prop.maxLength != null) out.maxLength = prop.maxLength;
   if (!Object.keys(out).length) out.type = 'string';
   return out;
 }
@@ -159,7 +164,7 @@ function freeHttp(FREE_TOOLS) {
   return [
     ...FREE_TOOLS.map((t) => ({ path: freePath(t), what: questionFor(t, '') })),
     { path: '/api/sample', what: 'Which paid routes have a stored sample response' },
-    { path: '/api/sample/<route>', what: 'One paid route\'s real captured response, with its price and input schema' },
+    { path: '/api/sample/token-risk', what: 'One paid route\'s real captured response, with its price and input schema (token-risk is an example: any route name from GET /api/sample works in its place)' },
     { path: '/api/keys/balance', what: 'A prepaid key\'s balance, calls and spend; send the key as X-AgentFeed-Key' },
   ];
 }
@@ -212,12 +217,13 @@ function groupOf(tags) {
 }
 
 /** Routes bucketed by group, in GROUPS order, with 'Other' last. */
-function grouped({ PRICES, TAGS }) {
+function grouped({ PRICES, TAGS, concretePathOf = null }) {
   const buckets = new Map();
   for (const [pattern, p] of Object.entries(PRICES)) {
     const g = groupOf(TAGS[p.tool]);
     if (!buckets.has(g)) buckets.set(g, []);
-    buckets.get(g).push({ pattern, path: pattern.replace('GET ', ''), ...p });
+    // `path` stays the pattern path (sort key); `shown` is what a text document prints for a caller to GET: the concrete example path (R20e)
+    buckets.get(g).push({ pattern, path: pattern.replace('GET ', ''), shown: (concretePathOf && concretePathOf(pattern)) || pattern.replace('GET ', ''), ...p });
   }
   const order = GROUPS.map(([t]) => t).concat('Other');
   return order.filter((g) => buckets.has(g)).map((g) => [g, buckets.get(g).sort((a, b) => a.path.localeCompare(b.path))]);
@@ -285,9 +291,12 @@ function buildOpenApi({ PRICES, META, FREE_TOOLS, mpp, tempo }) {
 
     const parameters = [];
     for (const name of names) {
+      const ex = m.pathParams && m.pathParams[name] != null ? String(m.pathParams[name]) : null;
       parameters.push({
         description: (pProps[name] && pProps[name].description) || `${name} (required)`,
-        in: 'path', name, required: true, schema: schemaFor(pProps[name] || {}),
+        in: 'path', name, required: true,
+        ...(ex != null ? { example: ex } : {}),
+        schema: { ...schemaFor(pProps[name] || {}), ...(ex != null ? { example: ex } : {}) },
       });
     }
     for (const [name, prop] of Object.entries(qProps)) {
@@ -433,7 +442,7 @@ function buildOpenApi({ PRICES, META, FREE_TOOLS, mpp, tempo }) {
         `Paid routes answer 402 with the challenge twice: x402 v2, base64 JSON in the PAYMENT-REQUIRED response header, for every rail; and x402 v1, the JSON body {x402Version: 1, accepts}, for Base and Solana. Pay with a PAYMENT-SIGNATURE header (x402 v2) or an X-PAYMENT header (x402 v1, Base or Solana; an X-PAYMENT carrying a v2 payload is read as PAYMENT-SIGNATURE). USDC on ${httpRailNames('Solana mainnet')}.${onRequestSentence() ? ` ${onRequestSentence()}` : ''}`,
         PAYTO_WARNING,
         'Response shape is always { "tool": "<name>", "data": { ... }, "paid": true }.',
-        'Before paying, GET /api/sample/<route> for that route\'s real captured response, free. GET /api/sample lists them.',
+        'Before paying, GET /api/sample/liq-pulse (or any other route name from GET /api/sample) for that route\'s real captured response, free.',
         'Start cheap: /api/price, /api/sol-price, /api/btc-price and /api/eth-price are $0.001; /api/perp, /api/liq-pulse and /api/funding-pulse are $0.005 and cover most questions. The premium routes are the liquidation tape, cascade detection and the tokenized-equity peg tape.',
         'It never returns fabricated or zero-filled data. An unsupported symbol answers 400 and a source that failed, is stale or has no history yet answers 503 with Retry-After; neither is ever billed. Only where the decline is the product (squeeze-score on a coin whose inputs do not resolve) does a supported symbol return 200 with a decline field naming the reason.',
         `Limits: GET only on /api/* (HEAD on a paid route answers the 402 challenge headers with no body, on a free route the GET answer's status and headers with no body); per caller per minute ${LIMIT_GET} GET or POST /mcp and ${LIMIT_OTHER} of any other method; a 429 carries Retry-After.`,
@@ -447,7 +456,11 @@ function buildOpenApi({ PRICES, META, FREE_TOOLS, mpp, tempo }) {
 }
 
 // ---- /.well-known/x402 ---------------------------------------------------
-// ONE resource per priced route (R10 F4). A path-parameter route is published as its pattern, in the OpenAPI {name} form
+// R20e (29 Oct 2026): a path-parameter route is published as a CONCRETE example URL again, with the {name} template as url_template. The R10 F4
+// choice below (template only) is reversed on purpose: the guard (lib/param-guard.js) now answers a 400 to any placeholder, so a flat list that
+// names /api/token-risk/{mint} would hand every validator twelve dead URLs. The cost is the one R10 F4 measured: Agent402 may list the 12
+// path-parameter routes twice (the {param} pattern from openapi.json plus the example URL from here). Revert = the single `concrete` line in buildWellKnown.
+// ONE resource per priced route (R10 F4). A path-parameter route was published as its pattern, in the OpenAPI {name} form
 // (/api/token-risk/{mint}), not as a concrete example URL: Agent402 reads this document and also our openapi.json, and with a
 // concrete URL here it listed each of the 12 path-parameter routes twice (the {param} pattern from openapi plus the example
 // URL from here). The concrete example stays published, as path_params_example on the catalogue entry, an object no indexer
@@ -464,16 +477,22 @@ function firstSentences(text, max) {
 }
 
 function buildWellKnown({ PRICES, META }) {
+  const ru = makeRouteUrls({ ORIGIN, meta: META });
   const resources = [];
   const catalog = [];
   for (const pattern of Object.keys(PRICES)) {
-    const url = ORIGIN + toTemplate(pattern.replace('GET ', '')).template;
+    // R20e: a path-parameter route is published as a URL that WORKS (its example values), never as a template: a crawler or an agent that GETs
+    // a published URL as written must get the route's 402, and the template spelling now answers a 400 (lib/param-guard.js). The template
+    // rides beside it as url_template for a client that wants the family; path_params_example and path_params say what varies.
+    const url = ru.concrete(pattern);
     const m = META[pattern];
     const pr = PRICES[pattern];
     resources.push(url);
     catalog.push({
       url, method: 'GET', name: pr.tool, description: firstSentences(pr.desc, 400), price_usd: pr.usd,
+      ...(ru.isTemplated(pattern) ? { url_template: ru.templateUrl(pattern) } : {}),
       ...(m && m.pathParams && Object.keys(m.pathParams).length ? { path_params_example: m.pathParams } : {}),
+      ...(m && m.pathParamsSchema && m.pathParamsSchema.properties ? { path_params: m.pathParamsSchema.properties } : {}),
     });
   }
   // `resources` is a flat list, one URL per route. The error contract is identical for all of them -- one wrapper, one
@@ -494,14 +513,16 @@ function buildWellKnown({ PRICES, META }) {
 // ---- /llms.txt and /SKILL.md --------------------------------------------
 function catalogueLines({ PRICES, TAGS, META, bullet }) {
   const out = [];
-  for (const [group, routes] of grouped({ PRICES, TAGS })) {
+  const ru = makeRouteUrls({ ORIGIN, meta: META });
+  for (const [group, routes] of grouped({ PRICES, TAGS, concretePathOf: (pt) => ru.concretePath(pt) })) {
     out.push('', `${bullet.heading} ${group}`, '');
     for (const r of routes) {
       const m = META[r.pattern];
       const params = m && m.inputSchema && Object.keys(m.inputSchema.properties || {});
       const pp = m && m.pathParamsSchema && Object.keys(m.pathParamsSchema.properties || {});
-      const args = [...(pp || []).map((k) => `:${k}`), ...(params || [])].join(', ');
-      out.push(`${bullet.item}GET ${r.path} — $${r.usd}${args ? ` — params: ${args}` : ''}`);
+      // R20e: the URL printed is a working example; the path parameter is named and marked as the part to replace
+      const args = [...(pp || []).map((k) => `${k} (path: replace the example value)`), ...(params || [])].join(', ');
+      out.push(`${bullet.item}GET ${r.shown} — $${r.usd}${args ? ` — params: ${args}` : ''}`);
       out.push(`${bullet.indent}${r.desc}${r.docNote ? ` ${r.docNote}` : ''}`);
     }
   }
@@ -541,7 +562,7 @@ function buildLlmsTxt({ PRICES, TAGS, META, FREE_TOOLS, mpp, tempo }) {
     `- ${ORIGIN}/.well-known/x402 — the resource list`,
     `- ${ORIGIN}/.well-known/x402.json — the full manifest with prices and accepted rails`,
     `- ${ORIGIN}/mcp — the same tools over MCP (POST, streamable HTTP)`,
-    `- ${ORIGIN}/api/sample/<route> — a real captured response for any paid route, free`,
+    `- ${ORIGIN}/api/sample/liq-pulse — a real captured response for any paid route, free (liq-pulse is an example: any route name from ${ORIGIN}/api/sample works in its place)`,
     `- ${ORIGIN}/api/forecast-record — the settled cascade-forecast track record, free`,
     `- ${ORIGIN}/SKILL.md — the agent skill: when to use each route, what it answers, what it costs`,
     '',
@@ -573,16 +594,17 @@ function buildSkillMd({ PRICES, TAGS, META, FREE_TOOLS, mpp, tempo }) {
   const freeCount = free.length;
 
   const table = [];
-  for (const [group, rs] of grouped({ PRICES: Object.fromEntries(routes), TAGS })) {
+  const ru = makeRouteUrls({ ORIGIN, meta: META });
+  for (const [group, rs] of grouped({ PRICES: Object.fromEntries(routes), TAGS, concretePathOf: (pt) => ru.concretePath(pt) })) {
     table.push('', `### ${group}`, '', '| Question | Route | Price |', '|---|---|---|');
     for (const r of rs) {
       const m = META[r.pattern] || {};
       const args = [
-        ...Object.keys((m.pathParamsSchema && m.pathParamsSchema.properties) || {}).map((k) => `:${k}`),
+        ...Object.keys((m.pathParamsSchema && m.pathParamsSchema.properties) || {}).map((k) => `${k} (path: replace the example value)`),
         ...Object.keys((m.inputSchema && m.inputSchema.properties) || {}),
       ];
       const q = questionFor(r.tool, r.desc).replace(/\|/g, '\\|');
-      table.push(`| ${q} | \`GET ${r.path}\`${args.length ? ` <br>params: ${args.join(', ')}` : ''} | $${r.usd} |`);
+      table.push(`| ${q} | \`GET ${r.shown}\`${args.length ? ` <br>params: ${args.join(', ')}` : ''} | $${r.usd} |`);
     }
   }
 
@@ -635,7 +657,7 @@ function buildSkillMd({ PRICES, TAGS, META, FREE_TOOLS, mpp, tempo }) {
     `| \`GET ${ORIGIN}/openapi.json\` | Every route with its parameters, price and a real captured response example |`,
     `| \`GET ${ORIGIN}/.well-known/x402.json\` | The manifest every number on this page is generated from |`,
     `| \`GET ${ORIGIN}/.well-known/x402\` | The resource list, one URL per route (path parameters as {name}) |`,
-    `| \`GET ${ORIGIN}/api/sample/<route>\` | A real response for one route, free, before you pay for it |`,
+    `| \`GET ${ORIGIN}/api/sample/liq-pulse\` | A real response for one route (liq-pulse is an example: any route name from \`GET ${ORIGIN}/api/sample\` works), free, before you pay for it |`,
     '',
     `## Free routes (${freeCount})`,
     '',

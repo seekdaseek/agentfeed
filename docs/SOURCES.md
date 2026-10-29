@@ -387,6 +387,21 @@ every answer names its sources and their `as_of` times (`data.sources`). No new 
 - **Universe:** the 178 Hyperliquid main-dex perps the sampler records (HIP-3 markets are not in the sampler).
 - **The tape is a banned-or-unclear input on the CEX side (C7 above):** these two routes use it only as sums and as heatmap bands, like /api/liq-pulse and /api/squeeze-score, never a single print.
 
+## Briefs (pensio): morning-brief, move-alert, anomaly-flag, and the news brief behind a flag
+
+Three routes built only from data this service already records (no new venue, none from the banned or unclear list). Every answer names its sources and their `as_of` ages (`sources`) and lists what it could not read (`stale_parts`).
+
+| route | price | sources | verdict | raw value still passed |
+|---|---|---|---|---|
+| /api/morning-brief | $0.03 | our Hyperliquid OI sampler (mark, open interest, funding every 5 min), our liquidation tape as sums, one biggest print per window and heatmap bands, the funding radar snapshot, the macro calendar snapshot (Federal Reserve, BLS and BEA pages), the Fear and Greed index | computed | the Fear and Greed value, with the attribution link its terms ask for (alternative.me); the biggest single liquidation of a window, as /api/liquidation-stats and /api/liquidation-leaders already sell |
+| /api/move-alert | $0.02 | the sampler, the macro calendar, our open-interest spike scan, and `tools/briefs/calibration.json`: per-coin move tails measured from Hyperliquid's public `candleSnapshot` requests by `bin/brief-calibrate.js` (an offline job; the route never calls Hyperliquid) | computed | none |
+| /api/anomaly-flag | $0.02 | the sampler, the funding radar, the liquidation tape (sums) and its 7-day hourly baseline, the open-interest spike scan | computed | none |
+
+- **Hyperliquid candles:** the documented limits (REST requests share a weight of 1200 a minute per IP; `candleSnapshot` weighs 20 plus 1 per 60 candles; only the most recent 5,000 candles exist) are in the header of `bin/brief-calibrate.js`, which sends one request at a time, 6.5 s apart. Hyperliquid's terms carry no data or redistribution restriction (row above, R7); the calibration file holds thresholds computed from the candles, not candles.
+- **Staleness (each gives 503 + Retry-After, never billed):** the sampler older than 15 minutes (core of all three), the calibration table older than 45 days (core of move-alert), and for anomaly-flag a stale tape, radar or spike scan when nothing else was found (it never says "nothing abnormal" on two signals of three). Parts outside the core that are stale are left out and named.
+- **Thresholds:** funding_extreme_abs_z and liq_spike_multiple are imported from /api/market-state (`tools/marketstate.js` `THRESHOLDS`), the spike z from /api/oi-spike-scan (`tools/derivs.js`).
+- **No language model:** the text is templates over these numbers.
+
 ## R11 Phase A (13 Oct 2026): sources behind the new tool files (terms read before building)
 
 Read on **2026-10-13**; the routes were wired on **14 Oct 2026** (R11). This table is what each route's source allows. "Line" is the clause that decides the verdict.

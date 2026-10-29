@@ -32,6 +32,8 @@ const FX = require('./tools/fxrates');
 const BL = require('./tools/baselaunches');
 const SIG = require('./tools/signals');
 const KEYLIB = require('./lib/keys');
+const BR = require('./tools/briefs');
+const BRC = BR.config;
 // R11 (14 Oct 2026): thirteen general-purpose routes (A) and seven language-model task routes (B)
 const SANC = require('./tools/sanctions');
 const EV = require('./tools/emailverify');
@@ -542,6 +544,24 @@ const EXP = [
     desc: 'Use when an agent needs the words in an audio file. Returns the text, timed segments and the spoken language for mp3, wav, m4a, ogg or webm audio (10 MB, 5 minutes, checked from the file). Cached 24 hours by the audio itself.',
     schema: { url: z.string().describe('the audio file: an absolute http or https URL') },
     run: (a) => TXT.transcribe(a) },
+
+  // ---- pensio (30 Oct 2026): three short briefs built only from data this service already holds (tools/briefs/*). Deterministic text,
+  // no language model, no path or query parameter. A stale input answers 503 and is never billed. Prices are PROPOSED (tools/briefs/config.js). ----
+  { name: 'get_morning_brief', route: `GET ${BRC.ROUTES.morning}`, usd: BRC.PRICES_PROPOSED.morning,
+    tags: ['brief', 'market-data', 'macro', 'liquidations', 'funding', 'hyperliquid', 'trading'],
+    desc: 'Use when an agent needs the overnight picture for BTC, ETH, SOL and HYPE in one answer. Returns the last 8 hours ranked by how abnormal each item is: price move against the coin\'s own usual 8-hour move, funding, open interest, liquidations (total, long/short split, biggest print), Fear and Greed, today\'s macro releases with UTC times, and the nearest liquidation cluster as the level to watch. A stale source is left out and named; with no sampler it answers 503, never billed.',
+    schema: {},
+    run: (a) => BR.getMorningBrief(a) },
+  { name: 'get_move_alert', route: `GET ${BRC.ROUTES.move}`, usd: BRC.PRICES_PROPOSED.move,
+    tags: ['brief', 'anomaly', 'screener', 'hyperliquid', 'open-interest', 'macro', 'trading'],
+    desc: 'Use when an agent needs to know which Hyperliquid perps moved unusually. Returns each coin whose 5-minute, 1-hour or 4-hour price move, or 1-hour open-interest change, is past its own measured tail (tiers from the coin\'s own history, sample size printed), labelled event-driven when a scheduled FOMC, CPI, NFP or PCE release explains it. An empty list is a valid answer. Stale inputs answer 503, never billed.',
+    schema: {},
+    run: (a) => BR.getMoveAlert(a) },
+  { name: 'get_anomaly_flag', route: `GET ${BRC.ROUTES.anomaly}`, usd: BRC.PRICES_PROPOSED.anomaly,
+    tags: ['brief', 'anomaly', 'screener', 'funding', 'liquidations', 'open-interest', 'hyperliquid', 'trading'],
+    desc: 'Use when an agent needs one check for what is abnormal across Hyperliquid perps right now. Returns funding, liquidation and open-interest anomalies in one ranked list, using the thresholds of /api/market-state, or nothing abnormal with what was checked. If a source is stale and nothing else was found it answers 503 rather than an all-clear, and is never billed.',
+    schema: {},
+    run: (a) => BR.getAnomalyFlag(a) },
 ];
 
 // ---- derived exports ----

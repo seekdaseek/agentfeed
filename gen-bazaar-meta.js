@@ -358,7 +358,9 @@ const BASE_RUN = {
 // R9: the six prepaid-key routes cannot be CAPTURED (a capture would create a key and a pending row). Their example is built by
 // the same function the handler uses, with a placeholder key (lib/keys.js exampleBody), and the entry says so (`static: true`).
 const KEYLIB = require('./lib/keys');
-const isStatic = (tool) => KEYLIB.exampleBody(tool) !== null;
+// pensio: the three briefs are constructed the same way, from a seeded synthetic market (tools/briefs/example.js); recapture them live on the box
+const BRIEFX = require('./tools/briefs/example');
+const isStatic = (tool) => KEYLIB.exampleBody(tool) !== null || BRIEFX.TOOLS.includes(tool);
 
 const expByRoute = new Map(EXP.map((t) => [t.route, t]));
 const defByName = new Map(TOOL_DEFS.map((d) => [d.name, d]));
@@ -370,7 +372,7 @@ function buildRoutes() {
     const pathParamKeys = (httpPath.match(/:([A-Za-z0-9_]+)/g) || []).map((s) => s.slice(1));
     const exp = expByRoute.get(pattern);
     const zodSchema = exp ? exp.schema : (defByName.get(p.tool) || {}).schema;
-    const run = exp ? (isStatic(p.tool) ? async () => KEYLIB.exampleBody(p.tool) : (a) => exp.run(a)) : BASE_RUN[p.tool];
+    const run = exp ? (BRIEFX.TOOLS.includes(p.tool) ? () => BRIEFX.exampleFor(p.tool) : isStatic(p.tool) ? async () => KEYLIB.exampleBody(p.tool) : (a) => exp.run(a)) : BASE_RUN[p.tool];
     rows.push({ pattern, httpPath, tool: p.tool, usd: p.usd, pathParamKeys, zodSchema: zodSchema || {}, run, source: exp ? 'expansion' : 'server' });
   }
   return rows;

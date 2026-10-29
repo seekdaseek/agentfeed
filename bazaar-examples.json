@@ -9189,9 +9189,399 @@
     }
    },
    "static": true
+  },
+  "GET /api/morning-brief": {
+   "tool": "get_morning_brief",
+   "price_usd": 0.03,
+   "input": {},
+   "inputSchema": {
+    "properties": {},
+    "required": []
+   },
+   "output": {
+    "example": {
+     "tool": "get_morning_brief",
+     "data": {
+      "brief": "morning-brief",
+      "as_of": "2026-01-15T08:02:00.…",
+      "window": {
+       "hours": 8,
+       "from": "2026-01-15T00:00:00.…",
+       "to": "2026-01-15T08:00:00.…"
+      },
+      "headline": "SOL open interest +5…",
+      "items": [
+       {
+        "what": "SOL open interest +5…",
+        "why_it_matters": "Open interest in coi…",
+        "level_to_watch": {
+         "kind": "liquidation_cluster",
+         "side_of_price": "above",
+         "price_low": 137.2253984106928,
+         "price_high": 137.76565588475066,
+         "distance_pct": 1.8,
+         "usd_24h": 4200000,
+         "text": "Nearest liquidation…"
+        },
+        "numbers": {
+         "oi_change_8h_pct": 5.9,
+         "oi_z": 8.06,
+         "windows_n": 152,
+         "price_change_8h_pct": -4.72
+        },
+        "source": "AgentFeed Hyperliqui…",
+        "as_of": "2026-01-15T08:00:00.…",
+        "abnormality": 4.03
+       }
+      ],
+      "sources": [
+       {
+        "name": "AgentFeed Hyperliqui…",
+        "as_of": "2026-01-15T08:00:00.…",
+        "age_s": 120
+       }
+      ],
+      "stale_parts": [],
+      "method": "Window: the last 8 h…",
+      "coins": {
+       "BTC": {
+        "mark": 61968.089935,
+        "change_8h_pct": -1.32,
+        "price_windows_n": 152,
+        "price_z": -1.35,
+        "oi_change_8h_pct": 1.03,
+        "oi_windows_n": 152,
+        "oi_z": 1.31,
+        "funding_annualised_pct": 15.97,
+        "funding_z_30d": 0.4,
+        "liquidations_8h_usd": 157928,
+        "liquidated_longs_share_pct": 50,
+        "biggest_liquidation_usd": 1232,
+        "liquidations_vs_usual": 1.03
+       }
+      },
+      "context": {
+       "fear_greed": {
+        "value": 31,
+        "classification": "Fear"
+       },
+       "macro_today": 1
+      }
+     },
+     "paid": true
+    },
+    "schema": {
+     "type": "object",
+     "properties": {
+      "tool": {
+       "type": "string"
+      },
+      "data": {
+       "type": "object",
+       "properties": {
+        "brief": {
+         "type": "string"
+        },
+        "as_of": {
+         "type": "string"
+        },
+        "window": {
+         "type": "object"
+        },
+        "headline": {
+         "type": "string"
+        },
+        "items": {
+         "type": "array"
+        },
+        "sources": {
+         "type": "array"
+        },
+        "stale_parts": {
+         "type": "array"
+        },
+        "method": {
+         "type": "string"
+        },
+        "coins": {
+         "type": "object"
+        },
+        "context": {
+         "type": "object"
+        }
+       }
+      },
+      "paid": {
+       "type": "boolean"
+      }
+     }
+    }
+   },
+   "static": true
+  },
+  "GET /api/move-alert": {
+   "tool": "get_move_alert",
+   "price_usd": 0.02,
+   "input": {},
+   "inputSchema": {
+    "properties": {},
+    "required": []
+   },
+   "output": {
+    "example": {
+     "tool": "get_move_alert",
+     "data": {
+      "brief": "move-alert",
+      "as_of": "2026-01-15T08:02:00.…",
+      "window": {
+       "horizons": [
+        "5m",
+        "1h",
+        "4h"
+       ],
+       "to": "2026-01-15T08:00:00.…"
+      },
+      "headline": "SOL -3.40% in 1 hour…",
+      "items": [
+       {
+        "what": "SOL -3.40% in 1 hour…",
+        "why_it_matters": "No scheduled release…",
+        "level_to_watch": {
+         "kind": "liquidation_cluster",
+         "side_of_price": "above",
+         "price_low": 138.87789243304564,
+         "price_high": 139.42465578908127,
+         "distance_pct": 1.8,
+         "usd_24h": 4200000,
+         "text": "Nearest liquidation…"
+        },
+        "numbers": {
+         "horizon": "1h",
+         "change_pct": -3.4,
+         "from_mark": 141.501904,
+         "mark": 136.690839,
+         "tier": "sharp",
+         "label": "unexplained",
+         "event": null,
+         "threshold_pct": {
+          "notable": 1.5,
+          "sharp": 2.4,
+          "extreme": 6
+         },
+         "effective_quantile": {
+          "notable": 0.99,
+          "sharp": 0.998,
+          "extreme": "sample_max"
+         },
+         "n": 4999,
+         "oi_change_pct": 0
+        },
+        "source": "AgentFeed Hyperliqui…",
+        "as_of": "2026-01-15T08:00:00.…",
+        "abnormality": 2.27
+       }
+      ],
+      "sources": [
+       {
+        "name": "AgentFeed Hyperliqui…",
+        "as_of": "2026-01-15T08:00:00.…",
+        "age_s": 120
+       }
+      ],
+      "stale_parts": [],
+      "method": "Price tails are meas…",
+      "coins_checked": 6,
+      "min_tier": "sharp",
+      "calibration": {
+       "fetched_at": "2026-01-13T08:02:00.…",
+       "source": "Hyperliquid info API…"
+      }
+     },
+     "paid": true
+    },
+    "schema": {
+     "type": "object",
+     "properties": {
+      "tool": {
+       "type": "string"
+      },
+      "data": {
+       "type": "object",
+       "properties": {
+        "brief": {
+         "type": "string"
+        },
+        "as_of": {
+         "type": "string"
+        },
+        "window": {
+         "type": "object"
+        },
+        "headline": {
+         "type": "string"
+        },
+        "items": {
+         "type": "array"
+        },
+        "sources": {
+         "type": "array"
+        },
+        "stale_parts": {
+         "type": "array"
+        },
+        "method": {
+         "type": "string"
+        },
+        "coins_checked": {
+         "type": "number"
+        },
+        "min_tier": {
+         "type": "string"
+        },
+        "calibration": {
+         "type": "object"
+        }
+       }
+      },
+      "paid": {
+       "type": "boolean"
+      }
+     }
+    }
+   },
+   "static": true
+  },
+  "GET /api/anomaly-flag": {
+   "tool": "get_anomaly_flag",
+   "price_usd": 0.02,
+   "input": {},
+   "inputSchema": {
+    "properties": {},
+    "required": []
+   },
+   "output": {
+    "example": {
+     "tool": "get_anomaly_flag",
+     "data": {
+      "brief": "anomaly-flag",
+      "as_of": "2026-01-15T08:02:00.…",
+      "window": {
+       "liquidations": "last 60 minutes",
+       "open_interest": "last hour against th…",
+       "funding": "30-day z-score at th…",
+       "to": "2026-01-15T08:00:00.…"
+      },
+      "headline": "SOL saw $721k liquid…",
+      "items": [
+       {
+        "what": "SOL saw $721k liquid…",
+        "why_it_matters": "Mostly long position…",
+        "level_to_watch": {
+         "kind": "liquidation_cluster",
+         "side_of_price": "above",
+         "price_low": 143.753677681148,
+         "price_high": 144.3196370420974,
+         "distance_pct": 1.8,
+         "usd_24h": 4200000,
+         "text": "Nearest liquidation…"
+        },
+        "numbers": {
+         "last_hour_usd": 720582,
+         "longs_usd": 612492,
+         "shorts_usd": 108087,
+         "biggest_usd": 30270,
+         "multiple": 36.03,
+         "hourly_median_usd": 20000,
+         "rule_multiple": 3,
+         "kind": "liquidations",
+         "also_flagged": [
+          "funding"
+         ]
+        },
+        "source": "AgentFeed liquidatio…",
+        "as_of": "2026-01-15T08:01:20.…",
+        "abnormality": 12.01
+       }
+      ],
+      "sources": [
+       {
+        "name": "AgentFeed Hyperliqui…",
+        "as_of": "2026-01-15T08:00:00.…",
+        "age_s": 120
+       }
+      ],
+      "stale_parts": [],
+      "method": "Universe: the 60 Hyp…",
+      "checked": {
+       "funding_perps": 337,
+       "liquidation_coins": 24,
+       "open_interest_coins": 74,
+       "universe": 24
+      },
+      "flagged_total": 3,
+      "rules": {
+       "funding_abs_z": 2,
+       "liquidation_multiple": 3,
+       "liquidation_floor_usd": 50000,
+       "open_interest_abs_z": 3
+      }
+     },
+     "paid": true
+    },
+    "schema": {
+     "type": "object",
+     "properties": {
+      "tool": {
+       "type": "string"
+      },
+      "data": {
+       "type": "object",
+       "properties": {
+        "brief": {
+         "type": "string"
+        },
+        "as_of": {
+         "type": "string"
+        },
+        "window": {
+         "type": "object"
+        },
+        "headline": {
+         "type": "string"
+        },
+        "items": {
+         "type": "array"
+        },
+        "sources": {
+         "type": "array"
+        },
+        "stale_parts": {
+         "type": "array"
+        },
+        "method": {
+         "type": "string"
+        },
+        "checked": {
+         "type": "object"
+        },
+        "flagged_total": {
+         "type": "number"
+        },
+        "rules": {
+         "type": "object"
+        }
+       }
+      },
+      "paid": {
+       "type": "boolean"
+      }
+     }
+    }
+   },
+   "static": true
   }
  },
- "_outputs_recaptured_at": "2026-10-18T21:10:47.317Z",
+ "_outputs_recaptured_at": "2026-10-29T21:35:35.514Z",
  "_pruned_at": "2026-10-13T04:50:31.410Z",
  "_schemas_regenerated_at": "2026-10-29T21:07:44.425Z",
  "_outputs_dropped_at": "2026-10-13T04:50:35.546Z",

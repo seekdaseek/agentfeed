@@ -42,7 +42,7 @@ test('item 9: the paper route shows the slash form as its example on every surfa
   const D = require('../tools/discovery');
   const key = 'GET /api/paper/:doi';
   assert.ok(PRICES[key], 'same route key');
-  assert.equal(Object.keys(PRICES).length, 91, 'the route count is unchanged');
+  assert.equal(Object.keys(PRICES).length, 91 + 3, 'the route count is unchanged by the paper change (91 routes at R20e, plus the three pensio briefs)');
   assert.equal(PRICES[key].usd, 0.005, 'same price');
   assert.ok(PRICES[key].desc.length >= 180 && PRICES[key].desc.length <= 255, `${PRICES[key].desc.length} chars`);
   assert.ok(PRICES[key].desc.includes('/api/paper/10.1038/nature14539') && !/%2F/i.test(PRICES[key].desc));

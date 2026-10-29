@@ -83,9 +83,9 @@ Notional uses `filled_qty × avg_fill_price` — what actually executed — not 
 
 Every paid route, cheapest question last. Generated from
 [`/.well-known/x402.json`](https://x402.ochinimus.app/.well-known/x402.json),
-read 2026-10-18 — names, prices and routes are the manifest's, not a copy kept
+read 2026-10-29 — names, prices and routes are the manifest's, not a copy kept
 in sync by hand. What each one returns is under
-[90 tools](#90-tools-83-paid-data-routes--7-free--pricing), word for word as
+[93 tools](#93-tools-86-paid-data-routes--7-free--pricing), word for word as
 the service publishes it.
 
 | Tool | Price | Route |
@@ -105,9 +105,11 @@ the service publishes it.
 | `get_ocr` | $0.04 | `/api/ocr` |
 | `get_translate` | $0.04 | `/api/translate` |
 | `get_cascade_history` | $0.03 | `/api/cascade-history` |
+| `get_morning_brief` | $0.03 | `/api/morning-brief` |
 | `get_peg_sessions` | $0.03 | `/api/peg-sessions` |
 | `get_extract` | $0.025 | `/api/extract` |
 | `get_sol_token_check` | $0.025 | `/api/sol-token-check/{mint}` |
+| `get_anomaly_flag` | $0.02 | `/api/anomaly-flag` |
 | `get_base_launches` | $0.02 | `/api/base-launches` |
 | `get_cascade_forecast` | $0.02 | `/api/cascade-forecast` |
 | `get_exit_quote` | $0.02 | `/api/exit-quote` |
@@ -117,6 +119,7 @@ the service publishes it.
 | `get_liq_heatmap` | $0.02 | `/api/liq-heatmap` |
 | `get_liquidation_leaders` | $0.02 | `/api/liquidation-leaders` |
 | `get_market_state` | $0.02 | `/api/market-state` |
+| `get_move_alert` | $0.02 | `/api/move-alert` |
 | `get_oi_spike_scan` | $0.02 | `/api/oi-spike-scan` |
 | `get_peg_deviation` | $0.02 | `/api/peg-deviation` |
 | `get_summarize` | $0.02 | `/api/summarize` |
@@ -485,13 +488,23 @@ Without the `spendControls` line the same client throws "All payment requirement
 
 All of them were paid from our own test wallets.
 
-## 90 tools (83 paid data routes + 7 free) & pricing
+## 93 tools (86 paid data routes + 7 free) & pricing
 
-**83 paid + 7 free**, 90 total on the MCP rail (the eight prepaid-key routes below are HTTP only). Every call is metered individually in USDC over
-x402 — no bundles, no minimums. Calling all 83 paid data tools once costs **$1.137**. Counts and prices are summed from
-[the live manifest](https://x402.ochinimus.app/.well-known/x402.json), read 2026-10-15.
+**86 paid + 7 free**, 93 total on the MCP rail (the eight prepaid-key routes below are HTTP only). Every call is metered individually in USDC over
+x402 — no bundles, no minimums. Calling all 86 paid data tools once costs **$1.207**. Counts and prices are summed from
+[the live manifest](https://x402.ochinimus.app/.well-known/x402.json), read 2026-10-29.
 
 The flagship is [`get_squeeze_score`](#the-moat--our-own-liquidation-tape) — a 0-100 short-squeeze / long-flush composite built from funding, crowding, OI build and the liq-skew of our exclusive tape. One number, one dime, answers "is this trade crowded and about to hurt someone."
+
+### Briefs: what changed and the level to watch
+
+Short composed answers built only from data AgentFeed already collects. Each one sells the judgment (what changed, why it matters, the one level to watch), never a raw number; the text is templates filled from the numbers, with no language model, and every item names its sources and their age. No path or query parameter. A part that is stale is left out and named in `stale_parts`; when the core of a brief cannot be built the route answers 503 and is never billed. They are also open to a 30-day brief pass and a 24-hour brief day pass (`/keys`). The prices are proposed and can change; the live 402 challenge is authoritative.
+
+| Tool | Price | Route | What you get |
+|---|---|---|---|
+| `get_morning_brief` | $0.03 | `/api/morning-brief` | Use when an agent needs the overnight picture for BTC, ETH, SOL and HYPE in one answer. Returns the last 8 hours ranked by how abnormal each item is: price move against the coin's own usual 8-hour move, funding, open interest, liquidations (total, long/short split, biggest print), Fear and Greed, today's macro releases with UTC times, and the nearest liquidation cluster as the level to watch. A stale source is left out and named; with no sampler it answers 503, never billed. |
+| `get_move_alert` | $0.02 | `/api/move-alert` | Use when an agent needs to know which Hyperliquid perps moved unusually. Returns each coin whose 5-minute, 1-hour or 4-hour price move, or 1-hour open-interest change, is past its own measured tail (tiers from the coin's own history, sample size printed), labelled event-driven when a scheduled FOMC, CPI, NFP or PCE release explains it. An empty list is a valid answer. Stale inputs answer 503, never billed. |
+| `get_anomaly_flag` | $0.02 | `/api/anomaly-flag` | Use when an agent needs one check for what is abnormal across Hyperliquid perps right now. Returns funding, liquidation and open-interest anomalies in one ranked list, using the thresholds of /api/market-state, or nothing abnormal with what was checked. If a source is stale and nothing else was found it answers 503 rather than an all-clear, and is never billed. |
 
 ### The moat — our own liquidation tape
 

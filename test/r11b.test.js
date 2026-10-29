@@ -98,10 +98,10 @@ test('openapi: the two top-up routes declare their key header; no other route ga
   assert.deepEqual((api.paths['/api/keys/buy-1'].get.parameters || []).map((x) => x.name), [], 'buy routes unchanged here (their key_hash comes from META)');
 });
 
-test('openapi on the real table: exactly the 13 input-less data routes are left without parameters', { skip }, () => {
+test('openapi on the real table: exactly the 16 input-less data routes (13, plus the three pensio briefs) are left without parameters', { skip }, () => {
   const { PRICES, TAGS, BAZAAR_META } = require('../payments');
   const D = require('../tools/discovery');
   const api = D.buildOpenApi({ PRICES, TAGS, META: BAZAAR_META, FREE_TOOLS: ['get_fear_greed'], mpp: { active: false, routes: [] }, tempo: { active: false }, network: 'mainnet' });
   const bare = Object.entries(api.paths).filter(([, o]) => o.get && o.get['x-payment-info'] && !(o.get.parameters || []).length && !o.get.requestBody).map(([p]) => p).sort();
-  assert.deepEqual(bare, ['/api/base-gas', '/api/btc-price', '/api/eth-price', '/api/funding-pulse', '/api/jito-tips', '/api/liq-pulse', '/api/liquidation-stats', '/api/market-snapshot', '/api/positioning', '/api/priority-fees', '/api/sol-network', '/api/sol-price', '/api/trade-context']);
+  assert.deepEqual(bare, ['/api/anomaly-flag', '/api/base-gas', '/api/btc-price', '/api/eth-price', '/api/funding-pulse', '/api/jito-tips', '/api/liq-pulse', '/api/liquidation-stats', '/api/market-snapshot', '/api/morning-brief', '/api/move-alert', '/api/positioning', '/api/priority-fees', '/api/sol-network', '/api/sol-price', '/api/trade-context']);
 });

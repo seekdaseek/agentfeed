@@ -183,6 +183,8 @@ function freeHttp(FREE_TOOLS) {
 // which tape. exit-quote has to be tested before the liquidation tape because
 // it carries `liquidations` too.
 const GROUPS = [
+  // pensio: the briefs lead, so a buyer meets the composed answers before the raw tables
+  ['Briefs: what changed and the level to watch', ['brief']],
   ['Our own collateral exit-liquidity tape', ['collateral', 'exit-liquidity'], 'exclusive'],
   ['Our own tokenized-equity peg tape', ['rwa', 'peg', 'tokenized-stocks'], 'exclusive'],
   ['Our own liquidation tape', ['liquidations', 'cascade', 'squeeze', 'heatmap'], 'exclusive'],

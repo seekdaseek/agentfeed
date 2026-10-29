@@ -25,7 +25,7 @@ FetchExternalData` 只能找到它的定义）。网页界面里也没有对应�
 ## 1. 购买密钥
 
 密钥是一笔余额，通过一次 x402 付款购买，可使用该接口 402 挑战中提供的任意 exact 通道（自 2026 年 10 月 14 日起：Solana、
-Base、Polygon、Arbitrum、Arc、Algorand、Optimism、Monad 与 Avalanche 上的 USDC，另有 11 个网络按需提供；购买密钥不提供高频的 batch 与 Gateway 通道）。套餐：**试用 $0.25**、
+Base、Polygon、Arbitrum、Arc、Optimism、Monad 与 Avalanche 上的 USDC，另有 11 个网络按需提供；购买密钥不提供高频的 batch 与 Gateway 通道）。套餐：**试用 $0.25**、
 **$1**、**$5**、**$20**；充值 $5 与 $20。每次调用扣除该接口 x402 价格的一半（最低 $0.0005）。余额为使用额度：不可退款，
 不会过期。密钥是持有即可使用的凭证：任何持有者都能消耗余额，滥用将被吊销。
 

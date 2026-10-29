@@ -28,7 +28,7 @@ gateway such as claw402.
 ## 1. Buy a key
 
 A key is a balance bought with one x402 payment, on any exact rail the route's 402 challenge offers (USDC on Solana,
-Base, Polygon, Arbitrum, Arc, Algorand, Optimism, Monad and Avalanche since 14 Oct 2026, and eleven more networks on request; the high-frequency batch and Gateway accepts are not offered
+Base, Polygon, Arbitrum, Arc, Optimism, Monad and Avalanche (Algorand was in this list from 14 Oct to 29 Oct 2026), and eleven more networks on request; the high-frequency batch and Gateway accepts are not offered
 on key purchases). Packs: **trial $0.25**, **$1**, **$5**, **$20**; top-ups $5 and $20. Each call draws half the
 route's x402 price (minimum $0.0005). Credit is a usage credit: non-refundable, no expiry. The key is a bearer secret:
 anyone holding it spends the balance, and abuse means revocation.
@@ -73,7 +73,7 @@ If you hold that key, pass it to the script in (a): the same USDC that pays claw
 
 ### (c) From a Solana wallet, or another rail
 
-The 402 of every purchase route lists the same price on Solana, Base, Polygon, Arbitrum, Arc, Algorand, Optimism, Monad and
+The 402 of every purchase route lists the same price on Solana, Base, Polygon, Arbitrum, Arc, Optimism, Monad and
 Avalanche, so a Solana-only buyer pays in USDC on Solana (the facilitator pays the network fee: the wallet needs USDC, no SOL).
 The same script as (a), with the Solana scheme; `pass` is the bot pass below, or use `trial`, `1`, `5` or `20`:
 

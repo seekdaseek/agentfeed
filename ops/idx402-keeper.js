@@ -11,7 +11,7 @@
 // Key-pack rows (/api/keys/*) are treated like data rows: price from the local openapi, domain_verified through the PATCH; they do
 // not count toward the 80-route floor. RAILS (R10): the payment_network of an x402 row is the list of networks that route's own
 // live 402 offers, in canonical order; when that list is longer than 402index's 50-character cap it keeps as many names as fit and
-// ends ' +N more' (the live nine: 'Solana, Base, Polygon, Arbitrum, Arc +4 more'). Data rows read one reference data route
+// ends ' +N more' (the live eight: 'Solana, Base, Polygon, Arbitrum, Arc +3 more'). Data rows read one reference data route
 // (/api/sol-price), key rows their own route; both are cached for an hour so the keeper adds about one local 402 read an hour per
 // route to unpaid_402 instead of one every run. 402index never filters on this field (display only).
 // It writes nothing while the listing is right. Upstream fix: ryanthegentry/402index PR #354 (unmerged); issue #346.

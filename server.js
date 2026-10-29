@@ -165,9 +165,12 @@ app.use((req, _res, next) => {
 // of /api/x|network) and BEFORE the key reserve, the refusal recorder, x402 v1 and v2, tempo and MPP, a value the handler would reject is a 400:
 // no challenge, no price, no reserve, nothing to sign. Shape only, with the handler's own validator; existence is still the handler's answer.
 const routeUrls = require('./lib/route-urls').makeRouteUrls({ ORIGIN: require('./tools/discovery').ORIGIN, meta: BAZAAR_META });
-const paramGuard = require('./lib/param-guard').makeParamGuard({ PRICES, routeUrls, db });
+// R20f: AF_QUERY_GUARD=off turns the QUERY rules (lib/query-rules.js) off and leaves the path rules on: the operator's way back if a rule ever refuses a value the
+// handler would have served, and how test/query-guard-real-server.test.js reads the handler's own answer to the same request.
+const queryGuardOn = (process.env.AF_QUERY_GUARD || 'on').toLowerCase() !== 'off';
+const paramGuard = require('./lib/param-guard').makeParamGuard({ PRICES, routeUrls, db, ...(queryGuardOn ? {} : { queryRules: {} }) });
 app.use(paramGuard.middleware);
-console.log(`[param-guard] ${paramGuard.rules.length} path-parameter routes refuse an impossible value before the paywall${paramGuard.unguarded.length ? ` (${paramGuard.unguarded.length} unguarded)` : ''}`);
+console.log(`[param-guard] ${paramGuard.rules.length} path-parameter routes refuse an impossible value before the paywall${paramGuard.unguarded.length ? ` (${paramGuard.unguarded.length} unguarded)` : ''}; query rules: ${queryGuardOn ? `${paramGuard.queryRoutes.reduce((n, r) => n + r.rules.length, 0)} on ${paramGuard.queryRoutes.length} routes` : 'OFF (AF_QUERY_GUARD=off)'}`);
 
 // ---- prepaid keys: refusals that must come before anyone pays (a duplicate key_hash is a 409, a top-up needs its key),
 // then the atomic reserve for a call that carries a valid key. A key never reaches x402: an unknown, pending or revoked

@@ -423,7 +423,7 @@ Terms re-read by the Phase B session on **2026-10-13** (the planning chat had re
 
 CDP facilitator (x402 exact on Base, Polygon, Arbitrum, Solana and World Chain; batch-settlement on Base, Polygon,
 Arbitrum, R5), Circle Facilitator Service (Arc), Circle Gateway (nanopayments on Arc; on Base, Polygon,
-Arbitrum too until 18 Oct 2026, R5), GoPlausible (Algorand, R5), Ultravioleta (Optimism, Monad, Avalanche in every 402; Celo, HyperEVM,
+Arbitrum too until 18 Oct 2026, R5), GoPlausible (Algorand, R5; switched off since 29 Oct 2026, see below), Ultravioleta (Optimism, Monad, Avalanche in every 402; Celo, HyperEVM,
 Unichain, Scroll, SKALE Base, BNB Chain, Ethereum and Robinhood Chain on request, R10), PayAI (Sei and X Layer on request, R10),
 Tempo RPC (MPP tempo/charge), the Solana RPC named by `MPP_RPC_URL` (MPP solana/charge verification: the public mainnet node api.mainnet-beta.solana.com since 24 Oct 2026, Helius before). Their terms govern
 settlement, not data resale, and are out of scope here.
@@ -435,6 +435,18 @@ reserve, the refusal recorder, x402 v1 and v2, tempo and MPP, so no 402 is issue
 copy of anyone's data. Rejections are counted per day, route, kind (`placeholder` for a copied `:wallet` or `{wallet}`, `invalid` for any other value), address
 and user agent in the `param_rejected` table, one counter row, never one row per request. The documents print a working example URL for each of the 12
 path-parameter routes (values from `bazaar-examples.json`, wallets and mints are public addresses) and the `{name}` template beside it, labelled as a template.
+The catalogue lists the concrete URL (a directory keyed on the URL may show a route twice: cosmetic, accepted 29 Oct 2026; a listed URL that answers 400 is broken). The DOI example is
+one segment (`10.1038%2Fnature14539`, the URL CDP's index already holds). CDP's `/validate` fails this route on `bazaar.routeTemplate.matches_resource` with either spelling (a DOI contains a slash and the check behaves as if it decodes the path first); the other 90 routes validate.
+
+### Query parameters are checked before payment (R20f, 29 Oct 2026)
+
+Same module, same counter table (`kind` = `query`). `lib/query-rules.js` holds 52 rules on 30 routes, each a copy of a check the route's handler already answers with a 400; it reads no upstream and
+stores nothing but the counter. A missing parameter is never refused (the query-less URL is the catalogue entry and stays a 402). `AF_QUERY_GUARD=off` switches the query rules off.
+
+### Algorand is switched off (29 Oct 2026)
+
+`X402_ALGO=off` on the live box: the GoPlausible Algorand network id is not a CAIP-2 identifier and makes CDP's Bazaar validate fail its required `parse` check on every route
+(measured 29 Oct 2026; with the rail off, `valid: true` on 90 of 91 routes, the exception being `/api/paper/{doi}`, see above). No Algorand payment was ever received. GoPlausible is not called while the rail is off.
 
 ### Prepaid keys (R9, 14 Oct 2026)
 

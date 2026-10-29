@@ -48,6 +48,20 @@ test('every published example value passes the guard, the MCP schema and the pat
   }
 });
 
+test('a published concrete URL has exactly the segments of its route template (a matcher that splits the path accepts it)', () => {
+  // measured 29 Oct 2026: CDP validate fails /api/paper/10.1038/nature14539 AND /api/paper/10.1038%2Fnature14539 on bazaar.routeTemplate.matches_resource
+  // against /api/paper/:doi (it appears to decode the path before it splits it; a %72 inside another route's segment passes), so no spelling of a DOI passes
+  // that lint. The one-segment spelling is kept: a matcher that does not decode accepts it and it is the URL CDP's index already holds for the route
+  for (const pattern of PARAM_ROUTES) {
+    const template = pattern.replace(/^GET /, '');
+    const concrete = routeUrls.concretePath(pattern);
+    assert.equal(concrete.split('/').length, template.split('/').length, `${pattern}: ${concrete} has as many segments as ${template}`);
+  }
+  assert.equal(routeUrls.concretePath('GET /api/paper/:doi'), '/api/paper/10.1038%2Fnature14539', 'control: the DOI route is the case that mattered');
+  // the literal-slash spelling is still a valid request (lib/slash-path.js), it is only not the one the catalogues publish
+  assert.equal(guard.check('GET /api/paper/:doi', '10.1038/nature14539'), null);
+});
+
 test('the six name-keyed validators: valid values pass, impossible values and every placeholder spelling are refused with a named reason', () => {
   const valid = {
     wallet: ['Gack9UtqfeZxFA1LqeqjLgC3JGuD7rS6CsSHKoXsD4Tu', '4a8o45skRPcyjAdyR8yES215Swvh8uTpZD6KLarhxCJ7', 'So11111111111111111111111111111111111111112'],

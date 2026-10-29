@@ -282,4 +282,4 @@ function decodeSymbol(hex) {
   return null;
 }
 
-module.exports = { getBaseGas, getBaseBalance, BASE_TOKENS, CHAINS, _scaled: scaled, _decodeSymbol: decodeSymbol, RPCS };
+module.exports = { getBaseGas, getBaseBalance, BASE_TOKENS, CHAINS, CHAIN_ALIAS, _scaled: scaled, _decodeSymbol: decodeSymbol, RPCS };

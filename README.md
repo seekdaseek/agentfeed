@@ -5,7 +5,7 @@
 
 **Crypto market data for AI agents (liquidations, funding, open interest, prices), Solana pre-trade checks, OFAC sanctions screening, scholarly papers, utilities and fixed-purpose language tasks (OCR, translate, summarize, extract, classify, prompt-injection check, transcribe). Pay per call in USDC. No accounts, no subscriptions, and no API key needed (prepaid keys are optional, for bots that cannot pay x402).**
 
-AgentFeed sells live trading data through the [x402 payment protocol](https://solana.com/x402) on Solana, Base, Polygon, Arbitrum, Arc, Algorand, Optimism, Monad and Avalanche, and on request on Celo, HyperEVM, Unichain, Scroll, SKALE Base, BNB Chain, Ethereum, Robinhood Chain, World Chain, Sei and X Layer (`GET /api/<route>|<network>`). An agent hits an endpoint, gets a `402 Payment Required` with the price, pays a fraction of a cent in USDC (or the dollar token the network names) from its own wallet, and receives the data — in about two seconds, gas sponsored by the facilitator.
+AgentFeed sells live trading data through the [x402 payment protocol](https://solana.com/x402) on Solana, Base, Polygon, Arbitrum, Arc, Optimism, Monad and Avalanche, and on request on Celo, HyperEVM, Unichain, Scroll, SKALE Base, BNB Chain, Ethereum, Robinhood Chain, World Chain, Sei and X Layer (`GET /api/<route>|<network>`). An agent hits an endpoint, gets a `402 Payment Required` with the price, pays a fraction of a cent in USDC (or the dollar token the network names) from its own wallet, and receives the data — in about two seconds, gas sponsored by the facilitator.
 
 Two rails, same data:
 
@@ -188,9 +188,9 @@ Every paid route answers `402` with an x402 v2 challenge in the `PAYMENT-REQUIRE
 the same challenge as an x402 v1 body (`{x402Version: 1, accepts}`) for Base and Solana. Pay with
 `PAYMENT-SIGNATURE` (v2, any rail) or `X-PAYMENT` (v1 on Base or Solana, verified and settled
 through the CDP facilitator's v1 kinds; Polygon and Arbitrum have no v1 kind there and stay v2).
-Nine networks are in every 402 and eleven more are offered on request (see "Pay on any chain"). Each network is settled by
+Eight networks are in every 402 and eleven more are offered on request (see "Pay on any chain"); Algorand is built but switched off, see "Algorand is switched off" below. Each network is settled by
 exactly one facilitator: CDP for Solana, Base, Polygon, Arbitrum and World Chain; Circle's Facilitator Service for Arc, to a
-dedicated Arc address; GoPlausible for Algorand; Ultravioleta for Optimism, Monad, Avalanche, Celo, HyperEVM, Unichain, Scroll,
+dedicated Arc address; GoPlausible for Algorand (switched off); Ultravioleta for Optimism, Monad, Avalanche, Celo, HyperEVM, Unichain, Scroll,
 SKALE Base, BNB Chain, Ethereum and Robinhood Chain; PayAI for Sei and X Layer. `payments.js` gives each facilitator client only
 its own networks, so a payment on one network can never reach another's facilitator.
 Every paid route also carries MPP `tempo`/`charge` challenges in `WWW-Authenticate` (Tempo
@@ -283,7 +283,13 @@ Twelve routes take their argument as the last path segment: `/api/wallet-activit
 instead: [`/.well-known/x402.json`](https://x402.ochinimus.app/.well-known/x402.json) lists
 `https://x402.ochinimus.app/api/wallet-activity/Gack9UtqfeZxFA1LqeqjLgC3JGuD7rS6CsSHKoXsD4Tu` as the `resource` and the `{wallet}` form as
 `resource_template`; `openapi.json` gives each path parameter an `example` and the `pattern`, `minLength` and `maxLength` it must satisfy; the 402's Bazaar
-declaration carries the same schema.
+declaration carries the same schema. The DOI example is published as one segment, `/api/paper/10.1038%2Fnature14539` (the URL CDP's index already holds for this route); the
+slash spelling `/api/paper/10.1038/nature14539` is still served. CDP's `/validate` fails this one route on `bazaar.routeTemplate.matches_resource` with either spelling (it
+behaves as if it decodes the path before splitting it, and a DOI always contains a slash); the other 90 priced routes validate. The existing `?doi=` alias fails it too (measured: its 402 still names the template `/api/paper/:doi`); only a priced route whose template has no DOI in the path would pass, which is a route redesign and an open decision.
+
+**Trade-off, decided 29 Oct 2026:** the catalogue lists these concrete example URLs, not the `{wallet}` templates. A directory that keys its listing on the URL
+(Agent402 does) may therefore show a route twice, once from the catalogue and once from the 402's own route template. That is cosmetic. A listed URL that answers
+400 is broken, which is what the literal templates were. To go back, change the `concrete` line in `buildWellKnown` (`tools/discovery.js`).
 
 A value that can never be served is refused **before** the paywall. `GET /api/wallet-activity/:wallet` and `GET /api/wallet-activity/notawallet` answer
 `400` with the reason, the shape expected, a working example URL and `"charged": false`: no 402, no challenge, no prepaid-key reserve, nothing sent to a
@@ -293,6 +299,29 @@ mint is 32 to 44 base58 characters, a coin 1 to 20 letters or digits, an address
 more is never settled on any rail (`test/param-guard-real-server.test.js`). Over MCP the same patterns are in each tool's input schema, so an impossible
 argument is rejected before the payment prompt. MPP `solana/charge` settles on chain before the handler runs, so it is offered only on the two routes that take
 no input (`/api/sol-price`, `/api/btc-price`); MPP `tempo/charge` and every x402 scheme settle after it.
+
+### Query parameters are checked before payment (R20f, 29 Oct 2026)
+
+The same guard covers the values of query parameters that a route's handler would refuse with a 400 anyway: an integer outside its range
+(`/api/sol-token-flow/{mint}?swaps=5` needs 20 to 100), a word outside its list (`?alg=md5`, `?format=jpeg`, `?length=long`, `?class=bonds`), a code of the wrong
+shape (`?base=EURO`, `?lang=english`, a 0x address that is not 40 hex digits), a `url=` that is not an absolute http or https URL (`?url=example.com`), a `text` or
+`data` over the route's length cap (4,000 characters; 2,048 bytes), a `schema=` that is not the JSON object the route needs. Such a request answers `400` with `error`, `param`, `expected`, `received`,
+a working `example` URL and `"charged": false`, before any 402 (`lib/query-rules.js`, mounted by `lib/param-guard.js`). The rules copy the handler's own checks and
+read a value the way the handler does (`Number()` on the raw text, words lower-cased, an empty value is "not given"); `test/query-guard-real-server.test.js` runs the real
+server twice, with the rules on and off, and requires that every value the guard refuses is refused by the handler with the same sentence. Not guarded, on purpose:
+a **missing** parameter (the query-less URL of each route is the one every catalogue lists, and it stays a 402), symbols and tickers that need an upstream to be judged
+(Hyperliquid's universe, the SEC list), URLs and free text, and limits the handler clamps instead of refusing (`limit` on `/api/liquidations`, `window` on
+`/api/cascade`, and others). 52 rules on 30 routes today; the full list is `lib/query-rules.js`. The integer and number ranges are also in each MCP tool's input schema and in the `minimum` / `maximum` of `openapi.json` and of
+the Bazaar declaration. `AF_QUERY_GUARD=off` in the environment (restart) switches the query rules off and leaves the path rules on.
+
+### Algorand is switched off (29 Oct 2026)
+
+`X402_ALGO=off` is set on the live box. CDP's Bazaar validator (`POST https://api.cdp.coinbase.com/platform/v2/x402/validate`) parses every accept of a route, and a network id
+outside the CAIP-2 grammar (`namespace:reference`, the reference 1 to 32 characters of `[-_a-zA-Z0-9]`) fails its required check `parse`; the whole route is then
+`rejected: invalid discovery configuration` (measured on all 91 priced routes). The Algorand id that the GoPlausible facilitator publishes,
+`algorand:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=`, is 44 characters with a trailing `=`. With the rail off 90 of the 91 routes validate (`valid: true`, simulation `accepted`, 25
+of 25 checks pass); the 91st, `/api/paper/{doi}`, fails only `bazaar.routeTemplate.matches_resource` (see "Path parameters"). No payment was ever made on Algorand. The code stays (`lib/rails.js`); to offer the rail again, remove the line and restart, once CDP accepts the id
+or the facilitator publishes a CAIP-2 one. `test/caip2-networks.test.js` fails if any other network id leaves the grammar.
 
 ### batch-settlement, on Base
 
@@ -394,7 +423,7 @@ All of them were paid from our own test wallets.
 
 ## Pay on any chain
 
-Nine networks are in every paid route's `402`; eleven more are offered on request. Ask for one by suffixing the route: `GET /api/<route>|<network>` (the `|` may be sent as `%7C`), for example `/api/sol-price|eip155:42220` for Celo. The `402` that comes back carries the default accepts plus that network's accept, and a payment on any network is accepted on the plain URL too. The prepaid-key purchase routes carry the nine only. The first six networks (Solana, Base, Polygon, Arbitrum, Arc, Algorand) are described under "Two payment protocols on one 402" and "Pay on Arc"; the table lists the other fourteen, generated from `lib/ext-rails.js`. Every row is `scheme: exact` (EIP-3009), paid to the same EVM treasury, settled by the one facilitator named in the row.
+Eight networks are in every paid route's `402`; eleven more are offered on request. Ask for one by suffixing the route: `GET /api/<route>|<network>` (the `|` may be sent as `%7C`), for example `/api/sol-price|eip155:42220` for Celo. The `402` that comes back carries the default accepts plus that network's accept, and a payment on any network is accepted on the plain URL too. The prepaid-key purchase routes carry the eight only. The first five networks (Solana, Base, Polygon, Arbitrum, Arc) are described under "Two payment protocols on one 402" and "Pay on Arc"; the table lists the other fourteen, generated from `lib/ext-rails.js`. Every row is `scheme: exact` (EIP-3009), paid to the same EVM treasury, settled by the one facilitator named in the row.
 
 | Network | CAIP-2 id | Token and address | Decimals | Facilitator | Offered | Minimum route price |
 |---|---|---|---|---|---|---|

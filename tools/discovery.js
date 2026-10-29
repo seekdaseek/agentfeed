@@ -139,6 +139,9 @@ function schemaFor(prop) {
   if (prop.pattern) out.pattern = prop.pattern;
   if (prop.minLength != null) out.minLength = prop.minLength;
   if (prop.maxLength != null) out.maxLength = prop.maxLength;
+  // R20f: a query parameter publishes the range lib/query-rules.js enforces (the same numbers the MCP schema carries)
+  if (prop.minimum != null) out.minimum = prop.minimum;
+  if (prop.maximum != null) out.maximum = prop.maximum;
   if (!Object.keys(out).length) out.type = 'string';
   return out;
 }

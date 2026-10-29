@@ -254,7 +254,7 @@ test('crawl: every URL a discovery document tells a caller to GET answers as wri
     for (const prm of (o.get.parameters || []).filter((x) => x.in === 'path')) {
       assert.ok(prm.example != null, `${p}: path parameter ${prm.name} carries an example`);
       assert.ok(prm.schema && (prm.schema.pattern || prm.schema.enum || prm.schema.minLength || prm.schema.maxLength), `${p}: and the shape it must have`);
-      filled = filled.replace(`{${prm.name}}`, String(prm.example).replace(/%2F/gi, '/'));
+      filled = filled.replace(`{${prm.name}}`, String(prm.example));
     }
     add(filled, `openapi example for ${p}`);
   }

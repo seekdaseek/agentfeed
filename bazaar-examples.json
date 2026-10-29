@@ -4770,11 +4770,15 @@
     "properties": {
      "min_liq_usd": {
       "description": "minimum quote-side liquidity (ETH, WETH or USDC held) in USD, default 1000; 0 lists every launch",
-      "type": "number"
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1000000000000
      },
      "limit": {
       "description": "launches returned, newest first, 1-100, default 20",
-      "type": "number"
+      "type": "number",
+      "minimum": 1,
+      "maximum": 100
      }
     },
     "required": []
@@ -4907,7 +4911,9 @@
      },
      "top": {
       "description": "coins (or positions with coin=) returned, 1-50, default 20",
-      "type": "number"
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50
      }
     },
     "required": []
@@ -5183,7 +5189,9 @@
      },
      "limit": {
       "description": "filings returned, 1-50, default 10",
-      "type": "number"
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50
      }
     },
     "required": [
@@ -5286,7 +5294,9 @@
      },
      "days": {
       "description": "look-back window in days, 1-180, default 30",
-      "type": "number"
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 180
      }
     },
     "required": [
@@ -5409,7 +5419,9 @@
     "properties": {
      "hours": {
       "description": "look-back window in hours, 1-72, default 24",
-      "type": "number"
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 72
      }
     },
     "required": []
@@ -6042,7 +6054,9 @@
     "properties": {
      "n": {
       "description": "coins returned, ranked by open interest in USD, 1-60, default 30",
-      "type": "number"
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 60
      },
      "coins": {
       "description": "comma list of Hyperliquid coins instead of the top n, at most 20, e.g. BTC,ETH,SOL",
@@ -7114,11 +7128,15 @@
      },
      "year_from": {
       "description": "earliest publication year, e.g. 2022",
-      "type": "number"
+      "type": "integer",
+      "minimum": 1000,
+      "maximum": 9999
      },
      "limit": {
       "description": "papers returned, 1-25, default 10",
-      "type": "number"
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 25
      }
     },
     "required": [
@@ -7843,7 +7861,9 @@
     "properties": {
      "swaps": {
       "description": "swaps to read, 20-100, default 50; a 20 second budget may return fewer, flagged truncated",
-      "type": "number"
+      "type": "integer",
+      "minimum": 20,
+      "maximum": 100
      }
     },
     "required": []
@@ -9173,7 +9193,7 @@
  },
  "_outputs_recaptured_at": "2026-10-18T21:10:47.317Z",
  "_pruned_at": "2026-10-13T04:50:31.410Z",
- "_schemas_regenerated_at": "2026-10-29T18:46:31.898Z",
+ "_schemas_regenerated_at": "2026-10-29T21:07:44.425Z",
  "_outputs_dropped_at": "2026-10-13T04:50:35.546Z",
  "_f6_recaptured_at": "2026-10-14T12:13Z injection-check: plain example input (R10 F6), output captured on the box from tools/injection.js"
 }

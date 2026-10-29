@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:foaf="http://xmlns.com/foaf/0.1/" xmlns:og="http://ogp.me/ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:schema="http://schema.org/" xmlns:sioc="http://rdfs.org/sioc/ns#" xmlns:sioct="http://rdfs.org/sioc/types#" xmlns:skos="http://www.w3.org/2004/02/skos/core#" xmlns:xsd="http://www.w3.org/2001/XMLSchema#" version="2.0" xml:base="https://www.cftc.gov/">
+  <channel>
+    <title>Press Releases</title>
+    <link>https://www.cftc.gov/</link>
+    <description/>
+    <language>en</language>
+    
+    <item>
+  <title>CFTC to Host Roundtable on 24/7 Trading</title>
+  <link>https://www.cftc.gov/PressRoom/PressReleases/9318-26</link>
+  <description/>
+  <pubDate>Wed, 28 Oct 2026 17:00:53 +0000</pubDate>
+    <dc:creator>CCollins</dc:creator>
+    <guid isPermaLink="true">https://www.cftc.gov/PressRoom/PressReleases/9318-26</guid>
+    </item>
+<item>
+  <title>ICYMI: Agricultural Leaders and Market Participants Join CFTC Chairman Selig in Overland Park, Kansas for AgCon 2026</title>
+  <link>https://www.cftc.gov/PressRoom/PressReleases/9317-26</link>
+  <description/>
+  <pubDate>Tue, 27 Oct 2026 19:22:28 +0000</pubDate>
+    <dc:creator>dfaulk-white</dc:creator>
+    <guid isPermaLink="true">https://www.cftc.gov/PressRoom/PressReleases/9317-26</guid>
+    </item>
+<item>
+  <title>CFTC Announces Semiweekly Publication of the COT Report</title>
+  <link>https://www.cftc.gov/PressRoom/PressReleases/9316-26</link>
+  <description/>
+  <pubDate>Tue, 27 Oct 2026 17:47:15 +0000</pubDate>
+    <dc:creator>CCollins</dc:creator>
+    <guid isPermaLink="true">https://www.cftc.gov/PressRoom/PressReleases/9316-26</guid>
+    </item>
+<item>
+  <title>CFTC Sues to Block State Enforcement in Utah Amid Ongoing Efforts to Preserve Jurisdiction </title>
+  <link>https://www.cftc.gov/PressRoom/PressReleases/9315-26</link>
+  <description/>
+  <pubDate>Tue, 27 Oct 2026 12:58:38 +0000</pubDate>
+    <dc:creator>dfaulk-white</dc:creator>
+    <guid isPermaLink="true">https://www.cftc.gov/PressRoom/PressReleases/9315-26</guid>
+    </item>
+<item>
+  <title>CFTC and National Basketball Association Sign MOU to Protect Integrity in Professional Basketball</title>
+  <link>https://www.cftc.gov/PressRoom/PressReleases/9314-26</link>
+  <description/>
+  <pubDate>Mon, 26 Oct 2026 14:00:00 +0000</pubDate>
+    <dc:creator>CCollins</dc:creator>
+    <guid isPermaLink="true">https://www.cftc.gov/PressRoom/PressReleases/9314-26</guid>
+    </item>
+<item>
+  <title>CFTC’s Innovation Task Force Announces Agenda &amp; Panelists for Inaugural Frontier Forum on Super Intelligence </title>
+  <link>https://www.cftc.gov/PressRoom/PressReleases/9312-26</link>
+  <description/>
+  <pubDate>Tue, 20 Oct 2026 18:00:00 +0000</pubDate>
+    <dc:creator>dfaulk-white</dc:creator>
+    <guid isPermaLink="true">https://www.cftc.gov/PressRoom/PressReleases/9312-26</guid>
+    </item>
+<item>
+  <title>CFTC Seeks Public Comment on Notice of Proposed Rulemaking Concerning the Inclusion of Certain Event Contracts in the Definition of Swap  </title>
+  <link>https://www.cftc.gov/PressRoom/PressReleases/9310-26</link>
+  <description/>
+  <pubDate>Fri, 09 Oct 2026 20:00:26 +0000</pubDate>
+    <dc:creator>dfaulk-white</dc:creator>
+    <guid isPermaLink="true">https://www.cftc.gov/PressRoom/PressReleases/9310-26</guid>
+    </item>
+<item>
+  <title>CFTC Issues Interim Final Rule Excluding Certain Activity from the Definition of Swap  </title>
+  <link>https://www.cftc.gov/PressRoom/PressReleases/9309-26</link>
+  <description/>
+  <pubDate>Fri, 09 Oct 2026 19:30:51 +0000</pubDate>
+    <dc:creator>dfaulk-white</dc:creator>
+    <guid isPermaLink="true">https://www.cftc.gov/PressRoom/PressReleases/9309-26</guid>
+    </item>
+<item>
+  <title>CFTC Issues No-Action Letter for DCMs Regarding Converting Existing Perpetual-Style Broad-Based Security Index Futures into True Perpetual Futures  </title>
+  <link>https://www.cftc.gov/PressRoom/PressReleases/9308-26</link>
+  <description/>
+  <pubDate>Mon, 05 Oct 2026 17:00:00 +0000</pubDate>
+    <dc:creator>dfaulk-white</dc:creator>
+    <guid isPermaLink="true">https://www.cftc.gov/PressRoom/PressReleases/9308-26</guid>
+    </item>
+<item>
+  <title>CFTC Seeks Public Comment on Advanced Notice of Proposed Rulemaking Relating to Regulation Crypto Asset Transactions and Regulation Crypto Asset Markets</title>
+  <link>https://www.cftc.gov/PressRoom/PressReleases/9307-26</link>
+  <description/>
+  <pubDate>Mon, 05 Oct 2026 15:40:00 +0000</pubDate>
+    <dc:creator>CCollins</dc:creator>
+    <guid isPermaLink="true">https://www.cftc.gov/PressRoom/PressReleases/9307-26</guid>
+    </item>
+
+  </channel>
+</rss>

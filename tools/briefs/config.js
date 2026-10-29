@@ -33,6 +33,7 @@ const soldRoutes = () => ALL_ROUTES.filter((r) => r !== ROUTES.news || newsOn())
 // parts whose tool has none.
 const MAX_AGE_S = {
   fear_greed: 36 * 3600,     // alternative.me publishes the index once a day; its own tool memoises 30 min and states no bound
+  news_snapshot: 3 * 3600,   // the news collector runs every 30 minutes; a source not read for 3 hours is stale and its items are left out
   calibration: 45 * 86400,   // the move-alert tails (bin/brief-calibrate.js); older than this the table is refused and the route answers 503
 };
 

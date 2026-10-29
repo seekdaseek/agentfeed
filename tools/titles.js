@@ -42,7 +42,7 @@ const TOOL_TITLES = {
   get_ocr: 'Image to text (OCR)', get_summarize: 'Page or PDF summary', get_extract: 'Structured extraction', get_translate: 'Translation',
   get_classify: 'Text classification', get_injection_check: 'Prompt injection check', get_transcribe: 'Speech to text',
   // pensio (30 Oct 2026)
-  get_morning_brief: 'Morning brief', get_move_alert: 'Move alert', get_anomaly_flag: 'Anomaly flag',
+  get_morning_brief: 'Morning brief', get_move_alert: 'Move alert', get_anomaly_flag: 'Anomaly flag', get_news_brief: 'Regulatory news brief',
 };
 
 module.exports = { TOOL_TITLES };

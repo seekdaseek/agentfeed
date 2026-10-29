@@ -579,6 +579,15 @@ const EXP = [
     run: (a) => BR.getAnomalyFlag(a) },
 ];
 
+// pensio: the news brief exists only while PENSIO_NEWS=on (tools/briefs/config.js newsOn). Off, the route is not in PRICES, the documents, the Bazaar or MCP.
+if (BRC.newsOn()) {
+  EXP.push({ name: 'get_news_brief', route: `GET ${BRC.ROUTES.news}`, usd: BRC.PRICES_PROPOSED.news,
+    tags: ['brief', 'news', 'macro', 'regulation', 'trading'],
+    desc: 'Use when an agent needs the official regulatory and central-bank news of the last 24 hours, sorted. Returns SEC, CFTC and Federal Reserve Board press releases, each with its agency, link and time, a label (enforcement, rule change, rates and policy, supervision, market structure, administrative, other) and an impact score from 1 to 5, ranked by impact. Release text is treated as data. If no source has been read for 3 hours it answers 503, never billed.',
+    schema: {},
+    run: (a) => BR.getNewsBrief(a) });
+}
+
 // ---- derived exports ----
 const PRICES_ADD = {};
 const TAGS_ADD = {};

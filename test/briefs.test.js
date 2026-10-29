@@ -278,3 +278,14 @@ test('templates: no NaN, undefined, null or object leak and no buy / sell wordin
   for (const b of seen) { assert.doesNotMatch(b.method, E.TRADE_CALL); assert.doesNotMatch(b.method, /NaN|undefined/); assert.doesNotMatch(JSON.stringify(b), /since \d{1,2} [A-Z][a-z]+ 20\d\d|since 20\d\d/); }
   assert.ok(strings > 200);
 });
+
+test('envelope: a leaked non-value in an item\'s sentence refuses the whole brief; in a third party\'s own title (what_template) only our part is checked', () => {
+  const col = E.collector(NOW);
+  const base = { why_it_matters: 'ok sentence', numbers: {}, source: 's', as_of: 'x', abnormality: 1 };
+  const env = (items) => E.envelope({ brief: 't', now: NOW, window: {}, items, col, method: 'm', emptyHeadline: 'none' });
+  assert.throws(() => env([{ ...base, what: 'SOL NaN% over 8 hours' }]), /leaked a non-value/);
+  assert.throws(() => env([{ ...base, what: 'ok', why_it_matters: 'it was undefined' }]), /leaked a non-value/);
+  assert.throws(() => env([{ ...base, what: 'SEC press release, 2 hours ago, other: a title', what_template: 'SEC press release, NaN hours ago, other:' }]), /leaked a non-value/);
+  const ok = env([{ ...base, what: 'SEC press release, 2 hours ago, other: Order declaring a contract null and void', what_template: 'SEC press release, 2 hours ago, other:' }]);
+  assert.match(ok.headline, /null and void/);
+});

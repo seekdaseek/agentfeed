@@ -94,7 +94,8 @@ function collector(nowMs) {
 function envelope({ brief, now, window, items, col, method, emptyHeadline, extra = {} }) {
   const ordered = items.map((it) => {
     const o = {
-      what: clean(it.what), why_it_matters: clean(it.why_it_matters),
+      // `what_template` is the part of `what` that is OUR template; the rest is a third party's own text (a release title), which is data and is not leak-checked
+      what: it.what_template ? (clean(it.what_template), String(it.what)) : clean(it.what), why_it_matters: clean(it.why_it_matters),
       ...(it.level_to_watch ? { level_to_watch: it.level_to_watch } : {}),
       numbers: it.numbers, source: it.source, as_of: it.as_of, abnormality: r(it.abnormality, 2),
     };

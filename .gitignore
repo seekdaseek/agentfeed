@@ -123,3 +123,9 @@ data/disposable-domains.txt
 data/openalex-searches.json
 data/gemini-usage.jsonl
 data/gemini-spend.json
+
+# pensio news brief (PENSIO_NEWS=on): the collector snapshot and the classifier label cache
+news.json
+news.json.tmp
+news-labels.json
+news-labels.json.tmp

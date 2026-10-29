@@ -6,4 +6,5 @@ module.exports = {
   get getMorningBrief() { return require('./morning').getMorningBrief; },
   get getMoveAlert() { return require('./move').getMoveAlert; },
   get getAnomalyFlag() { return require('./anomaly').getAnomalyFlag; },
+  get getNewsBrief() { return require('./news').getNewsBrief; },
 };

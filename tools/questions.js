@@ -62,6 +62,7 @@ const QUESTIONS = {
   get_morning_brief: 'What changed overnight in BTC, ETH, SOL and HYPE, and what is the one level to watch?',
   get_move_alert: 'Which Hyperliquid perps moved unusually, and was it the calendar or unexplained flow?',
   get_anomaly_flag: 'Is anything abnormal in funding, liquidations or open interest across the perps right now?',
+  get_news_brief: 'What did the SEC, the CFTC and the Federal Reserve Board publish in the last 24 hours, and which of it matters?',
   get_macro_calendar: 'When are the next FOMC decision and CPI, NFP and PCE releases?',
   get_tradfi_radar: 'Which stock, index, gold or oil perps have extreme funding right now?',
   get_equity_24h: 'What is this stock trading at right now, even on the weekend?',

@@ -378,4 +378,4 @@ if (require.main === module) (async () => {
   else { console.error('usage: node ops/af-digest.js --digest [--force] [--test] | --alert [--dry]'); process.exit(1); }
 })().catch((e) => { console.log(`${new Date().toISOString()} af-digest failed: ${String(e.message).slice(0, 200)}`); process.exit(1); });
 
-module.exports = { shapeOf, yesterday, offsetMin, digestText, keysLines, circleAuthAlert, keyLowAlert, circleAuthRowsBetween, CIRCLE_AUTH_RE };
+module.exports = { shapeOf, isOwn, yesterday, offsetMin, digestText, keysLines, circleAuthAlert, keyLowAlert, circleAuthRowsBetween, CIRCLE_AUTH_RE };

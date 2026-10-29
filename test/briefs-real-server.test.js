@@ -232,3 +232,31 @@ test('a stale liquidation tape (the real accessor reads the tape\'s newest print
   assert.match(JSON.parse(a.body).error, /liquidation tape/);
   assert.deepEqual(tapeStale.fac.log.filter((x) => x.op === 'settle'), [], 'the 503 was not settled');
 });
+
+test('the brief pass on the real server: the purchase is a paid 402, a stub-settled purchase activates the key, the key reads a brief with nothing drawn, and another route is a 403', async () => {
+  const KL = require('../lib/keys');
+  for (const kind of [KL.BRIEF_PASS, KL.BRIEF_DAY_PASS]) {
+    const ch = await get(s, kind.path);
+    assert.equal(ch.status, 402, `unpaid ${kind.path}`);
+    const accepts = H.unb64(ch.headers['payment-required']).accepts;
+    assert.ok(accepts.every((a) => a.amount === String(Math.round(kind.usd * 1e6))), `${kind.path}: every accept is exactly ${kind.usd} (no half-price accept for a pass)`);
+    const key = newKey(); const hash = hashKey(key);
+    const url = `${kind.path}?key_hash=${hash}&prefix=${key.slice(4, 12)}`;
+    const c2 = await get(s, url);
+    const bought = await get(s, url, { 'payment-signature': H.b64(H.payBase(c2.headers['payment-required'])) });
+    assert.equal(bought.status, 200, bought.body.slice(0, 200));
+    assert.equal(JSON.parse(bought.body).data.pass.days, kind.days);
+    const handlers = s.handlerRuns().length;
+    s.fac.log.length = 0;
+    const res = await get(s, ROUTES[0].path, { 'x-agentfeed-key': key });
+    assert.equal(res.status, 200, res.body.slice(0, 200));
+    assert.equal(JSON.parse(res.body).data.brief, 'morning-brief');
+    assert.equal(s.handlerRuns().length, handlers + 1);
+    assert.deepEqual(s.fac.log, [], 'a pass call asks the facilitator nothing');
+    const other = await get(s, '/api/time', { 'x-agentfeed-key': key });
+    assert.equal(other.status, 403);
+    const bal = JSON.parse((await get(s, '/api/keys/balance', { 'x-agentfeed-key': key })).body);
+    assert.equal(bal.balance_usd, 0);
+    assert.equal(bal.pass.kind, kind.id);
+  }
+});

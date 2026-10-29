@@ -88,6 +88,10 @@ const KEYDAYPASS = () => {
   const P = KEYLIB.DAY_PASS;
   return `Day pass: ${money(P.usd)} flat for 24 hours of unlimited calls to ${P.allow.join(' and ')} (cross-venue liquidation pressure in 5-second buckets, and the recent liquidation tape), for bots that poll all day, can set an HTTP header, and pay by a default x402 client, which buys it as is. One payment on any exact rail returns an API key (afk_...) once, or, with key_hash=<sha256 hex of a key you generated>, registers your own key without the server ever seeing it. Send it as X-AgentFeed-Key (or Authorization: Bearer) on ${P.allow.join(' and ')}: nothing is drawn per call, each of the two routes answers one call every 10 seconds per key (6 a minute), and the pass is refused on every other route. It starts when the payment settles and ends 24 hours later; GET /api/keys/balance shows the expiry, free. Non-refundable, cannot be topped up. Exact rails only: no half-price batch or Gateway accept on this route.`;
 };
+const KEYBRIEFPASS = (P) => {
+  const span = P.days === 1 ? '24 hours' : `${P.days} days`;
+  return `${P.days === 1 ? 'Brief day pass' : 'Brief pass'}: ${money(P.usd)} flat for ${span} of unlimited calls to the AgentFeed briefs (${P.allow.join(', ')}), for agents that run on a schedule with no one to approve a payment: the key goes in X-AgentFeed-Key and nothing is drawn per call. Each route answers one call every ${Object.values(P.pace)[0] / 1000} seconds per key. One payment on any exact rail returns an API key (afk_...) once, or, with key_hash=<sha256 hex of a key you generated>, registers the hash and never sees the key. Starts when the payment settles. Non-refundable, no top-up, a bearer secret. Exact rails only.`;
+};
 const KEYTOP = (k) => {
   const usd = KEYLIB.TOPUPS[k];
   return `Top up a prepaid key by ${money(usd)}: send the key as X-AgentFeed-Key and pay once on any exact rail; the balance grows when the payment settles, and the response is only delivered after it did. Needs an active key. Usage credit, non-refundable, no expiry. Exact rails only: no half-price batch or Gateway accept on this route.`;
@@ -428,6 +432,17 @@ const EXP = [
     desc: KEYDAYPASS(),
     schema: KEYSCHEMA,
     run: (a, req) => keys().buy(a, req, KEYLIB.DAY_PASS.usd, { pass: KEYLIB.DAY_PASS }) },
+  // pensio: the brief passes (tools/briefs/config.js holds the PROPOSED price and pace)
+  { name: 'buy_key_brief_pass', route: 'GET /api/keys/buy-brief-pass', usd: KEYLIB.BRIEF_PASS.usd, noHf: true, mcp: false,
+    tags: ['api-key', 'prepaid', 'bots', 'pass', 'brief'],
+    desc: KEYBRIEFPASS(KEYLIB.BRIEF_PASS),
+    schema: KEYSCHEMA,
+    run: (a, req) => keys().buy(a, req, KEYLIB.BRIEF_PASS.usd, { pass: KEYLIB.BRIEF_PASS }) },
+  { name: 'buy_key_brief_day_pass', route: 'GET /api/keys/buy-brief-day-pass', usd: KEYLIB.BRIEF_DAY_PASS.usd, noHf: true, mcp: false,
+    tags: ['api-key', 'prepaid', 'bots', 'pass', 'brief'],
+    desc: KEYBRIEFPASS(KEYLIB.BRIEF_DAY_PASS),
+    schema: KEYSCHEMA,
+    run: (a, req) => keys().buy(a, req, KEYLIB.BRIEF_DAY_PASS.usd, { pass: KEYLIB.BRIEF_DAY_PASS }) },
   { name: 'topup_key_5', route: 'GET /api/keys/topup-5', usd: 5, noHf: true, mcp: false,
     tags: ['api-key', 'prepaid', 'bots', 'credit'],
     desc: KEYTOP('5'),

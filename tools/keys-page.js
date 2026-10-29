@@ -12,6 +12,7 @@
 // script and style are allowed by hash.
 'use strict';
 const crypto = require('crypto');
+const KEYLIB = require('../lib/keys');
 
 const STYLE = `
 :root{--bg:#0a0e14;--card:#111722;--txt:#d7dde7;--dim:#7d8899;--gold:#ffd84d;--line:#1e2635;--ok:#3ddc97;--bad:#ff6b6b}
@@ -32,7 +33,8 @@ a{color:var(--gold)}`;
 
 const SCRIPT = `
 (function(){
-const PACKS={trial:0.25,'1':1,'5':5,'20':20,pass:25,'day-pass':1};
+const PACKS={trial:0.25,'1':1,'5':5,'20':20,pass:25,'day-pass':1,'brief-pass':${KEYLIB.BRIEF_PASS.usd},'brief-day-pass':${KEYLIB.BRIEF_DAY_PASS.usd}};
+const BRIEF_ROUTES=${JSON.stringify(KEYLIB.BRIEF_PASS.allow)};
 const BASE='eip155:8453', CHAIN_HEX='0x2105', CHAIN_ID=8453;
 const B58='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 const $=(id)=>document.getElementById(id);
@@ -74,9 +76,9 @@ async function buy(){
     if(r.status!==200){const h=r.headers.get('payment-response');let why=body.error||'';if(h){try{why=unb64(h).errorReason||why;}catch(e){}}throw new Error('not paid ('+r.status+')'+(why?': '+why:''));}
     $('key').textContent=key;
     const ps=body.data.pass;
-    const day=!!ps&&ps.days===1, until=ps&&new Date(Date.now()+ps.days*864e5).toISOString();
-    $('meta').textContent=ps?'prefix '+body.data.prefix+', '+(day?'day pass':'bot pass')+' for '+ps.routes.join(', ')+' only, valid until about '+(day?until.slice(0,16).replace('T',' ')+' UTC':until.slice(0,10))+' ('+(day?'24 hours':ps.days+' days')+' from this payment), '+(ps.routes.length>1?'/api/liq-feed and /api/liquidations each answer one call every 10 seconds (6 a minute)':'one call every 10 seconds')+', nothing drawn per call':'prefix '+body.data.prefix+', balance $'+body.data.balance_usd+', '+body.data.rate_per_min+' requests a minute';
-    if(ps) $('examples').textContent='curl "https://x402.ochinimus.app'+ps.routes[0]+'?symbols=BTCUSDT,ETHUSDT" -H "X-AgentFeed-Key: afk_..."'+(ps.routes.indexOf('/api/liquidations')>=0?'\\ncurl "https://x402.ochinimus.app/api/liquidations?symbol=SOLUSDT" -H "X-AgentFeed-Key: afk_..."':'')+'\\ncurl https://x402.ochinimus.app/api/keys/balance -H "X-AgentFeed-Key: afk_..."   # shows the expiry';
+    const brief=!!ps&&ps.routes.every((r)=>BRIEF_ROUTES.indexOf(r)>=0), day=!!ps&&ps.days===1, until=ps&&new Date(Date.now()+ps.days*864e5).toISOString();
+    $('meta').textContent=ps?'prefix '+body.data.prefix+', '+(brief?(day?'brief day pass':'brief pass'):day?'day pass':'bot pass')+' for '+ps.routes.join(', ')+' only, valid until about '+(day?until.slice(0,16).replace('T',' ')+' UTC':until.slice(0,10))+' ('+(day?'24 hours':ps.days+' days')+' from this payment), '+(brief?'each brief route answers one call every ${KEYLIB.BRIEF_PASS.pace[KEYLIB.BRIEF_PASS.allow[0]] / 1000} seconds':ps.routes.length>1?'/api/liq-feed and /api/liquidations each answer one call every 10 seconds (6 a minute)':'one call every 10 seconds')+', nothing drawn per call':'prefix '+body.data.prefix+', balance $'+body.data.balance_usd+', '+body.data.rate_per_min+' requests a minute';
+    if(ps) $('examples').textContent='curl "https://x402.ochinimus.app'+ps.routes[0]+(brief?'':'?symbols=BTCUSDT,ETHUSDT')+'" -H "X-AgentFeed-Key: afk_..."'+(ps.routes.indexOf('/api/liquidations')>=0?'\\ncurl "https://x402.ochinimus.app/api/liquidations?symbol=SOLUSDT" -H "X-AgentFeed-Key: afk_..."':'')+'\\ncurl https://x402.ochinimus.app/api/keys/balance -H "X-AgentFeed-Key: afk_..."   # shows the expiry';
     $('result').style.display='block';
     say('paid and active. Copy the key now: this page is the only place it exists.','ok');
   }catch(e){say(String(e&&e.message||e),'err');}
@@ -102,6 +104,8 @@ const HTML = `<!doctype html>
 <label><input type="radio" name="pack" value="20">$20</label>
 <label><input type="radio" name="pack" value="pass">bot pass $25: 30 days, /api/liq-feed only, no per-call charge</label>
 <label><input type="radio" name="pack" value="day-pass">day pass $1: 24 hours, /api/liq-feed and /api/liquidations, one call every 10 s each, no per-call charge</label>
+<label><input type="radio" name="pack" value="brief-pass">brief pass $${KEYLIB.BRIEF_PASS.usd}: ${KEYLIB.BRIEF_PASS.days} days, the brief routes (${KEYLIB.BRIEF_PASS.allow.join(", ")}), one call a minute each, no per-call charge</label>
+<label><input type="radio" name="pack" value="brief-day-pass">brief day pass $${KEYLIB.BRIEF_DAY_PASS.usd}: 24 hours, the same routes, no per-call charge</label>
 </div>
 <button id="buy">Buy with USDC on Base</button>
 <div id="status"></div>

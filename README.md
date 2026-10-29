@@ -90,12 +90,14 @@ the service publishes it.
 
 | Tool | Price | Route |
 |---|---|---|
+| `buy_key_brief_pass` | $25 | `/api/keys/buy-brief-pass` |
 | `buy_key_pass` | $25 | `/api/keys/buy-pass` |
 | `buy_key_20` | $20 | `/api/keys/buy-20` |
 | `topup_key_20` | $20 | `/api/keys/topup-20` |
 | `buy_key_5` | $5 | `/api/keys/buy-5` |
 | `topup_key_5` | $5 | `/api/keys/topup-5` |
 | `buy_key_1` | $1 | `/api/keys/buy-1` |
+| `buy_key_brief_day_pass` | $1 | `/api/keys/buy-brief-day-pass` |
 | `buy_key_day_pass` | $1 | `/api/keys/buy-day-pass` |
 | `buy_key_trial` | $0.25 | `/api/keys/buy-trial` |
 | `get_squeeze_score` | $0.1 | `/api/squeeze-score` |
@@ -747,8 +749,9 @@ A bot that can set an HTTP header but cannot sign an x402 payment (n8n, Freqtrad
 - **Bring your own key:** generate `afk_` + base58 of 32 random bytes yourself and buy with `?key_hash=<sha256 hex>&prefix=<8 characters after afk_>`; the server registers the hash and never sees the key, and a dropped connection after payment loses nothing. Without `key_hash` the server generates the key and returns it once.
 - **Bot pass:** `GET /api/keys/buy-pass` ($25) is a different kind of key for a bot that polls `/api/liq-feed` all day: valid for 30 days from the moment its payment settles, good **only** on `/api/liq-feed` (and the MCP tool `get_liq_feed`), nothing drawn per call, still one call per 10 seconds. Every other route answers 403 to it, it cannot be topped up, and `GET /api/keys/balance` shows its routes and expiry. At a 30-second poll it costs $0.83 a day, against $1.44 a day on an ordinary key.
 - **Day pass:** `GET /api/keys/buy-day-pass` is **$1.00 flat for 24 hours** from the moment its payment settles, good **only** on `/api/liq-feed` and `/api/liquidations`, nothing drawn per call, each of the two routes one call every 10 seconds per key (6 a minute; a call inside the 10 seconds is a 429 with `Retry-After`, never billed). It is the pass a default x402 client can buy as it is: `@x402/fetch` 2.28 refuses any payment over $1 before signing and accepts exactly $1.00 (measured), so the $5 and $20 packs and the $25 bot pass need `spendControls` raised and this one does not. Every other route answers 403 to it, it cannot be topped up, and `GET /api/keys/balance` shows its routes, expiry and hours left. Also in the browser at [/keys](https://x402.ochinimus.app/keys).
+- **Brief pass:** `GET /api/keys/buy-brief-pass` ($25, proposed) is valid for 30 days from the moment its payment settles, and `GET /api/keys/buy-brief-day-pass` is **$1.00 flat for 24 hours**: good **only** on the brief routes (`/api/morning-brief`, `/api/move-alert`, `/api/anomaly-flag`, and their MCP tools), nothing drawn per call, each route one call every 60 seconds per key (a call inside that is a 429 with `Retry-After`, never billed). For an agent that runs on a schedule with nobody to approve a payment: the key goes in `X-AgentFeed-Key` from an environment variable. Every other route answers 403, an expired pass 401. Non-refundable, no top-up, a bearer secret; the stock x402 client's $1 spend cap buys the day pass as is.
 - **Balance:** `GET /api/keys/balance` with the header, free.
-- **Terms:** a prepaid balance is usage credit, non-refundable, with no expiry (a bot pass is a flat price, non-refundable, valid for 30 days, and the day pass the same for 24 hours); the key is a bearer secret (anyone holding it spends the balance); abuse means revocation. Purchase routes offer the exact accepts only, because credit bought through the half-price batch or Gateway tier would be a free 50%.
+- **Terms:** a prepaid balance is usage credit, non-refundable, with no expiry (a bot pass is a flat price, non-refundable, valid for 30 days, and the day pass the same for 24 hours; the brief passes follow the same terms); the key is a bearer secret (anyone holding it spends the balance); abuse means revocation. Purchase routes offer the exact accepts only, because credit bought through the half-price batch or Gateway tier would be a free 50%.
 - **In the books:** a purchase is a settled payment (status `paid`); the calls it funds are rows of status `key`, consumption of credit already counted, never revenue.
 
 ## No wallet? Use Apify Store

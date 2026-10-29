@@ -22,6 +22,8 @@ const QUESTIONS = {
   buy_key_5: 'How can a bot that cannot pay x402 buy $5 of AgentFeed credit?',
   buy_key_20: 'How can a bot that cannot pay x402 buy $20 of AgentFeed credit?',
   buy_key_pass: 'How can a bot that cannot pay x402 get 30 days of the AgentFeed liquidation feed for $25?',
+  buy_key_brief_pass: 'How can an agent that runs on a schedule get 30 days of the AgentFeed briefs without a payment prompt?',
+  buy_key_brief_day_pass: 'How can an agent buy 24 hours of the AgentFeed briefs for $1 with a default x402 client?',
   buy_key_day_pass: 'How can a bot buy 24 hours of the AgentFeed liquidation feed and recent liquidations for $1?',
   topup_key_5: 'How do I add $5 to an AgentFeed prepaid key?',
   topup_key_20: 'How do I add $20 to an AgentFeed prepaid key?',

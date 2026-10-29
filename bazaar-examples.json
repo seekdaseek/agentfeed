@@ -9579,9 +9579,187 @@
     }
    },
    "static": true
+  },
+  "GET /api/keys/buy-brief-pass": {
+   "tool": "buy_key_brief_pass",
+   "price_usd": 25,
+   "input": {},
+   "inputSchema": {
+    "properties": {
+     "key_hash": {
+      "description": "sha256 hex (64 characters) of a key you generated yourself as afk_ + base58 of 32 random bytes: the server registers the hash and never sees the key",
+      "type": "string"
+     },
+     "prefix": {
+      "description": "the 8 characters after afk_ in that key, so /api/keys/balance can show it before the first use",
+      "type": "string"
+     }
+    },
+    "required": []
+   },
+   "output": {
+    "example": {
+     "tool": "buy_key_brief_pass",
+     "data": {
+      "key": "afk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "prefix": "xxxxxxxx",
+      "pass": {
+       "price_usd": 25,
+       "days": 30,
+       "routes": [
+        "/api/morning-brief",
+        "/api/move-alert",
+        "/api/anomaly-flag"
+       ],
+       "starts": "when this payment settles",
+       "expires": "30 days after that"
+      },
+      "status": "active",
+      "rate_per_min": 120,
+      "use": "send it on every call to /api/morning-brief, /api/move-alert, /api/anomaly-flag as the header X-AgentFeed-Key: <key> (or Authorization: Bearer <key>); a call costs nothing more while the pass is valid; each route answers one call every 60 seconds per key (1 a…",
+      "balance": "GET /api/keys/balance with the same header (free) shows the expiry",
+      "terms": "a 30-day brief pass for a flat $25, good only on /api/morning-brief, /api/move-alert, /api/anomaly-flag, non-refundable, cannot be topped up (buy another when it ends); the key is a bearer secret: anyone holding it uses the pass; abuse means revocation",
+      "note": "this is the only time the key is shown; it is not stored anywhere on our side, only its sha256"
+     },
+     "paid": true
+    },
+    "schema": {
+     "type": "object",
+     "properties": {
+      "tool": {
+       "type": "string"
+      },
+      "data": {
+       "type": "object",
+       "properties": {
+        "key": {
+         "type": "string"
+        },
+        "prefix": {
+         "type": "string"
+        },
+        "pass": {
+         "type": "object"
+        },
+        "status": {
+         "type": "string"
+        },
+        "rate_per_min": {
+         "type": "number"
+        },
+        "use": {
+         "type": "string"
+        },
+        "balance": {
+         "type": "string"
+        },
+        "terms": {
+         "type": "string"
+        },
+        "note": {
+         "type": "string"
+        }
+       }
+      },
+      "paid": {
+       "type": "boolean"
+      }
+     }
+    }
+   },
+   "static": true
+  },
+  "GET /api/keys/buy-brief-day-pass": {
+   "tool": "buy_key_brief_day_pass",
+   "price_usd": 1,
+   "input": {},
+   "inputSchema": {
+    "properties": {
+     "key_hash": {
+      "description": "sha256 hex (64 characters) of a key you generated yourself as afk_ + base58 of 32 random bytes: the server registers the hash and never sees the key",
+      "type": "string"
+     },
+     "prefix": {
+      "description": "the 8 characters after afk_ in that key, so /api/keys/balance can show it before the first use",
+      "type": "string"
+     }
+    },
+    "required": []
+   },
+   "output": {
+    "example": {
+     "tool": "buy_key_brief_day_pass",
+     "data": {
+      "key": "afk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "prefix": "xxxxxxxx",
+      "pass": {
+       "price_usd": 1,
+       "days": 1,
+       "routes": [
+        "/api/morning-brief",
+        "/api/move-alert",
+        "/api/anomaly-flag"
+       ],
+       "starts": "when this payment settles",
+       "expires": "24 hours after that"
+      },
+      "status": "active",
+      "rate_per_min": 120,
+      "use": "send it on every call to /api/morning-brief, /api/move-alert, /api/anomaly-flag as the header X-AgentFeed-Key: <key> (or Authorization: Bearer <key>); a call costs nothing more while the pass is valid; each route answers one call every 60 seconds per key (1 a…",
+      "balance": "GET /api/keys/balance with the same header (free) shows the expiry",
+      "terms": "a 24-hour brief day pass for a flat $1, good only on /api/morning-brief, /api/move-alert, /api/anomaly-flag, non-refundable, cannot be topped up (buy another when it ends); the key is a bearer secret: anyone holding it uses the pass; abuse means revocation",
+      "note": "this is the only time the key is shown; it is not stored anywhere on our side, only its sha256"
+     },
+     "paid": true
+    },
+    "schema": {
+     "type": "object",
+     "properties": {
+      "tool": {
+       "type": "string"
+      },
+      "data": {
+       "type": "object",
+       "properties": {
+        "key": {
+         "type": "string"
+        },
+        "prefix": {
+         "type": "string"
+        },
+        "pass": {
+         "type": "object"
+        },
+        "status": {
+         "type": "string"
+        },
+        "rate_per_min": {
+         "type": "number"
+        },
+        "use": {
+         "type": "string"
+        },
+        "balance": {
+         "type": "string"
+        },
+        "terms": {
+         "type": "string"
+        },
+        "note": {
+         "type": "string"
+        }
+       }
+      },
+      "paid": {
+       "type": "boolean"
+      }
+     }
+    }
+   },
+   "static": true
   }
  },
- "_outputs_recaptured_at": "2026-10-29T21:35:35.514Z",
+ "_outputs_recaptured_at": "2026-10-29T21:47:27.608Z",
  "_pruned_at": "2026-10-13T04:50:31.410Z",
  "_schemas_regenerated_at": "2026-10-29T21:07:44.425Z",
  "_outputs_dropped_at": "2026-10-13T04:50:35.546Z",

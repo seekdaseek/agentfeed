@@ -14,10 +14,10 @@ const express = require('express');
 const HAVE_BOX = fs.existsSync('/opt/agentfeed/liquidations.db') && fs.existsSync('/opt/overhang/overhang.db');
 const skip = HAVE_BOX ? false : 'needs the box databases (/opt/agentfeed/liquidations.db, /opt/overhang/overhang.db)';
 
-const KEY_ROUTES = ['GET /api/keys/buy-trial', 'GET /api/keys/buy-1', 'GET /api/keys/buy-5', 'GET /api/keys/buy-20', 'GET /api/keys/buy-pass', 'GET /api/keys/buy-day-pass', 'GET /api/keys/topup-5', 'GET /api/keys/topup-20'];
+const KEY_ROUTES = ['GET /api/keys/buy-trial', 'GET /api/keys/buy-1', 'GET /api/keys/buy-5', 'GET /api/keys/buy-20', 'GET /api/keys/buy-pass', 'GET /api/keys/buy-day-pass', 'GET /api/keys/buy-brief-pass', 'GET /api/keys/buy-brief-day-pass', 'GET /api/keys/topup-5', 'GET /api/keys/topup-20'];   // pensio: plus the two brief passes
 const SIGNAL_ROUTES = ['GET /api/signal-board', 'GET /api/coin-signal/:coin'];
 
-test('price table: the nine routes at the briefed prices, only the eight key routes are noHf', { skip }, () => {
+test('price table: the nine routes at the briefed prices, only the ten key routes (eight, plus the two brief passes) are noHf', { skip }, () => {
   const { PRICES } = require('../payments');
   const want = { 'GET /api/signal-board': [0.01, 'get_signal_board'], 'GET /api/coin-signal/:coin': [0.004, 'get_coin_signal'],
     'GET /api/keys/buy-trial': [0.25, 'buy_key_trial'], 'GET /api/keys/buy-1': [1, 'buy_key_1'], 'GET /api/keys/buy-5': [5, 'buy_key_5'], 'GET /api/keys/buy-20': [20, 'buy_key_20'], 'GET /api/keys/buy-pass': [25, 'buy_key_pass'], 'GET /api/keys/buy-day-pass': [1, 'buy_key_day_pass'],
@@ -27,7 +27,7 @@ test('price table: the nine routes at the briefed prices, only the eight key rou
     assert.equal(PRICES[route].usd, usd, route);
     assert.equal(PRICES[route].tool, tool, route);
   }
-  assert.deepEqual(Object.entries(PRICES).filter(([, p]) => p.noHf).map(([r]) => r).sort(), [...KEY_ROUTES].sort(), 'noHf is exactly the eight key routes');
+  assert.deepEqual(Object.entries(PRICES).filter(([, p]) => p.noHf).map(([r]) => r).sort(), [...KEY_ROUTES].sort(), 'noHf is exactly the ten key routes');
   for (const r of SIGNAL_ROUTES) assert.ok(!PRICES[r].noHf, `${r} keeps the high-frequency tier`);
   assert.ok(!PRICES['GET /api/keys/balance'], 'the balance check is free and not in the price table');
 });

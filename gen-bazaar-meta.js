@@ -520,6 +520,7 @@ async function recapture(tools) {
     // which payments.js spreads into the 402 challenge); /api/sample says so only for those routes
     if (JSON.stringify(redExample) !== JSON.stringify(c.example)) entryNext.redacted = true; else delete entryNext.redacted;
     if (isStatic(r.tool)) entryNext.static = true; // a constructed example, never a capture (see KEYLIB above); /api/sample says so
+    if (BRIEFX.TOOLS.includes(r.tool)) entryNext.synthetic = true; // the briefs' example is a seeded synthetic market, not a reading (tools/briefs/example.js)
     next.push([r.pattern, entryNext]);
   }
   for (const [pattern, entry] of next) prev.routes[pattern] = entry;
@@ -601,6 +602,7 @@ async function main() {
       entry.output = { example: redExample, schema: schemaOf(example) };
       if (JSON.stringify(redExample) !== JSON.stringify(example)) entry.redacted = true; // see --recapture: on the entry, not in `output`
       if (isStatic(r.tool)) entry.static = true;
+      if (BRIEFX.TOOLS.includes(r.tool)) entry.synthetic = true;
     }
 
     meta[r.pattern] = entry;

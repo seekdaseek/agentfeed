@@ -354,7 +354,9 @@ app.get('/api/sample/:route', (req, res) => {
     ...(m.pathParams ? { path_params_example: m.pathParams } : {}),
     input_schema: m.inputSchema || { properties: {} },
     sample_response: m.output ? m.output.example : null,
-    captured: m.static
+    captured: m.synthetic
+      ? 'built by the real brief code over a seeded synthetic market: field names, types and the wording of the sentences are exactly what the paid route returns, but every number in it is generated and none is a market reading'
+      : m.static
       ? 'built by the same code that builds the real response, with a placeholder key (a capture would create a key); field names and types are exactly what the paid route returns'
       : 'a real response from this service, trimmed; field names and types are exactly what the paid route returns',
     ...(m.redacted ? { redacted: 'values from OKX and Binance (the liquidation tape\'s prints) are null in this stored sample: their terms forbid redistributing that data' } : {}),

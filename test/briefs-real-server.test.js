@@ -260,3 +260,20 @@ test('the brief pass on the real server: the purchase is a paid 402, a stub-sett
     assert.equal(bal.pass.kind, kind.id);
   }
 });
+
+test('the free samples: /api/sample/<route> serves each brief\'s example for nothing, and says plainly that its numbers are generated', async () => {
+  const idx = JSON.parse((await get(s, '/api/sample')).body);
+  for (const r of ROUTES) assert.ok(idx.routes.some((x) => x.endsWith(r.path)), `${r.path} has a sample`);
+  for (const r of ROUTES) {
+    for (const slug of [r.path.replace('/api/', ''), r.tool]) {
+      const res = await get(s, `/api/sample/${slug}`);
+      assert.equal(res.status, 200, slug);
+      const j = JSON.parse(res.body);
+      assert.equal(j.tool, r.tool);
+      assert.equal(j.price_usd, r.usd);
+      assert.match(j.captured, /seeded synthetic market.*every number in it is generated and none is a market reading/);
+      assert.doesNotMatch(j.captured, /placeholder key/);
+      assert.ok(j.sample_response && j.sample_response.data && j.sample_response.data.headline, `${slug}: the sample has the brief's envelope`);
+    }
+  }
+});

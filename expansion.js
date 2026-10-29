@@ -564,7 +564,7 @@ const EXP = [
   // no language model, no path or query parameter. A stale input answers 503 and is never billed. Prices are PROPOSED (tools/briefs/config.js). ----
   { name: 'get_morning_brief', route: `GET ${BRC.ROUTES.morning}`, usd: BRC.PRICES_PROPOSED.morning,
     tags: ['brief', 'market-data', 'macro', 'liquidations', 'funding', 'hyperliquid', 'trading'],
-    desc: 'Use when an agent needs the overnight picture for BTC, ETH, SOL and HYPE in one answer. Returns the last 8 hours ranked by how abnormal each item is: price move against the coin\'s own usual 8-hour move, funding, open interest, liquidations (total, long/short split, biggest print), Fear and Greed, today\'s macro releases with UTC times, and the nearest liquidation cluster as the level to watch. A stale source is left out and named; with no sampler it answers 503, never billed.',
+    desc: 'Use when an agent needs a one-answer summary of the last 8 hours in BTC, ETH, SOL and HYPE. Returns the items ranked by how abnormal each is: price move against the coin\'s own usual 8-hour move, funding, open interest, liquidations (total, long/short split, biggest print), Fear and Greed, today\'s macro releases with UTC times, and the nearest liquidation cluster as the level to watch. A stale source is left out and named; with no sampler it answers 503, never billed.',
     schema: {},
     run: (a) => BR.getMorningBrief(a) },
   { name: 'get_move_alert', route: `GET ${BRC.ROUTES.move}`, usd: BRC.PRICES_PROPOSED.move,

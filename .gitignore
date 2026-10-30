@@ -129,3 +129,7 @@ news.json
 news.json.tmp
 news-labels.json
 news-labels.json.tmp
+
+# pensio: the weekly move-alert calibration table (bin/brief-calibrate.js writes it; a deploy never touches it)
+brief-calibration.json
+brief-calibration.json.*.tmp

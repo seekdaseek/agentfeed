@@ -12,10 +12,21 @@
 // quantile up to p99.9 (p99.8 at n = 5000), and extreme is "larger than every window in the sample" while p99.99 is unsupported (it needs n >= 100,000).
 // Windows are candle returns, not rolling windows: they do not overlap, so n is the number of independent windows.
 //
-//   node bin/brief-calibrate.js --out tools/briefs/calibration.json [--coins 30] [--gap-ms 6500] [--closes-out file]
-// Needs the network and nothing else. It is a one-off / weekly job, not a server dependency.
+//   node bin/brief-calibrate.js --out brief-calibration.json [--coins 30] [--gap-ms 6500] [--closes-out file]
+// Needs the network and nothing else. It is a weekly job (the table is refused after 45 days, so without it /api/move-alert turns into a 503); the server never calls it.
+//
+// THE WEEKLY JOB (root cron on the box, part of the deploy; Mondays 04:10 UTC, about 25 minutes; the gap is 15 s, not 6.5, because the box's other Hyperliquid
+// collectors share the same IP and the documented 1200 weight a minute: this run uses about 420 of it):
+//   10 4 * * 1 cd /opt/agentfeed && /usr/bin/flock -n /var/lock/brief-calibrate.lock /usr/bin/timeout 3600 /usr/bin/node --max-old-space-size=192 bin/brief-calibrate.js --out brief-calibration.json --gap-ms 15000 >> /opt/agentfeed/brief-calibrate.log 2>&1
+// It writes brief-calibration.json (git-ignored runtime data beside the code); tools/briefs/move.js reads the newer of that file and the shipped tools/briefs/calibration.json.
+//
+// A BAD FETCH NEVER REPLACES A GOOD TABLE. The new table is accepted only when accept() says so: at least 80% of the requested coins complete (5m and 1h with at least
+// 4,000 windows each, 4h with at least 1,000), no more than 20% of the requests failed, and, when a table already exists, at least 80% of its coins are still covered.
+// Otherwise the old file is left exactly as it was, the reasons are printed, and the exit status is 2 (the log and the daily alert in ops/af-digest.js show it).
+// An accepted table is written to a temp file in the same directory and renamed over the old one, so a reader sees the whole old table or the whole new one.
 'use strict';
 const fs = require('fs');
+const path = require('path');
 
 const INFO = process.env.HL_API || 'https://api.hyperliquid.xyz/info';
 const NOMINAL = { notable: 0.99, sharp: 0.999, extreme: 0.9999 };
@@ -23,6 +34,10 @@ const MIN_EXCEEDANCES = 10;
 const MIN_WINDOWS = 1000;                   // a horizon with fewer complete candles than this is left out: p99 would sit on under 10 points
 const INTERVALS = { '5m': 300_000, '1h': 3_600_000, '4h': 14_400_000 };
 const WEIGHT_PER_REQ = (n) => 20 + Math.ceil(n / 60);
+// what a complete coin needs (windows per horizon): 5,000 candles are requested, so far fewer means the API truncated the answer
+const MIN_N = { '5m': 4000, '1h': 4000, '4h': 1000 };
+const MIN_COIN_SHARE = 0.8;       // of the requested coins, and of the coins an existing table already covers
+const MAX_ERROR_SHARE = 0.2;      // of the requests
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
@@ -56,6 +71,35 @@ function windowsOf(candles, nowMs) {
   return { done, closes, abs };
 }
 
+/** a coin is complete when every horizon is present with at least MIN_N windows */
+const complete = (c) => Object.entries(MIN_N).every(([h, n]) => c && c[h] && c[h].n >= n);
+
+/**
+ * Pure: may `doc` replace `existing` (null when there is no table yet)? -> { ok, reasons[] }.
+ * wanted = the coins the run asked for; requests = how many candle requests it made.
+ */
+function accept(doc, { wanted, requests, existing = null }) {
+  const reasons = [];
+  const coins = Object.keys(doc.coins || {});
+  const good = coins.filter((c) => complete(doc.coins[c]));
+  if (good.length < Math.ceil(wanted * MIN_COIN_SHARE)) reasons.push(`only ${good.length} of ${wanted} requested coins are complete (5m and 1h at least ${MIN_N['5m']} windows, 4h at least ${MIN_N['4h']}); at least ${Math.ceil(wanted * MIN_COIN_SHARE)} needed`);
+  const errs = (doc.errors || []).length;
+  if (requests > 0 && errs > requests * MAX_ERROR_SHARE) reasons.push(`${errs} of ${requests} requests failed (more than ${MAX_ERROR_SHARE * 100}%)`);
+  if (existing && existing.coins) {
+    const had = Object.keys(existing.coins);
+    const kept = had.filter((c) => doc.coins && doc.coins[c]);
+    if (had.length && kept.length < Math.ceil(had.length * MIN_COIN_SHARE)) reasons.push(`the new table covers only ${kept.length} of the ${had.length} coins the current one covers (at least ${Math.ceil(had.length * MIN_COIN_SHARE)} needed)`);
+  }
+  return { ok: reasons.length === 0, reasons };
+}
+
+/** write `text` to `file` through a temp file in the same directory, then rename; the temp file never survives a failure */
+function writeAtomic(file, text, fsImpl = fs) {
+  const tmp = `${file}.${process.pid}.tmp`;
+  try { fsImpl.writeFileSync(tmp, text); fsImpl.renameSync(tmp, file); }
+  catch (e) { try { fsImpl.unlinkSync(tmp); } catch { /* nothing was written */ } throw e; }
+}
+
 async function post(body, fetchImpl = fetch) {
   const r = await fetchImpl(INFO, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(30000) });
   if (r.status === 429) { const e = new Error('429'); e.status = 429; throw e; }
@@ -63,20 +107,22 @@ async function post(body, fetchImpl = fetch) {
   return r.json();
 }
 
-async function run({ coinsN = 30, gapMs = 6500, out, closesOut, log = console.error, fetchImpl = fetch, nowMs = Date.now() } = {}) {
+async function run({ coinsN = 30, gapMs = 6500, out, closesOut, log = console.error, fetchImpl = fetch, nowMs = Date.now(), sleepFn = sleep, fsImpl = fs, shipped = path.join(__dirname, '..', 'tools', 'briefs', 'calibration.json') } = {}) {
   const [meta, ctxs] = await post({ type: 'metaAndAssetCtxs' }, fetchImpl);
   const ranked = meta.universe.map((u, i) => ({ coin: u.name, oi_usd: Number(ctxs[i] && ctxs[i].openInterest) * Number(ctxs[i] && ctxs[i].markPx), delisted: u.isDelisted }))
     .filter((r) => !r.delisted && Number.isFinite(r.oi_usd)).sort((a, b) => b.oi_usd - a.oi_usd).slice(0, coinsN);
   const result = { coins: {}, errors: [] };
   const closesFile = {};
   let weight = WEIGHT_PER_REQ(1);
+  let requests = 0;
   for (const { coin } of ranked) {
     for (const [iv, ms] of Object.entries(INTERVALS)) {
-      await sleep(gapMs);
+      await sleepFn(gapMs);
       let candles = null;
+      requests++;
       for (let attempt = 0; attempt < 2 && !candles; attempt++) {
         try { candles = await post({ type: 'candleSnapshot', req: { coin, interval: iv, startTime: nowMs - 5000 * ms, endTime: nowMs } }, fetchImpl); }
-        catch (e) { if (e.status === 429 && attempt === 0) { log(`429 on ${coin} ${iv}, waiting 30 s`); await sleep(30000); } else { result.errors.push({ coin, interval: iv, error: e.message }); break; } }
+        catch (e) { if (e.status === 429 && attempt === 0) { log(`429 on ${coin} ${iv}, waiting 30 s`); await sleepFn(30000); } else { result.errors.push({ coin, interval: iv, error: e.message }); break; } }
       }
       if (!candles) continue;
       weight += WEIGHT_PER_REQ(candles.length);
@@ -98,14 +144,22 @@ async function run({ coinsN = 30, gapMs = 6500, out, closesOut, log = console.er
     request_weight_total: weight, requests_gap_ms: gapMs,
     coins: result.coins, errors: result.errors,
   };
-  if (out) fs.writeFileSync(out, JSON.stringify(doc, null, 1));
-  if (closesOut) fs.writeFileSync(closesOut, JSON.stringify({ source: doc.source, fetched_at: doc.fetched_at, coins: closesFile }));
-  return doc;
+  let existing = null;
+  // the table to protect: the file being replaced, or, on the first run, the table that ships with the code
+  if (out) for (const f of [out, shipped]) { try { existing = JSON.parse(fsImpl.readFileSync(f, 'utf8')); break; } catch { existing = null; } }
+  const verdict = accept(doc, { wanted: coinsN, requests, existing });
+  doc.accepted = verdict.ok;
+  if (out) {
+    if (verdict.ok) { writeAtomic(out, JSON.stringify(doc, null, 1), fsImpl); log(`wrote ${out}: ${Object.keys(doc.coins).length} coins`); }
+    else log(`NOT written (${out} keeps its current table): ${verdict.reasons.join('; ')}`);
+  }
+  if (closesOut && verdict.ok) fsImpl.writeFileSync(closesOut, JSON.stringify({ source: doc.source, fetched_at: doc.fetched_at, coins: closesFile }));
+  return Object.assign(doc, { rejected: verdict.ok ? undefined : verdict.reasons });
 }
 
 if (require.main === module) {
   run({ coinsN: Number(arg('--coins', 30)), gapMs: Number(arg('--gap-ms', 6500)), out: arg('--out'), closesOut: arg('--closes-out') })
-    .then((d) => { console.error(`done: ${Object.keys(d.coins).length} coins, ${d.errors.length} errors, weight ${d.request_weight_total}`); })
+    .then((d) => { console.error(`done: ${Object.keys(d.coins).length} coins, ${d.errors.length} errors, weight ${d.request_weight_total}`); if (d.rejected) process.exit(2); })
     .catch((e) => { console.error('failed:', e.message); process.exit(1); });
 }
-module.exports = { tiers, windowsOf, run, NOMINAL, MIN_EXCEEDANCES, MIN_WINDOWS, INTERVALS };
+module.exports = { tiers, windowsOf, accept, writeAtomic, run, NOMINAL, MIN_EXCEEDANCES, MIN_WINDOWS, MIN_N, INTERVALS };

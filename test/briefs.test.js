@@ -289,3 +289,39 @@ test('envelope: a leaked non-value in an item\'s sentence refuses the whole brie
   const ok = env([{ ...base, what: 'SEC press release, 2 hours ago, other: Order declaring a contract null and void', what_template: 'SEC press release, 2 hours ago, other:' }]);
   assert.match(ok.headline, /null and void/);
 });
+
+// ---------------------------------------------------------------- move-alert calibration age (round 2)
+test('move-alert calibration age: nothing said at 29 days, stated in method from day 30, served until 45, a 503 after; the age is always in the answer', async () => {
+  const at = (days) => () => makeCalibration(NOW, undefined, { fetched_at: new Date(NOW - days * 86400_000 - 3600_000).toISOString() });
+  const run = (days) => getMoveAlert({}, { now: NOW, deps: moveDeps({}), calibration: at(days) });
+  const d29 = keep(await run(29));
+  assert.doesNotMatch(d29.method, /CALIBRATION AGE/);
+  assert.equal(d29.calibration.age_days, 29);
+  const d30 = keep(await run(30));
+  assert.match(d30.method, /CALIBRATION AGE: the tail table is 30 days old; the weekly refresh should have replaced it, and the route refuses a table older than 45 days \(it then answers 503, not billed\)\./);
+  assert.equal(d30.calibration.age_days, 30);
+  assert.match(keep(await run(44)).method, /the tail table is 44 days old/);
+  await rejects503(() => run(46), /46 days old \(limit 45\)/);
+});
+test('move-alert calibration files: the newer of the runtime table and the shipped one is read; a corrupt or missing one is skipped, never fatal while the other is good; none is a 503', () => {
+  const fs = require('fs'); const os = require('os');
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'cal-load-'));
+  const doc = (iso, tag) => JSON.stringify({ source: tag, fetched_at: iso, coins: { BTC: {} } });
+  const runtime = path.join(d, 'brief-calibration.json'), shipped = path.join(d, 'calibration.json');
+  const old = process.env.BRIEF_CALIBRATION;
+  try {
+    process.env.BRIEF_CALIBRATION = `${runtime},${shipped}`;
+    fs.writeFileSync(shipped, doc('2026-10-01T00:00:00.000Z', 'shipped'));
+    assert.equal(MV.loadCalibration().value.source, 'shipped', 'only the shipped table exists');
+    fs.writeFileSync(runtime, doc('2026-10-20T00:00:00.000Z', 'runtime'));
+    assert.equal(MV.loadCalibration().value.source, 'runtime', 'the newer fetched_at wins');
+    fs.writeFileSync(runtime, doc('2026-09-01T00:00:00.000Z', 'runtime-older'));
+    assert.equal(MV.loadCalibration().value.source, 'shipped', 'an older runtime table does not beat the shipped one');
+    fs.writeFileSync(runtime, '{"half written');
+    assert.equal(MV.loadCalibration().value.source, 'shipped', 'a corrupt runtime table is skipped');
+    fs.writeFileSync(runtime, JSON.stringify({ fetched_at: 'not a date', coins: {} }));
+    assert.equal(MV.loadCalibration().value.source, 'shipped', 'and so is one without a date');
+    fs.unlinkSync(shipped); fs.unlinkSync(runtime);
+    assert.throws(() => MV.loadCalibration());
+  } finally { if (old === undefined) delete process.env.BRIEF_CALIBRATION; else process.env.BRIEF_CALIBRATION = old; fs.rmSync(d, { recursive: true, force: true }); }
+});

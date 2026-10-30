@@ -13,6 +13,7 @@
 //                                           and ANY refused payment whose reason is a Circle authorisation refusal for the Arc rail
 //                                           (403 / forbidden / registration_required): one row is an alert, own wallets included,
 //                                           then quiet for an hour (a dead Circle key is seen on the first payment, not after a burst)
+//                                           and, from day 30 of the move-alert calibration table (tools/briefs/config.js), one line a day about its age
 //   --dry                                   print what would be sent; send nothing, write no state
 //
 // crons (root), under flock, no PM2 process:
@@ -345,6 +346,33 @@ async function keyLowAlert(db, state, now, io = {}) {
   return due.length;
 }
 
+// The move-alert calibration table (pensio, 30 Oct 2026). /api/move-alert refuses a table older than 45 days (it then answers 503), and the weekly cron job
+// bin/brief-calibrate.js is what keeps it young. From day 30 this sends ONE Telegram line a day (the first --alert run of each UTC day), so a refresh that stopped
+// working is seen about two weeks before the route fails. Same path as every other alert here (send(): the token is read from the env file and never printed). A failed
+// send leaves the day unmarked, so the next run tries again. The files are the ones tools/briefs/move.js reads; the newer fetched_at counts.
+const CAL_FILES = () => (process.env.BRIEF_CALIBRATION ? process.env.BRIEF_CALIBRATION.split(',') : [path.join(__dirname, '..', 'brief-calibration.json'), path.join(__dirname, '..', 'tools', 'briefs', 'calibration.json')]);
+async function calibrationAlert(state, now, io = {}) {
+  const sendFn = io.send || send, log = io.log || console.log;
+  const { MAX_AGE_S } = require('../tools/briefs/config');
+  let fetched = null;
+  for (const f of io.files || CAL_FILES()) {
+    try { const t = Date.parse(JSON.parse(fs.readFileSync(f, 'utf8')).fetched_at); if (Number.isFinite(t) && (fetched == null || t > fetched)) fetched = t; } catch { /* absent or unreadable */ }
+  }
+  const warnDays = MAX_AGE_S.calibration_warn / 86400, refuseDays = MAX_AGE_S.calibration / 86400;
+  const ageDays = fetched == null ? null : Math.floor((now - fetched) / 86400e3);
+  if (ageDays != null && ageDays < warnDays) return 0;
+  const day = new Date(now).toISOString().slice(0, 10);
+  const seen = state.calibration || (state.calibration = {});
+  if (seen.day === day) return 0;
+  const text = ageDays == null
+    ? 'AgentFeed: no readable move-alert calibration table, so /api/move-alert answers 503 (not billed) until one is written. Run bin/brief-calibrate.js; its log: /opt/agentfeed/brief-calibrate.log (cron: Mondays 04:10 UTC).'
+    : `AgentFeed: the move-alert calibration table is ${ageDays} days old; the route refuses it after ${refuseDays} (${ageDays >= refuseDays ? 'now: /api/move-alert answers 503, not billed' : `${refuseDays - ageDays} days left`}). The weekly refresh is not replacing it: read /opt/agentfeed/brief-calibrate.log (cron: Mondays 04:10 UTC).`;
+  if (!(await sendFn(text))) return 0;
+  seen.day = day;
+  log(`${new Date(now).toISOString()} calibration age alert sent (${ageDays == null ? 'no table' : `${ageDays} days`})`);
+  return 1;
+}
+
 async function alert(db) {
   const now = Date.now();
   const rows = db.prepare(`SELECT ts, tool, payer_wallet, ip, user_agent, error_msg FROM calls WHERE status='payment_refused' AND NOT COALESCE(${RESYNC_SQL}, 0) AND ts >= ?`).all(now - BURST_WINDOW);
@@ -368,6 +396,7 @@ async function alert(db) {
   try { await circleAuthAlert(db, state, now); } catch (e) { console.log(`${new Date().toISOString()} circle auth alert failed: ${String(e && e.message).slice(0, 160)}`); }
   await lateTempo(db, state, now);
   try { await keyLowAlert(db, state, now); } catch (e) { console.log(`${new Date().toISOString()} apify key low alert failed: ${String(e && e.message).slice(0, 160)}`); }
+  try { await calibrationAlert(state, now); } catch (e) { console.log(`${new Date().toISOString()} calibration age alert failed: ${String(e && e.message).slice(0, 160)}`); }
   saveState(state);
 }
 
@@ -378,4 +407,4 @@ if (require.main === module) (async () => {
   else { console.error('usage: node ops/af-digest.js --digest [--force] [--test] | --alert [--dry]'); process.exit(1); }
 })().catch((e) => { console.log(`${new Date().toISOString()} af-digest failed: ${String(e.message).slice(0, 200)}`); process.exit(1); });
 
-module.exports = { shapeOf, isOwn, yesterday, offsetMin, digestText, keysLines, circleAuthAlert, keyLowAlert, circleAuthRowsBetween, CIRCLE_AUTH_RE };
+module.exports = { calibrationAlert, shapeOf, isOwn, yesterday, offsetMin, digestText, keysLines, circleAuthAlert, keyLowAlert, circleAuthRowsBetween, CIRCLE_AUTH_RE };

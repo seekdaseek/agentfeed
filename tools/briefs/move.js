@@ -10,7 +10,8 @@
 // z-score); the sampler's 7 days are too short to calibrate p99.9, and recalibrating on the box's own record is a later step. The z cut-offs below are
 // PROPOSED, not measured.
 //
-// CORE: the sampler (the latest mark of every coin) and a calibration table younger than MAX_AGE_S.calibration; without them the answer is a 503.
+// CORE: the sampler (the latest mark of every coin) and a calibration table younger than MAX_AGE_S.calibration (45 days); without them the answer is a 503. From 30 days the
+// table's age is stated in `method` (and ops/af-digest.js --alert sends one line a day), so a refresh that stopped working is seen two weeks before the route does.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -29,12 +30,26 @@ const EVENT_BEFORE_S = 15 * 60;                       // a scheduled release exp
 const EVENT_AFTER_S = 2 * 3600;                       // ... to 2 hours after it
 const MAX_ITEMS = 12;
 
-let _cal = null;
-function loadCalibration() {
-  const file = process.env.BRIEF_CALIBRATION || path.join(__dirname, 'calibration.json');
+// The table is read from the newer of two files: brief-calibration.json beside the code (git-ignored runtime data, written by the weekly cron job
+// bin/brief-calibrate.js; a deploy never touches it) and the table that ships with the code. BRIEF_CALIBRATION (tests) names the file or files, comma separated, to read.
+const CAL_FILES = () => (process.env.BRIEF_CALIBRATION ? process.env.BRIEF_CALIBRATION.split(',') : [path.join(__dirname, '..', '..', 'brief-calibration.json'), path.join(__dirname, 'calibration.json')]);
+const _cal = new Map();   // file -> { mtimeMs, doc }
+function readCal(file) {
   const st = fs.statSync(file);
-  if (!_cal || _cal.mtimeMs !== st.mtimeMs || _cal.file !== file) _cal = { file, mtimeMs: st.mtimeMs, doc: JSON.parse(fs.readFileSync(file, 'utf8')) };
-  return { value: _cal.doc, as_of_ms: Date.parse(_cal.doc.fetched_at), name: `Hyperliquid candle tails (${_cal.doc.source})` };
+  const hit = _cal.get(file);
+  if (hit && hit.mtimeMs === st.mtimeMs) return hit.doc;
+  const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
+  if (!doc || typeof doc.coins !== 'object' || !Number.isFinite(Date.parse(doc.fetched_at))) throw new Error('not a calibration table');
+  _cal.set(file, { mtimeMs: st.mtimeMs, doc });
+  return doc;
+}
+function loadCalibration() {
+  let best = null; let lastErr = null;
+  for (const file of CAL_FILES()) {
+    try { const doc = readCal(file); if (!best || Date.parse(doc.fetched_at) > Date.parse(best.doc.fetched_at)) best = { file, doc }; } catch (e) { lastErr = e; }
+  }
+  if (!best) throw lastErr || new Error('no calibration table');
+  return { value: best.doc, as_of_ms: Date.parse(best.doc.fetched_at), name: `Hyperliquid candle tails (${best.doc.source})`, file: best.file };
 }
 
 const rank = (t) => TIERS.indexOf(t);
@@ -61,7 +76,7 @@ function eventFor(events, fromS, toS) {
   return null;
 }
 
-function method(calDoc, calCoins, minTier) {
+function method(calDoc, calCoins, minTier, ageDays = null) {
   const ns = {}; const qs = new Set();
   for (const c of Object.values(calCoins)) for (const h of HORIZONS) if (c[h.id]) { (ns[h.id] ||= []).push(c[h.id].n); qs.add(`${h.id} sharp p${(c[h.id].q_sharp * 100).toFixed(1)}`); }
   const nr = (id) => (ns[id] ? (Math.min(...ns[id]) === Math.max(...ns[id]) ? `${ns[id][0]}` : `${Math.min(...ns[id])} to ${Math.max(...ns[id])}`) : 'none');
@@ -72,6 +87,7 @@ function method(calDoc, calCoins, minTier) {
     `Event-driven: a move whose window meets a scheduled FOMC, CPI, NFP or PCE release from ${EVENT_BEFORE_S / 60} minutes before it to ${EVENT_AFTER_S / 3600} hours after it is labelled event_driven with the release named; otherwise it is unexplained by the calendar. This is LineWatch's in-running exclusion for perps.`,
     `Open interest (coin units): the 1-hour change against the coin's own previous day, as /api/oi-spike-scan measures it (z-score; coins above $${OI_MIN_USD / 1e6}M of open interest, 1-hour change of at least ${OI_MIN_1H_PCT}%); tiers at |z| ${OI_Z.notable}, ${OI_Z.sharp}, ${OI_Z.extreme} are proposed and not yet calibrated on our own record (a later step), so open-interest items are labelled by that rule only.`,
     `Abnormality score: price = |change| / the coin's notable threshold for that horizon; open interest = |z| / ${OI_Z.notable}. Coverage: only coins in the calibration table are checked.`,
+    ...(ageDays != null && ageDays >= MAX_AGE_S.calibration_warn / 86400 ? [`CALIBRATION AGE: the tail table is ${ageDays} days old; the weekly refresh should have replaced it, and the route refuses a table older than ${MAX_AGE_S.calibration / 86400} days (it then answers 503, not billed).`] : []),
     'The text is templates filled from these numbers; there is no language model. It describes what moved and never what to trade.',
   ].join(' ');
 }
@@ -176,9 +192,9 @@ async function getMoveAlert(_p = {}, { now = Date.now(), deps = S.real, calibrat
   return E.envelope({
     brief: 'move-alert', now,
     window: { horizons: HORIZONS.map((h) => h.id), to: asOf },
-    items, col, method: method(cal.value, calCoins, minTier),
+    items, col, method: method(cal.value, calCoins, minTier, Math.floor(calAge / 86400)),
     emptyHeadline: `No move at the ${minTier} tier or above in the last 4 hours across ${checked} coins: each is inside its own measured range.`,
-    extra: { coins_checked: checked, min_tier: minTier, calibration: { fetched_at: cal.value.fetched_at, source: cal.value.source } },
+    extra: { coins_checked: checked, min_tier: minTier, calibration: { fetched_at: cal.value.fetched_at, source: cal.value.source, age_days: Math.floor(calAge / 86400) } },
   });
 }
 

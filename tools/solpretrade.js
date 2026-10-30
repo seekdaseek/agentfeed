@@ -107,6 +107,9 @@ function makeCtx(opts = {}) {
   const floor = opts.gapMs ?? 170;
   ctx.rpc = async (method, params, o) => {
     for (let attempt = 0; ; attempt++) {
+      // R20j: a request that has seen every endpoint fail (ctx.outage) ends in a 503 whatever else it reads (outageGuard), so it starts no NEW call: one failing request had made
+      // about 390 upstream calls across three hosts. A call already running keeps its own retries.
+      if (attempt === 0 && ctx.outage) throw ctx.outage;
       guard();
       if (PACED.has(method) && !ctx.mocked) await pace();
       // a call may not outlive the request's deadline: its own timeout is whatever time is left
@@ -361,8 +364,10 @@ async function tokenCheck(p = {}, deps = {}) {
 // transaction or a refused scan, and wrong when NO endpoint answered: a Solana outage would come back as a paid, partial answer. The first such failure
 // is remembered on the ctx (ctx.outage, set in ctx.rpc) and the request ends in a 503, not charged, whatever the tolerant code did with it.
 async function outageGuard(ctx, run) {
-  const out = await run();
-  if (ctx.outage) throw unavailable(`the Solana RPC did not answer (${String(ctx.outage.message).replace(/\.?\s*Not charged\.?$/, '').slice(0, 120)}). Not charged.`, { retryAfter: 30 });
+  const outageError = () => unavailable(`the Solana RPC did not answer (${String(ctx.outage.message).replace(/\.?\s*Not charged\.?$/, '').slice(0, 120)}). Not charged.`, { retryAfter: 30 });
+  let out;
+  try { out = await run(); } catch (e) { if (ctx.outage && e === ctx.outage) throw outageError(); throw e; }   // R20j: ctx.rpc re-throws the remembered outage to any later call; same answer as a swallowed one
+  if (ctx.outage) throw outageError();
   return out;
 }
 async function tokenCheckRun(mint, deps) {

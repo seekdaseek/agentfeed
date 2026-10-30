@@ -462,6 +462,16 @@ routes. Alchemy documents `getTokenLargestAccounts` at 20 compute units and list
 alchemy.com/pricing, read 30 Oct 2026); at this service's 3,500 or so Solana calls a day that is far inside the allowance. Nothing is configured yet: adding a key is the owner's step
 (`ops/add-rpc-fallback.sh`), and the provider's terms apply to that account, not to this repository.
 
+### Alchemy as the keyed provider: what it serves and how fast (R20j, 30 Oct 2026)
+
+Installed by the owner at 06:37Z. Measured on the box: `getSlot` and `getTokenLargestAccounts` answer 200 (a 20-account ranking); **`getProgramAccounts` is answered HTTP 429 "Your app has
+exceeded its compute units per second capacity" even as the only call on an otherwise idle app**, with a trivial filter and with the Raydium filter alike, while the calls next to it return 200.
+sol-token-check, sol-token-flow and sol-holder-clusters therefore cannot be served through Alchemy's Free plan and still need Helius (credits return on 9 Nov) or a plan that serves it; their
+discovery calls go to Helius only (`RPC_PROGRAM_SKIP`). Throughput: the documentation pages read on 30 Oct 2026 (alchemy.com/pricing, its Spanish version, and the support article "What is
+included in the Free Tier") say Free = 30M CU a month and **300 CU/s, measured over a rolling 10 seconds** (3,000 CU in any 10 s), shown as "15 requests/s" (300 / 20 CU). The owner's page shows
+25 requests/s (500 CU/s at 20 CU) and a search snippet quoted 500 CU/s: two published figures that this repository could not reconcile, so the code holds to the lower one. Alchemy's
+weights are in `lib/rpc-throttle.js` (alchemy.com/docs/reference/compute-unit-costs, read 30 Oct 2026). With 25 requests/s at 10 CU (`getAccountInfo`) the budget of 240 CU/s is 24 requests/s.
+
 ### Prepaid keys (R9, 14 Oct 2026)
 
 Not a data source and not a new payment protocol: a key is a balance stored in agentfeed.db (`api_keys`, only the sha256 of the key), bought with one ordinary x402 payment on the exact rails and spent per call at the route's high-frequency price (half the x402 price, minimum $0.0005). The purchase routes (`/api/keys/buy-trial`, `buy-1`, `buy-5`, `buy-20`, `topup-5`, `topup-20`) carry no batch-settlement and no Gateway accept, so credit cannot be bought at half price. Revenue is the settled purchase (status `paid`); the calls it funds are rows of status `key` and are never added to revenue. Credit is non-refundable and has no expiry (terms at /terms).

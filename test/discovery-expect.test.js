@@ -49,3 +49,20 @@ test('discovery-check against the real server: the two count lines compare with 
     assert.equal(toolsLine, `OK   MCP tools/list: ${here.tools} tools (TOOL_DEFS + the pricing tool: ${here.tools})`);
   }
 });
+
+// server.json is what the MCP Registry publishes and what the server card is built from (the registry's description limit is 100 characters).
+const sj = require('../server.json');
+const live = loadExpected();
+
+test('server.json: the description fits the registry\'s 100 characters, names the briefs and the 20 chains, and the version is above the registry\'s live latest (2.9.0)', () => {
+  assert.ok(sj.description.length >= 1 && sj.description.length <= 100, `${sj.description.length} characters: ${sj.description}`);
+  assert.match(sj.description, /briefs/);
+  assert.match(sj.description, /\b20 chains\b/);
+  const v = sj.version.split('.').map(Number);
+  assert.ok(v.length === 3 && v.every(Number.isInteger));
+  assert.ok(v[0] > 2 || (v[0] === 2 && v[1] > 9), `version ${sj.version} must be above 2.9.0, the latest the registry holds (read 30 Oct 2026)`);
+});
+
+test('server.json: the description\'s tool count is the live tools/list count, derived from TOOL_DEFS', { skip: live.error ? 'this checkout\'s tables cannot be loaded here (run under the box shim, or on the box)' : false }, () => {
+  assert.match(sj.description, new RegExp(`\\b${live.tools} tools\\b`), `${sj.description} vs ${live.tools}`);
+});

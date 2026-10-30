@@ -3,6 +3,7 @@
 //   mode 'capped'   HTTP 429 "max usage reached" for everything (a Helius key out of credits)
 //   mode 'public'   answers every method except `refuse`, which gets HTTP 429 {"code":429,"message":"Too many requests for a specific RPC call"}
 //                   (the Solana Labs public RPC and getTokenLargestAccounts)
+//   option accountPresent: a base64 getAccountInfo answers a token account instead of null (the account exists)
 //   mode 'cups'     answers every method except `refuse`, which gets HTTP 429 {"code":429,"message":"Your app has exceeded its compute units per second capacity..."}
 //                   (Alchemy's Free plan and getProgramAccounts, measured 30 Oct 2026)
 // It counts the calls per method, so a test can say how many times an endpoint was asked what.
@@ -21,10 +22,11 @@ const LARGEST = { context: { slot: 463000000 }, value: [
   { address: 'Hld3333333333333333333333333333333333333333', amount: '100000000000', decimals: 6, uiAmount: 100000, uiAmountString: '100000' },
 ] };
 
-function answer(method, params) {
+function answer(method, params, accountPresent) {
   if (method === 'getAccountInfo') {
     const enc = params && params[1] && params[1].encoding;
-    return enc === 'jsonParsed' ? MINT_ACCOUNT : { context: { slot: 463000000 }, value: null };   // base64: a Metaplex PDA that does not exist
+    if (enc === 'jsonParsed') return MINT_ACCOUNT;
+    return accountPresent ? { context: { slot: 463000000 }, value: { owner: TOKEN_PROGRAM, lamports: 2039280, executable: false, rentEpoch: 0, space: 165, data: ['', 'base64'] } } : { context: { slot: 463000000 }, value: null };   // base64: a Metaplex PDA that does not exist, or (accountPresent) a token account
   }
   if (method === 'getTokenLargestAccounts') return LARGEST;
   if (method === 'getMultipleAccounts') return { context: { slot: 463000000 }, value: (params[0] || []).map(() => null) };
@@ -34,7 +36,7 @@ function answer(method, params) {
   return null;
 }
 
-function startRpcStub({ mode = 'ok', refuse = [], delayMs = 0 } = {}) {
+function startRpcStub({ mode = 'ok', refuse = [], delayMs = 0, accountPresent = false } = {}) {
   const counts = new Map();
   const hits = [];
   const refused = new Set(refuse);
@@ -58,7 +60,7 @@ function startRpcStub({ mode = 'ok', refuse = [], delayMs = 0 } = {}) {
         return res.end('{"jsonrpc":"2.0","id":1,"error":{"code":429,"message":"Your app has exceeded its compute units per second capacity. If you have retries enabled, you can safely ignore this message."}}');
       }
       res.setHeader('content-type', 'application/json');
-      res.end(JSON.stringify({ jsonrpc: '2.0', id: j.id ?? 1, result: answer(method, j.params) }));
+      res.end(JSON.stringify({ jsonrpc: '2.0', id: j.id ?? 1, result: answer(method, j.params, accountPresent) }));
     });
   });
   return new Promise((resolve) => srv.listen(0, '127.0.0.1', () => {

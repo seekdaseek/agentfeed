@@ -14,6 +14,7 @@
 //                                           (403 / forbidden / registration_required): one row is an alert, own wallets included,
 //                                           then quiet for an hour (a dead Circle key is seen on the first payment, not after a burst)
 //                                           and, from day 30 of the move-alert calibration table (tools/briefs/config.js), one line a day about its age
+//                                           and (R22) one line when the USDC account of a Solana payTo in the manifest does not exist, then quiet for an hour
 //   --dry                                   print what would be sent; send nothing, write no state
 //
 // crons (root), under flock, no PM2 process:
@@ -373,6 +374,76 @@ async function calibrationAlert(state, now, io = {}) {
   return 1;
 }
 
+// ---- The USDC account of every Solana payTo (R22, 30 Oct 2026). A Solana x402 payment pays the payTo's associated USDC account. A wallet cleanup closed the treasury's at 08:10:41Z and it was
+// recreated at 10:35:14Z; meanwhile every Solana payment would have been refused at verification ("simulation failed: transaction would fail"), and nothing here said so (the one refusal in
+// those 2 h 25 min was our own QA wallet, at 10:30). So every --alert run (5 min) reads the live manifest, takes each distinct Solana (payTo, USDC mint), derives the associated token
+// account and asks lib/solrpc whether it exists: ONE Telegram line when it does not, then quiet for an hour (QUIET_AFTER_ALERT); a present account clears the state, so the next closure
+// alerts at once. An RPC error, an unreadable manifest or an answer of an unexpected shape is logged and is NOT a missing account: no alert and no state change. Only the classic token
+// program's USDC is checked (a Token-2022 asset would derive another address and read as missing). The cron runs without the service's env file, so the RPC settings are read from it here,
+// by name, and never printed.
+const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+const TOKEN_PROGRAM = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+const ATA_PROGRAM = 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL';
+const RPC_ENV_NAMES = ['SOLANA_RPC_URL', 'HELIUS_RPC', 'HELIUS_API_KEY', 'RPC_FALLBACKS', 'RPC_CUPS', 'RPC_HEAVY_SKIP', 'RPC_PROGRAM_SKIP'];
+const MANIFEST_URL = () => process.env.AF_MANIFEST_URL || 'http://127.0.0.1:3006/.well-known/x402.json';
+const SERVICE_ENV = () => process.env.AF_SERVICE_ENV || path.join(__dirname, '..', '.env');
+
+/** every distinct { payTo, asset } the manifest offers on a Solana network (CAIP-2 `solana:...`) */
+function solanaPayTos(manifest) {
+  const seen = new Map();
+  for (const r of (manifest && manifest.resources) || []) for (const a of r.accepts || []) {
+    if (!/^solana:/.test(String(a.network || '')) || typeof a.payTo !== 'string' || typeof a.asset !== 'string') continue;
+    seen.set(`${a.payTo}|${a.asset}`, { payTo: a.payTo, asset: a.asset });
+  }
+  return [...seen.values()];
+}
+/** the associated token account of `owner` for `mint` under the classic token program */
+async function usdcAccountOf(owner, mint = USDC_MINT) {
+  const k = require('@solana/kit');
+  const enc = k.getAddressEncoder();
+  const [ata] = await k.getProgramDerivedAddress({ programAddress: ATA_PROGRAM, seeds: [enc.encode(owner), enc.encode(TOKEN_PROGRAM), enc.encode(mint)] });
+  return ata;
+}
+function loadRpcEnv() {
+  let text = '';
+  try { text = fs.readFileSync(SERVICE_ENV(), 'utf8'); } catch { return; }
+  for (const line of text.split('\n')) {
+    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+    if (m && RPC_ENV_NAMES.includes(m[1]) && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+  }
+}
+async function readManifest() {
+  const r = await fetch(MANIFEST_URL(), { signal: AbortSignal.timeout(15000) });
+  if (!r.ok) throw new Error(`manifest HTTP ${r.status}`);
+  return r.json();
+}
+async function treasuryAlert(state, now, io = {}) {
+  const sendFn = io.send || send, log = io.log || console.log;
+  let targets;
+  try { targets = (io.targets || solanaPayTos(await readManifest())).filter((t) => t.asset === USDC_MINT); } catch (e) { log(`${new Date(now).toISOString()} treasury usdc check: manifest unreadable (${String(e && e.message).slice(0, 80)}); nothing checked`); return 0; }
+  if (!targets.length) { log(`${new Date(now).toISOString()} treasury usdc check: no Solana USDC payTo in the manifest; nothing checked`); return 0; }
+  const rpcFn = io.rpc || (() => { loadRpcEnv(); return require('../lib/solrpc').rpc; })();
+  const seen = state.treasury || (state.treasury = {});
+  let alerts = 0, present = 0;
+  for (const t of targets) {
+    const ata = await (io.account || usdcAccountOf)(t.payTo, t.asset);
+    let res;
+    try { res = await rpcFn('getAccountInfo', [ata, { encoding: 'base64', commitment: 'confirmed' }]); }
+    catch (e) { log(`${new Date(now).toISOString()} treasury usdc check: rpc error for ${ata.slice(0, 8)}… (${String(e && e.message).slice(0, 80)}); not reported as missing`); continue; }
+    if (!res || typeof res !== 'object' || !('value' in res)) { log(`${new Date(now).toISOString()} treasury usdc check: unexpected rpc answer for ${ata.slice(0, 8)}…; not reported as missing`); continue; }
+    if (res.value) {
+      present++;
+      if (seen[ata]) { delete seen[ata]; log(`${new Date(now).toISOString()} treasury usdc account ${ata.slice(0, 8)}… is back`); }
+      continue;
+    }
+    if (seen[ata] && now - seen[ata].alertedAt < QUIET_AFTER_ALERT) continue;
+    const text = `AgentFeed: the USDC account ${ata} of the Solana payTo ${t.payTo} does not exist, so every Solana payment is refused at verification (the payer is not charged). Recreate it (send USDC to the payTo, or spl-token create-account ${t.asset} --owner ${t.payTo}); the next reminder is in 1 hour.`;
+    if (await sendFn(text)) { seen[ata] = { alertedAt: now, payTo: t.payTo }; alerts++; log(`${new Date(now).toISOString()} treasury usdc account missing: alert sent (${ata.slice(0, 8)}…)`); }
+  }
+  if (DRY) log(`${new Date(now).toISOString()} treasury usdc check (dry): ${targets.length} Solana payTo, ${present} account(s) present, ${alerts} alert(s) that would be sent`);
+  return alerts;
+}
+
 async function alert(db) {
   const now = Date.now();
   const rows = db.prepare(`SELECT ts, tool, payer_wallet, ip, user_agent, error_msg FROM calls WHERE status='payment_refused' AND NOT COALESCE(${RESYNC_SQL}, 0) AND ts >= ?`).all(now - BURST_WINDOW);
@@ -397,6 +468,7 @@ async function alert(db) {
   await lateTempo(db, state, now);
   try { await keyLowAlert(db, state, now); } catch (e) { console.log(`${new Date().toISOString()} apify key low alert failed: ${String(e && e.message).slice(0, 160)}`); }
   try { await calibrationAlert(state, now); } catch (e) { console.log(`${new Date().toISOString()} calibration age alert failed: ${String(e && e.message).slice(0, 160)}`); }
+  try { await treasuryAlert(state, now); } catch (e) { console.log(`${new Date().toISOString()} treasury usdc check failed: ${String(e && e.message).slice(0, 160)}`); }
   saveState(state);
 }
 
@@ -407,4 +479,4 @@ if (require.main === module) (async () => {
   else { console.error('usage: node ops/af-digest.js --digest [--force] [--test] | --alert [--dry]'); process.exit(1); }
 })().catch((e) => { console.log(`${new Date().toISOString()} af-digest failed: ${String(e.message).slice(0, 200)}`); process.exit(1); });
 
-module.exports = { calibrationAlert, shapeOf, isOwn, yesterday, offsetMin, digestText, keysLines, circleAuthAlert, keyLowAlert, circleAuthRowsBetween, CIRCLE_AUTH_RE };
+module.exports = { treasuryAlert, solanaPayTos, usdcAccountOf, calibrationAlert, shapeOf, isOwn, yesterday, offsetMin, digestText, keysLines, circleAuthAlert, keyLowAlert, circleAuthRowsBetween, CIRCLE_AUTH_RE };

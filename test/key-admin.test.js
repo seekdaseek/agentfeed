@@ -52,3 +52,47 @@ test('grant without --out prints the key once; refusals for bad input', () => {
   assert.match(fail('revoke', 'abc'), /6 characters/);
   assert.match(fail('nope'), /usage/);
 });
+
+// R22: grant-pass mints a comp pass of every kind the store sells, so a pass can be proved on the box without a payment (sold 0: never revenue).
+const { PASS, DAY_PASS, SIGNALS_PASS, SIGNALS_DAY_PASS, passOf } = require('../lib/keys');
+const DAY_MS = 86_400_000;
+
+test('grant-pass: the bot pass, the day pass, the signals pass and the signals day pass are comp grants on exactly their own routes (sold 0, no balance, key off stdout)', () => {
+  const cases = [
+    { args: ['30'], kind: PASS }, { args: ['1', '--day'], kind: DAY_PASS },
+    { args: ['30', '--signals'], kind: SIGNALS_PASS }, { args: ['1', '--signals', '--day'], kind: SIGNALS_DAY_PASS },
+  ];
+  for (const { args, kind } of cases) {
+    const out = path.join(dir, `gp-${kind.id}.key`);
+    const t0 = Date.now();
+    const said = run('grant-pass', ...args, '--label', `r22-${kind.id}`, '--out', out);
+    const key = fs.readFileSync(out, 'utf8').trim();
+    assert.match(key, KEY_RE);
+    assert.equal(fs.statSync(out).mode & 0o777, 0o600);
+    assert.ok(!said.includes(key), `${kind.id}: the key is not on stdout`);
+    assert.ok(said.includes(key.slice(4, 12)) && said.includes(kind.label), said);
+    if (kind.id.startsWith('signals')) assert.ok(said.includes('/api/coin-signal/{coin}') && !said.includes(':coin'), `${kind.id}: the route is printed as {coin}, never as a colon template: ${said}`);
+    const db = new Database(DB, { readonly: true });
+    const row = db.prepare('SELECT * FROM api_keys WHERE key_hash = ?').get(hashKey(key));
+    db.close();
+    assert.equal(row.status, 'active', kind.id);
+    assert.equal(row.allow, kind.allow.join(','), `${kind.id}: exactly the routes of its kind`);
+    assert.equal(row.pass_days, kind.days, kind.id);
+    assert.equal(row.balance_micro, 0, `${kind.id}: no balance`);
+    assert.equal(row.sold_micro, 0, `${kind.id}: a comp pass is not a sale`);
+    assert.equal(row.buyer, 'grant');
+    assert.ok(Math.abs(row.expires_at - (t0 + kind.days * DAY_MS)) < 60_000, `${kind.id}: expires ${kind.days} day(s) out`);
+    assert.equal(passOf(row).id, kind.id, `${kind.id}: the store reads the row back as the same kind of pass`);
+  }
+  const list = run('list');
+  assert.ok(list.includes('r22-signals-day') && list.includes('/api/signal-board') && list.includes('/api/morning-brief'));
+});
+
+test('grant-pass: a signals day pass is one day, and the usual refusals hold', () => {
+  assert.match(fail('grant-pass', '30', '--signals', '--day', '--label', 'x'), /signals day pass is 1 day/);
+  assert.match(fail('grant-pass', '0', '--signals', '--label', 'x'), /1 to 365/);
+  assert.match(fail('grant-pass', '1', '--signals', '--day'), /--label/);
+  const out = path.join(dir, 'gp-exists.key');
+  fs.writeFileSync(out, 'x');
+  assert.match(fail('grant-pass', '1', '--signals', '--day', '--label', 'x', '--out', out), /exists/);
+});

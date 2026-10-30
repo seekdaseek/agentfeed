@@ -5,8 +5,10 @@
 //   node ops/key-admin.mjs revoke <prefix>
 //   node ops/key-admin.mjs set-rate <prefix> <n>            requests per minute, 1-6000
 //   node ops/key-admin.mjs grant <usd> --label <x> [--out <file>]
-//   node ops/key-admin.mjs grant-pass <days> --label <x> [--day] [--out <file>]   a comp bot pass: good only on /api/liq-feed, no balance;
-//                                                                         --day: the day pass's routes (/api/liq-feed and /api/liquidations)
+//   node ops/key-admin.mjs grant-pass <days> --label <x> [--day] [--signals] [--out <file>]   a comp pass, no balance: good only on its routes;
+//                                                                         default: the bot pass's /api/liq-feed; --day: the day pass's routes (/api/liq-feed and /api/liquidations);
+//                                                                         --signals: the signals pass's routes (the briefs and the perp signal routes); --signals --day: the signals
+//                                                                         day pass (24 hours, <days> must be 1). Sold 0 either way: a comp pass is never revenue.
 //
 // grant makes a comp or partner key (a gateway such as claw402, or a proof run), active at once, sold_micro 0, so it
 // never reads as revenue. The key is printed ONCE to this terminal; with --out it is written to <file> (mode 600) and
@@ -20,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const Database = require('better-sqlite3');
-const { makeKeyStore, toUsd, PASS, DAY_PASS } = require('../lib/keys');
+const { makeKeyStore, toUsd, showRoute, PASS, DAY_PASS, SIGNALS_PASS, SIGNALS_DAY_PASS } = require('../lib/keys');
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const DB = process.env.AGENTFEED_DB || path.join(here, '..', 'agentfeed.db');
@@ -29,7 +31,7 @@ const flag = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 
 const die = (msg) => { console.error(msg); process.exit(1); };
 const iso = (ms) => (ms ? new Date(ms).toISOString().replace('.000Z', 'Z') : '-');
 
-if (!cmd || !['list', 'revoke', 'set-rate', 'grant', 'grant-pass'].includes(cmd)) die('usage: key-admin.mjs list | revoke <prefix> | set-rate <prefix> <n> | grant <usd> --label <x> [--out <file>] | grant-pass <days> --label <x> [--out <file>]');
+if (!cmd || !['list', 'revoke', 'set-rate', 'grant', 'grant-pass'].includes(cmd)) die('usage: key-admin.mjs list | revoke <prefix> | set-rate <prefix> <n> | grant <usd> --label <x> [--out <file>] | grant-pass <days> --label <x> [--day] [--signals] [--out <file>]');
 if (!fs.existsSync(DB)) die(`no database at ${DB}`);
 const db = new Database(DB);
 db.pragma('busy_timeout = 5000');
@@ -71,15 +73,17 @@ if (cmd === 'list') {
   if (!lbl) die('grant-pass needs --label <x> (who or what the pass is for)');
   const out = flag('--out');
   if (out && fs.existsSync(out)) die(`${out} exists; refusing to overwrite a key file`);
-  const kind = args.includes('--day') ? DAY_PASS : PASS;
+  const day = args.includes('--day');
+  const kind = args.includes('--signals') ? (day ? SIGNALS_DAY_PASS : SIGNALS_PASS) : (day ? DAY_PASS : PASS);
+  if (args.includes('--signals') && day && days !== kind.days) die(`a signals day pass is ${kind.days} day: grant-pass ${kind.days} --signals --day`);
   const key = store.grantPass({ days, allow: kind.allow, label: lbl });
   const prefix = key.slice(4, 12);
   if (out) {
     fs.writeFileSync(out, key + '\n', { mode: 0o600 });
     fs.chmodSync(out, 0o600);
-    console.log(`granted a ${days}-day ${kind.label} (${kind.allow.join(', ')}) to ${lbl}: prefix ${prefix}, key written to ${out} (mode 600, ${key.length} chars)`);
+    console.log(`granted a ${days}-day ${kind.label} (${kind.allow.map(showRoute).join(', ')}) to ${lbl}: prefix ${prefix}, key written to ${out} (mode 600, ${key.length} chars)`);
   } else {
-    console.log(`granted a ${days}-day ${kind.label} (${kind.allow.join(', ')}) to ${lbl}: prefix ${prefix}`);
+    console.log(`granted a ${days}-day ${kind.label} (${kind.allow.map(showRoute).join(', ')}) to ${lbl}: prefix ${prefix}`);
     console.log(`key (shown once, not stored anywhere): ${key}`);
   }
 } else if (cmd === 'grant') {

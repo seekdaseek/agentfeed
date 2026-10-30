@@ -37,7 +37,7 @@ test('item 8: the agent card carries the fixed text (skills are built from the p
 });
 const compat = () => require('../lib/compat');
 
-test('item 9: the paper route shows the slash form as its example on every surface, the route key and the route count are unchanged', { skip }, () => {
+test('item 9: the paper example VALUE is the DOI as written, the published URL is the one-segment form R20f chose, the retired instruction is gone from every surface, route key and price unchanged', { skip }, () => {
   const { PRICES, TAGS, BAZAAR_META } = require('../payments');
   const D = require('../tools/discovery');
   const key = 'GET /api/paper/:doi';
@@ -51,17 +51,19 @@ test('item 9: the paper route shows the slash form as its example on every surfa
   const ctx = { PRICES, TAGS, META: BAZAAR_META, FREE_TOOLS: ['get_fear_greed'], mpp: { active: false, routes: [] }, tempo: { active: false }, network: 'mainnet' };
   const api = D.buildOpenApi(ctx);
   assert.deepEqual(api.paths['/api/paper/{doi}'].get['x-example-path'], { doi: '10.1038/nature14539' });
-  const OLD_INSTRUCTION = /Send the slash of the DOI|slash sent as %2F|10\.1038%2F/i;   // the %2F form still works and is mentioned once, as the alternative
-  // The documented 400 (error-responses.json, regenerated in pensio round 2) quotes the guard's own example URL, which R20f publishes as ONE segment on purpose
-  // (lib/route-urls.js: 10.1038%2Fnature14539, the form CDP's validate accepts). That URL is the guard's, not the instruction this check retired, so the
-  // responses are tested for exactly that form below and the rest of the operation must still be free of the old text.
-  const { responses: paperResponses, ...paperOp } = api.paths['/api/paper/{doi}'].get;
-  assert.ok(!OLD_INSTRUCTION.test(JSON.stringify({ ...api.paths['/api/paper/{doi}'], get: paperOp })), 'openapi: the old %2F instruction and example are gone');
-  assert.ok(JSON.stringify(paperResponses).includes('/api/paper/10.1038%2Fnature14539'), 'the documented 400 carries the one-segment example R20f publishes');
-  const entry = D.buildWellKnown(ctx).resourceCatalog.find((r) => /\/api\/paper\/\{doi\}$/.test(r.url));
+  // R17 retired an INSTRUCTION ("send the slash as %2F"). R20f then chose, on purpose, to PUBLISH the URL in one segment (lib/route-urls.js: the form CDP's
+  // validate accepts), so every surface that prints a caller's URL prints this one, and the guard's documented 400 quotes it. That URL is no longer "old text".
+  const RETIRED = /Send the slash of the DOI|slash sent as %2F/i;
+  const ONE_SEGMENT = '/api/paper/10.1038%2Fnature14539';
+  assert.ok(!RETIRED.test(JSON.stringify(api.paths['/api/paper/{doi}'])), 'openapi: the retired %2F instruction is gone');
+  assert.ok(JSON.stringify(api.paths['/api/paper/{doi}'].get.responses).includes(ONE_SEGMENT), 'openapi: the documented 400 quotes the one-segment URL');
+  const entry = D.buildWellKnown(ctx).resourceCatalog.find((r) => r.url.endsWith(ONE_SEGMENT));
+  assert.ok(entry, '/.well-known/x402 resourceCatalog lists the route by its one-segment URL');
   assert.deepEqual(entry.path_params_example, { doi: '10.1038/nature14539' }, '/.well-known/x402 resourceCatalog');
-  for (const [name, text] of [['llms.txt', D.buildLlmsTxt(ctx)], ['SKILL.md', D.buildSkillMd(ctx)]]) assert.ok(!OLD_INSTRUCTION.test(text), `${name}: the old %2F instruction is gone`);
-  assert.ok(D.buildLlmsTxt(ctx).includes('/api/paper/10.1038/nature14539'), 'llms.txt carries the slash example');
+  for (const [name, text] of [['llms.txt', D.buildLlmsTxt(ctx)], ['SKILL.md', D.buildSkillMd(ctx)]]) {
+    assert.ok(!RETIRED.test(text), `${name}: the retired %2F instruction is gone`);
+    assert.ok(text.includes(`GET ${ONE_SEGMENT}`), `${name} prints the one-segment URL R20f publishes`);
+  }
   const { MCP_DEFS_ADD } = require('../expansion');
   const def = MCP_DEFS_ADD.find((d) => d.name === 'get_paper');
   assert.ok(def.desc.includes('/api/paper/10.1038/nature14539'));

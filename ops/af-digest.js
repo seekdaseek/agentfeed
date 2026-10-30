@@ -38,13 +38,8 @@ const DRY = args.has('--dry');
 
 // Our own traffic: tagged in the digest, never an alert. Same wallets as afwatch.js. EVM addresses are compared lower-case
 // (the audit table stores them that way from R8, older rows are migrated): one payer, one spelling.
-const OWN_WALLETS = new Set([
-  'EqRNNpKVpu6jm8iRTNa17Rht2TRTzCtNNz37M9m2Di1',
-  'Gack9UtqfeZxFA1LqeqjLgC3JGuD7rS6CsSHKoXsD4Tu',
-  'TeStKWyNre9PW8XbLfvuBm9f6EnTBYqS5GXTzciCnHw',
-  '0xFEfF369D5048b2Cf817d87467E48404b3ADfE4Ee',
-  '0x05b38ff795a2d750788157f1119e5d403d8ef47a', // the Circle Gateway proof payer (Arc, 13 Oct 2026)
-].map(normPayer));
+// R22: the list is lib/own-traffic.js, shared with ops/funnel.js (through isOwn below) and /opt/afwatch/afwatch.js.
+const { OWN_WALLETS } = require('../lib/own-traffic');
 // The box itself, plus /opt/afwatch/own-ips.txt (one per line, # comments): the Mac's
 // addresses change, so they live in a file rather than here.
 const OWN_IPS = new Set(['167.233.69.154', '2a01:4f8:c015:eb5e::1', '127.0.0.1', '::1', '::ffff:127.0.0.1']);
@@ -479,4 +474,4 @@ if (require.main === module) (async () => {
   else { console.error('usage: node ops/af-digest.js --digest [--force] [--test] | --alert [--dry]'); process.exit(1); }
 })().catch((e) => { console.log(`${new Date().toISOString()} af-digest failed: ${String(e.message).slice(0, 200)}`); process.exit(1); });
 
-module.exports = { treasuryAlert, solanaPayTos, usdcAccountOf, calibrationAlert, shapeOf, isOwn, yesterday, offsetMin, digestText, keysLines, circleAuthAlert, keyLowAlert, circleAuthRowsBetween, CIRCLE_AUTH_RE };
+module.exports = { OWN_WALLETS, treasuryAlert, solanaPayTos, usdcAccountOf, calibrationAlert, shapeOf, isOwn, yesterday, offsetMin, digestText, keysLines, circleAuthAlert, keyLowAlert, circleAuthRowsBetween, CIRCLE_AUTH_RE };

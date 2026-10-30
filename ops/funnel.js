@@ -64,10 +64,15 @@ function buildReport(db, { days = 7, now = Date.now(), all = false, isOwn = () =
     for (const r of db.prepare('SELECT day, route, user_agent, SUM(n) AS n FROM unpaid_402 WHERE day >= ? GROUP BY day, route, user_agent').iterate(fromDay)) get(r.day, r.route, uaFamily(r.user_agent)).unpaid_402 += r.n;
   } else notes.push('the unpaid_402 table does not exist in this database: no 402 counts');
   const keyKinds = new Map();
+  // R22: a key bought by one of our own wallets is our own money: its calls are left out like its purchase (--all keeps them). A comp grant (buyer 'grant') is not own: a partner's key is outside use.
+  const ownKeys = new Set();
+  const hasBuyer = hasTable(db, 'api_keys') && db.prepare('PRAGMA table_info(api_keys)').all().some((c) => c.name === 'buyer');
+  if (hasBuyer) for (const r of db.prepare('SELECT prefix, buyer FROM api_keys').iterate()) if (r.buyer && isOwn({ payer_wallet: r.buyer, ip: null })) ownKeys.add(`key:${r.prefix}`);
   if (hasTable(db, 'api_keys')) for (const r of db.prepare('SELECT prefix, pass_days, allow FROM api_keys').iterate()) keyKinds.set(`key:${r.prefix}`, !r.pass_days ? 'pack' : passKindOf ? passKindOf(r) : `pass ${r.pass_days}d`);
-  let own = 0, rows = 0;
+  let own = 0, ownKeyCalls = 0, rows = 0;
   for (const r of db.prepare("SELECT ts, tool, payer_wallet, tx_sig, amount_usdc, status, ip, error_msg, user_agent FROM calls WHERE ts >= ? AND status IN ('paid', 'key', 'payment_refused') ORDER BY ts").iterate(fromMs)) {
     rows++;
+    if (!all && r.status === 'key' && ownKeys.has(String(r.payer_wallet || ''))) { ownKeyCalls++; continue; }
     if (!all && r.status !== 'key' && isOwn(r)) { own++; continue; }
     const c = get(utcDay(r.ts), r.tool, uaFamily(r.user_agent));
     if (r.status === 'paid') {
@@ -97,6 +102,7 @@ function buildReport(db, { days = 7, now = Date.now(), all = false, isOwn = () =
   const totals = routes.reduce((a, t) => ({ unpaid_402: a.unpaid_402 + t.unpaid_402, paid: a.paid + t.paid, paid_usd: Math.round((a.paid_usd + t.paid_usd) * 1e6) / 1e6, refused: a.refused + t.refused, key_calls: a.key_calls + t.key_calls }), { unpaid_402: 0, paid: 0, paid_usd: 0, refused: 0, key_calls: 0 });
   totals.conversion = totals.unpaid_402 > 0 ? Math.round((totals.paid / totals.unpaid_402) * 1e4) / 1e4 : null;
   if (own) notes.push(`${own} paid or refused rows from own / test wallets and addresses were left out (--all keeps them)`);
+  if (ownKeyCalls) notes.push(`${ownKeyCalls} calls of keys bought by own wallets were left out (--all keeps them)`);
   notes.push('rail is inferred from the payer and transaction shape: the table stores no network, and every EVM chain reads as evm');
   return { window: { days, from_day: fromDay, to_day: utcDay(now), calls_rows_read: rows }, totals, routes, rows: out, notes };
 }

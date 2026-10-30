@@ -41,7 +41,7 @@ function fixture(file, { tables = true } = {}) {
   row(D0, 'get_morning_brief', 'paid', { payer: OWN, tx: SOL_TX, usd: 0.03 });                                                  // an own wallet: left out by default
   row(D0, 'get_morning_brief', 'payment_refused', { payer: EVM_PAYER, err: 'verification refused: invalid_exact_evm_payload_signature' }); row(D0, 'get_morning_brief', 'payment_refused', { err: 'verification refused: invalid_exact_evm_payload_signature' });
   row(D0, 'get_morning_brief', 'payment_refused', { err: 'settlement refused: insufficient_funds', ua: 'python-httpx/0.27.0' });
-  for (let i = 0; i < 4; i++) row(D0, 'get_morning_brief', 'key', { payer: 'key:AAAAAAAA', usd: 0, ua: 'hermes-agent/1.0' });       // a brief pass: nothing drawn
+  for (let i = 0; i < 4; i++) row(D0, 'get_morning_brief', 'key', { payer: 'key:AAAAAAAA', usd: 0, ua: 'hermes-agent/1.0' });       // a signals pass: nothing drawn
   for (let i = 0; i < 2; i++) row(D1, 'get_signal_board', 'key', { payer: 'key:BBBBBBBB', usd: 0.005, ua: 'hermes-agent/1.0' });  // a prepaid pack: half price drawn
   row(D0, 'get_fear_greed', 'free'); row(D1, 'get_morning_brief', 'paid', { payer: EVM_PAYER, tx: EVM_TX, usd: 0.03 });
   row('2026-10-20', 'get_anomaly_flag', 'paid', { payer: EVM_PAYER, tx: EVM_TX, usd: 0.02 });                                    // outside a 7-day window
@@ -80,7 +80,7 @@ test('report: 402s, paid by rail, refused by reason, key and pass calls, convers
   const mv = cell(D0, 'get_move_alert', 'browser');
   assert.deepEqual([mv.unpaid_402, mv.paid, mv.conversion], [4, 1, 0.25]);
   const k = cell(D0, 'get_morning_brief', 'hermes-agent');
-  assert.deepEqual([k.key_calls, k.key_calls_by_kind, k.unpaid_402, k.conversion], [4, { brief: 4 }, 0, null]);
+  assert.deepEqual([k.key_calls, k.key_calls_by_kind, k.unpaid_402, k.conversion], [4, { signals: 4 }, 0, null]);
   assert.deepEqual(cell(D1, 'get_signal_board', 'hermes-agent').key_calls_by_kind, { pack: 2 });
   assert.equal(cell(D1, 'get_morning_brief', 'curl').paid, 1);
   assert.ok(!r.rows.some((x) => x.route === 'get_anomaly_flag'), 'a day before the window is not counted (402s or paid)');

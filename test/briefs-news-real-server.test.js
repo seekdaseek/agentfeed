@@ -40,7 +40,7 @@ test('flag on: unpaid GET and HEAD are the 402 (price from the config), no handl
   for (const m of ['GET', 'HEAD']) {
     const r = await H.raw(on.port, m, BC.ROUTES.news, { 'cf-connecting-ip': '198.20.9.9' });
     assert.equal(r.status, 402, m);
-    assert.equal(H.unb64(r.headers['payment-required']).accepts.find((a) => a.network === H.BASE).amount, String(Math.round(BC.PRICES_PROPOSED.news * 1e6)));
+    assert.equal(H.unb64(r.headers['payment-required']).accepts.find((a) => a.network === H.BASE).amount, String(Math.round(BC.BRIEF_PRICES.news * 1e6)));
   }
   assert.deepEqual(on.handlerRuns(), []);
   assert.deepEqual(on.netAttempts(), []);
@@ -61,7 +61,7 @@ test('flag on, paid: with the model unreachable the releases are served unclassi
   assert.equal(bad.length, 1);
   assert.match(bad[0].why_it_matters, /not sent to any model/);
   assert.equal(on.fac.log.filter((x) => x.op === 'settle').length, 1);
-  assert.equal(on.fac.log.find((x) => x.op === 'settle').amount, String(Math.round(BC.PRICES_PROPOSED.news * 1e6)));
+  assert.equal(on.fac.log.find((x) => x.op === 'settle').amount, String(Math.round(BC.BRIEF_PRICES.news * 1e6)));
   assert.ok(on.netAttempts().every((h) => /googleapis/.test(h)), 'the only outbound attempt is the model host, and it was refused: ' + on.netAttempts().join(','));
 });
 test('flag on, sources stale: a 503 that is not settled on x402 v2 or v1', async () => {
@@ -72,7 +72,7 @@ test('flag on, sources stale: a 503 that is not settled on x402 v2 or v1', async
   assert.equal(v2.status, 503);
   assert.match(JSON.parse(v2.body).error, /no news source has been read in the last 3 hours\. Not charged\./);
   assert.ok(Number(v2.headers['retry-after']) > 0);
-  const v1 = await get(stale, BC.ROUTES.news, { 'x-payment': H.b64(H.payV1({}, String(Math.round(BC.PRICES_PROPOSED.news * 1e6)))) });
+  const v1 = await get(stale, BC.ROUTES.news, { 'x-payment': H.b64(H.payV1({}, String(Math.round(BC.BRIEF_PRICES.news * 1e6)))) });
   assert.equal(v1.status, 503);
   assert.deepEqual(stale.fac.log.filter((x) => x.op === 'settle'), []);
 });

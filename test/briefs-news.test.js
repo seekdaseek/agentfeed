@@ -204,14 +204,14 @@ test('the injection rules catch what they are meant to (control: known positives
   assert.equal(R.scan('SEC Charges Adviser in Cherry-Picking Scheme. The Commission will hold an open meeting.').verdict, 'none');
 });
 
-test('the flag: off, the route is in no table; on, it is priced, an MCP tool, and the brief pass covers it', () => {
-  const probe = (flag) => JSON.parse(execFileSync(process.execPath, ['--require', path.join(__dirname, 'helpers', 'af-test-preload.js'), '-e', "const {PRICES}=require('./payments');const {MCP_DEFS_ADD}=require('./expansion');const K=require('./lib/keys');console.log(JSON.stringify({priced:!!PRICES['GET /api/news-brief'],price:(PRICES['GET /api/news-brief']||{}).usd,mcp:MCP_DEFS_ADD.some(d=>d.name==='get_news_brief'),allow:K.BRIEF_PASS.allow,day:K.BRIEF_DAY_PASS.allow}))"],
+test('the flag: off, the route is in no table; on, it is priced, an MCP tool, and the signals pass covers it', () => {
+  const probe = (flag) => JSON.parse(execFileSync(process.execPath, ['--require', path.join(__dirname, 'helpers', 'af-test-preload.js'), '-e', "const {PRICES}=require('./payments');const {MCP_DEFS_ADD}=require('./expansion');const K=require('./lib/keys');console.log(JSON.stringify({priced:!!PRICES['GET /api/news-brief'],price:(PRICES['GET /api/news-brief']||{}).usd,mcp:MCP_DEFS_ADD.some(d=>d.name==='get_news_brief'),allow:K.SIGNALS_PASS.allow,day:K.SIGNALS_DAY_PASS.allow}))"],
     { cwd: path.join(__dirname, '..'), env: { PATH: process.env.PATH, AF_ROOT: path.join(__dirname, '..'), AGENTFEED_DB: path.join(os.tmpdir(), `news-flag-${flag}.db`), OVERHANG_DB_PATH: process.env.OVERHANG_DB_PATH, ...(flag ? { PENSIO_NEWS: flag } : {}) }, encoding: 'utf8' }).trim().split('\n').pop());
   const off = probe('');
   assert.deepEqual([off.priced, off.mcp], [false, false]);
   assert.ok(!off.allow.includes('/api/news-brief'));
   const on = probe('on');
-  assert.deepEqual([on.priced, on.mcp, on.price], [true, true, require('../tools/briefs/config').PRICES_PROPOSED.news]);
+  assert.deepEqual([on.priced, on.mcp, on.price], [true, true, require('../tools/briefs/config').BRIEF_PRICES.news]);
   assert.ok(on.allow.includes('/api/news-brief') && on.day.includes('/api/news-brief'));
   assert.deepEqual(probe('off').priced, false, 'only the exact value on switches it on');
 });

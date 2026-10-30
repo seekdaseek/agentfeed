@@ -42,10 +42,14 @@ function writeFiles(dir, { now = Date.now(), sampler = 'ok', extra = 8, shock, t
     events: [{ type: 'CPI', title: 'Consumer Price Index', reference_period: null, date_new_york: day, time_new_york: '08:30', utc: `${day}T23:30:00.000Z`, source_url: 'https://www.bls.gov/schedule/news_release/cpi.htm', verified_at: new Date(now - 3600_000).toISOString() }] };
   const macroPath = path.join(dir, 'macro.json');
   fs.writeFileSync(macroPath, JSON.stringify(macro));
+  // the whale snapshot signal-board and coin-signal read (tools/signals.js whales(): a file, never an upstream)
+  const whalePath = path.join(dir, 'hl-whales.json');
+  fs.writeFileSync(whalePath, JSON.stringify({ at: now, marks: {}, scanned: 3, withPositions: 2, listRows: 3, listAt: now,
+    positions: ['BTC', 'ETH', 'SOL'].map((coin, i) => ({ coin, side: i % 2 ? 'short' : 'long', size: 10, notional_usd: 1_000_000 * (i + 1), entry_px: 100, liquidation_px: 80, address: `0x${String(i + 1).repeat(40)}` })) }));
   const calPath = path.join(dir, 'calibration.json');
   fs.writeFileSync(calPath, JSON.stringify(makeCalibration(now, ['BTC', 'ETH', 'SOL', 'HYPE', 'C00', 'C01', 'C02']).value));
   void nowS;
-  return { HL_OI_DB: oiPath, LIQ_DB: liqPath, FUNDING_RADAR_SNAPSHOT: radarPath, MACRO_SNAPSHOT: macroPath, BRIEF_CALIBRATION: calPath, CALIPER_LIQ_DB: liqPath };
+  return { HL_OI_DB: oiPath, LIQ_DB: liqPath, FUNDING_RADAR_SNAPSHOT: radarPath, MACRO_SNAPSHOT: macroPath, BRIEF_CALIBRATION: calPath, HL_WHALES_SNAPSHOT: whalePath, CALIPER_LIQ_DB: liqPath };
 }
 
 module.exports = { writeFiles };

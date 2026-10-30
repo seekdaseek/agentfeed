@@ -9583,8 +9583,8 @@
    "static": true,
    "synthetic": true
   },
-  "GET /api/keys/buy-brief-pass": {
-   "tool": "buy_key_brief_pass",
+  "GET /api/keys/buy-signals-pass": {
+   "tool": "buy_key_signals_pass",
    "price_usd": 25,
    "input": {},
    "inputSchema": {
@@ -9602,7 +9602,7 @@
    },
    "output": {
     "example": {
-     "tool": "buy_key_brief_pass",
+     "tool": "buy_key_signals_pass",
      "data": {
       "key": "afk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
       "prefix": "xxxxxxxx",
@@ -9612,16 +9612,21 @@
        "routes": [
         "/api/morning-brief",
         "/api/move-alert",
-        "/api/anomaly-flag"
+        "/api/anomaly-flag",
+        "/api/market-state",
+        "/api/signal-board",
+        "/api/coin-signal/:coin",
+        "/api/oi-spike-scan",
+        "/api/liq-heatmap"
        ],
        "starts": "when this payment settles",
        "expires": "30 days after that"
       },
       "status": "active",
       "rate_per_min": 120,
-      "use": "send it on every call to /api/morning-brief, /api/move-alert, /api/anomaly-flag as the header X-AgentFeed-Key: <key> (or Authorization: Bearer <key>); a call costs nothing more while the pass is valid; each route answers one call every 60 seconds per key (1 a…",
+      "use": "send it on every call to /api/morning-brief, /api/move-alert, /api/anomaly-flag, /api/market-state, /api/signal-board, /api/coin-signal/{coin}, /api/oi-spike-scan, /api/liq-heatmap as the header X-AgentFeed-Key: <key> (or Authorization: Bearer <key>); a call c…",
       "balance": "GET /api/keys/balance with the same header (free) shows the expiry",
-      "terms": "a 30-day brief pass for a flat $25, good only on /api/morning-brief, /api/move-alert, /api/anomaly-flag, non-refundable, cannot be topped up (buy another when it ends); the key is a bearer secret: anyone holding it uses the pass; abuse means revocation",
+      "terms": "a 30-day signals pass for a flat $25, good only on /api/morning-brief, /api/move-alert, /api/anomaly-flag, /api/market-state, /api/signal-board, /api/coin-signal/{coin}, /api/oi-spike-scan, /api/liq-heatmap, non-refundable, cannot be topped up (buy another whe…",
       "note": "this is the only time the key is shown; it is not stored anywhere on our side, only its sha256"
      },
      "paid": true
@@ -9672,8 +9677,8 @@
    },
    "static": true
   },
-  "GET /api/keys/buy-brief-day-pass": {
-   "tool": "buy_key_brief_day_pass",
+  "GET /api/keys/buy-signals-day-pass": {
+   "tool": "buy_key_signals_day_pass",
    "price_usd": 1,
    "input": {},
    "inputSchema": {
@@ -9691,7 +9696,7 @@
    },
    "output": {
     "example": {
-     "tool": "buy_key_brief_day_pass",
+     "tool": "buy_key_signals_day_pass",
      "data": {
       "key": "afk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
       "prefix": "xxxxxxxx",
@@ -9701,16 +9706,21 @@
        "routes": [
         "/api/morning-brief",
         "/api/move-alert",
-        "/api/anomaly-flag"
+        "/api/anomaly-flag",
+        "/api/market-state",
+        "/api/signal-board",
+        "/api/coin-signal/:coin",
+        "/api/oi-spike-scan",
+        "/api/liq-heatmap"
        ],
        "starts": "when this payment settles",
        "expires": "24 hours after that"
       },
       "status": "active",
       "rate_per_min": 120,
-      "use": "send it on every call to /api/morning-brief, /api/move-alert, /api/anomaly-flag as the header X-AgentFeed-Key: <key> (or Authorization: Bearer <key>); a call costs nothing more while the pass is valid; each route answers one call every 60 seconds per key (1 a…",
+      "use": "send it on every call to /api/morning-brief, /api/move-alert, /api/anomaly-flag, /api/market-state, /api/signal-board, /api/coin-signal/{coin}, /api/oi-spike-scan, /api/liq-heatmap as the header X-AgentFeed-Key: <key> (or Authorization: Bearer <key>); a call c…",
       "balance": "GET /api/keys/balance with the same header (free) shows the expiry",
-      "terms": "a 24-hour brief day pass for a flat $1, good only on /api/morning-brief, /api/move-alert, /api/anomaly-flag, non-refundable, cannot be topped up (buy another when it ends); the key is a bearer secret: anyone holding it uses the pass; abuse means revocation",
+      "terms": "a 24-hour signals day pass for a flat $1, good only on /api/morning-brief, /api/move-alert, /api/anomaly-flag, /api/market-state, /api/signal-board, /api/coin-signal/{coin}, /api/oi-spike-scan, /api/liq-heatmap, non-refundable, cannot be topped up (buy another…",
       "note": "this is the only time the key is shown; it is not stored anywhere on our side, only its sha256"
      },
      "paid": true
@@ -9762,8 +9772,8 @@
    "static": true
   }
  },
- "_outputs_recaptured_at": "2026-10-29T22:04:29.211Z",
- "_pruned_at": "2026-10-13T04:50:31.410Z",
+ "_outputs_recaptured_at": "2026-10-30T07:51:47.304Z",
+ "_pruned_at": "2026-10-30T07:49:09.331Z",
  "_schemas_regenerated_at": "2026-10-29T21:07:44.425Z",
  "_outputs_dropped_at": "2026-10-13T04:50:35.546Z",
  "_f6_recaptured_at": "2026-10-14T12:13Z injection-check: plain example input (R10 F6), output captured on the box from tools/injection.js"

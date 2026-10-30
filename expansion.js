@@ -88,9 +88,10 @@ const KEYDAYPASS = () => {
   const P = KEYLIB.DAY_PASS;
   return `Day pass: ${money(P.usd)} flat for 24 hours of unlimited calls to ${P.allow.join(' and ')} (cross-venue liquidation pressure in 5-second buckets, and the recent liquidation tape), for bots that poll all day, can set an HTTP header, and pay by a default x402 client, which buys it as is. One payment on any exact rail returns an API key (afk_...) once, or, with key_hash=<sha256 hex of a key you generated>, registers your own key without the server ever seeing it. Send it as X-AgentFeed-Key (or Authorization: Bearer) on ${P.allow.join(' and ')}: nothing is drawn per call, each of the two routes answers one call every 10 seconds per key (6 a minute), and the pass is refused on every other route. It starts when the payment settles and ends 24 hours later; GET /api/keys/balance shows the expiry, free. Non-refundable, cannot be topped up. Exact rails only: no half-price batch or Gateway accept on this route.`;
 };
-const KEYBRIEFPASS = (P) => {
+const KEYSIGNALSPASS = (P) => {
   const span = P.days === 1 ? '24 hours' : `${P.days} days`;
-  return `${P.days === 1 ? 'Brief day pass' : 'Brief pass'}: ${money(P.usd)} flat for ${span} of unlimited calls to the AgentFeed briefs (${P.allow.join(', ')}), for agents that run on a schedule with no one to approve a payment: the key goes in X-AgentFeed-Key and nothing is drawn per call. Each route answers one call every ${Object.values(P.pace)[0] / 1000} seconds per key. One payment on any exact rail returns an API key (afk_...) once, or, with key_hash=<sha256 hex of a key you generated>, registers the hash and never sees the key. Starts when the payment settles. Non-refundable, no top-up, a bearer secret. Exact rails only.`;
+  const show = (r) => r.replace(/:([A-Za-z0-9_]+)/g, '{$1}');
+  return `${P.days === 1 ? 'Signals day pass' : 'Signals pass'}: ${money(P.usd)} flat for ${span} of unlimited calls to the AgentFeed briefs and perp signal routes, for agents that run on a schedule with no one to approve a payment. The key goes in X-AgentFeed-Key and nothing is drawn per call. Each route answers one call every ${Object.values(P.pace)[0] / 1000} seconds per key. One payment on any exact rail returns an API key (afk_...) once, or, with key_hash=<sha256 hex of a key you generated>, registers the hash and never sees the key. Starts when the payment settles. Non-refundable, no top-up, a bearer secret. Exact rails only. Covers: ${P.allow.map(show).join(', ')}.`;
 };
 const KEYTOP = (k) => {
   const usd = KEYLIB.TOPUPS[k];
@@ -432,17 +433,17 @@ const EXP = [
     desc: KEYDAYPASS(),
     schema: KEYSCHEMA,
     run: (a, req) => keys().buy(a, req, KEYLIB.DAY_PASS.usd, { pass: KEYLIB.DAY_PASS }) },
-  // pensio: the brief passes (tools/briefs/config.js holds the PROPOSED price and pace)
-  { name: 'buy_key_brief_pass', route: 'GET /api/keys/buy-brief-pass', usd: KEYLIB.BRIEF_PASS.usd, noHf: true, mcp: false,
+  // pensio: the signals passes (tools/briefs/config.js holds the price, the pace and the one list of routes they cover)
+  { name: 'buy_key_signals_pass', route: 'GET /api/keys/buy-signals-pass', usd: KEYLIB.SIGNALS_PASS.usd, noHf: true, mcp: false,
     tags: ['api-key', 'prepaid', 'bots', 'pass', 'brief'],
-    desc: KEYBRIEFPASS(KEYLIB.BRIEF_PASS),
+    desc: KEYSIGNALSPASS(KEYLIB.SIGNALS_PASS),
     schema: KEYSCHEMA,
-    run: (a, req) => keys().buy(a, req, KEYLIB.BRIEF_PASS.usd, { pass: KEYLIB.BRIEF_PASS }) },
-  { name: 'buy_key_brief_day_pass', route: 'GET /api/keys/buy-brief-day-pass', usd: KEYLIB.BRIEF_DAY_PASS.usd, noHf: true, mcp: false,
+    run: (a, req) => keys().buy(a, req, KEYLIB.SIGNALS_PASS.usd, { pass: KEYLIB.SIGNALS_PASS }) },
+  { name: 'buy_key_signals_day_pass', route: 'GET /api/keys/buy-signals-day-pass', usd: KEYLIB.SIGNALS_DAY_PASS.usd, noHf: true, mcp: false,
     tags: ['api-key', 'prepaid', 'bots', 'pass', 'brief'],
-    desc: KEYBRIEFPASS(KEYLIB.BRIEF_DAY_PASS),
+    desc: KEYSIGNALSPASS(KEYLIB.SIGNALS_DAY_PASS),
     schema: KEYSCHEMA,
-    run: (a, req) => keys().buy(a, req, KEYLIB.BRIEF_DAY_PASS.usd, { pass: KEYLIB.BRIEF_DAY_PASS }) },
+    run: (a, req) => keys().buy(a, req, KEYLIB.SIGNALS_DAY_PASS.usd, { pass: KEYLIB.SIGNALS_DAY_PASS }) },
   { name: 'topup_key_5', route: 'GET /api/keys/topup-5', usd: 5, noHf: true, mcp: false,
     tags: ['api-key', 'prepaid', 'bots', 'credit'],
     desc: KEYTOP('5'),
@@ -561,18 +562,18 @@ const EXP = [
     run: (a) => TXT.transcribe(a) },
 
   // ---- pensio (30 Oct 2026): three short briefs built only from data this service already holds (tools/briefs/*). Deterministic text,
-  // no language model, no path or query parameter. A stale input answers 503 and is never billed. Prices are PROPOSED (tools/briefs/config.js). ----
-  { name: 'get_morning_brief', route: `GET ${BRC.ROUTES.morning}`, usd: BRC.PRICES_PROPOSED.morning,
+  // no language model, no path or query parameter. A stale input answers 503 and is never billed. Prices are in tools/briefs/config.js. ----
+  { name: 'get_morning_brief', route: `GET ${BRC.ROUTES.morning}`, usd: BRC.BRIEF_PRICES.morning,
     tags: ['brief', 'market-data', 'macro', 'liquidations', 'funding', 'hyperliquid', 'trading'],
     desc: 'Use when an agent needs a one-answer summary of the last 8 hours in BTC, ETH, SOL and HYPE. Returns the items ranked by how abnormal each is: price move against the coin\'s own usual 8-hour move, funding, open interest, liquidations (total, long/short split, biggest print), Fear and Greed, today\'s macro releases with UTC times, and the nearest liquidation cluster as the level to watch. A stale source is left out and named; with no sampler it answers 503, never billed.',
     schema: {},
     run: (a) => BR.getMorningBrief(a) },
-  { name: 'get_move_alert', route: `GET ${BRC.ROUTES.move}`, usd: BRC.PRICES_PROPOSED.move,
+  { name: 'get_move_alert', route: `GET ${BRC.ROUTES.move}`, usd: BRC.BRIEF_PRICES.move,
     tags: ['brief', 'anomaly', 'screener', 'hyperliquid', 'open-interest', 'macro', 'trading'],
     desc: 'Use when an agent needs to know which Hyperliquid perps moved unusually. Returns each coin whose 5-minute, 1-hour or 4-hour price move, or 1-hour open-interest change, is past its own measured tail (tiers from the coin\'s own history, sample size printed), labelled event-driven when a scheduled FOMC, CPI, NFP or PCE release explains it. An empty list is a valid answer. Stale inputs answer 503, never billed.',
     schema: {},
     run: (a) => BR.getMoveAlert(a) },
-  { name: 'get_anomaly_flag', route: `GET ${BRC.ROUTES.anomaly}`, usd: BRC.PRICES_PROPOSED.anomaly,
+  { name: 'get_anomaly_flag', route: `GET ${BRC.ROUTES.anomaly}`, usd: BRC.BRIEF_PRICES.anomaly,
     tags: ['brief', 'anomaly', 'screener', 'funding', 'liquidations', 'open-interest', 'hyperliquid', 'trading'],
     desc: 'Use when an agent needs one check for what is abnormal across Hyperliquid perps right now. Returns funding, liquidation and open-interest anomalies in one ranked list, using the thresholds of /api/market-state, or nothing abnormal with what was checked. If a source is stale and nothing else was found it answers 503 rather than an all-clear, and is never billed.',
     schema: {},
@@ -581,7 +582,7 @@ const EXP = [
 
 // pensio: the news brief exists only while PENSIO_NEWS=on (tools/briefs/config.js newsOn). Off, the route is not in PRICES, the documents, the Bazaar or MCP.
 if (BRC.newsOn()) {
-  EXP.push({ name: 'get_news_brief', route: `GET ${BRC.ROUTES.news}`, usd: BRC.PRICES_PROPOSED.news,
+  EXP.push({ name: 'get_news_brief', route: `GET ${BRC.ROUTES.news}`, usd: BRC.BRIEF_PRICES.news,
     tags: ['brief', 'news', 'macro', 'regulation', 'trading'],
     desc: 'Use when an agent needs the official regulatory and central-bank news of the last 24 hours, sorted. Returns SEC, CFTC and Federal Reserve Board press releases, each with its agency, link and time, a label (enforcement, rule change, rates and policy, supervision, market structure, administrative, other) and an impact score from 1 to 5, ranked by impact. Release text is treated as data. If no source has been read for 3 hours it answers 503, never billed.',
     schema: {},

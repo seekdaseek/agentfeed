@@ -33,8 +33,8 @@ a{color:var(--gold)}`;
 
 const SCRIPT = `
 (function(){
-const PACKS={trial:0.25,'1':1,'5':5,'20':20,pass:25,'day-pass':1,'brief-pass':${KEYLIB.BRIEF_PASS.usd},'brief-day-pass':${KEYLIB.BRIEF_DAY_PASS.usd}};
-const BRIEF_ROUTES=${JSON.stringify(KEYLIB.BRIEF_PASS.allow)};
+const PACKS={trial:0.25,'1':1,'5':5,'20':20,pass:25,'day-pass':1,'signals-pass':${KEYLIB.SIGNALS_PASS.usd},'signals-day-pass':${KEYLIB.SIGNALS_DAY_PASS.usd}};
+const SIGNALS_ROUTES=${JSON.stringify(KEYLIB.SIGNALS_PASS.allow)};
 const BASE='eip155:8453', CHAIN_HEX='0x2105', CHAIN_ID=8453;
 const B58='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 const $=(id)=>document.getElementById(id);
@@ -76,8 +76,8 @@ async function buy(){
     if(r.status!==200){const h=r.headers.get('payment-response');let why=body.error||'';if(h){try{why=unb64(h).errorReason||why;}catch(e){}}throw new Error('not paid ('+r.status+')'+(why?': '+why:''));}
     $('key').textContent=key;
     const ps=body.data.pass;
-    const brief=!!ps&&ps.routes.every((r)=>BRIEF_ROUTES.indexOf(r)>=0), day=!!ps&&ps.days===1, until=ps&&new Date(Date.now()+ps.days*864e5).toISOString();
-    $('meta').textContent=ps?'prefix '+body.data.prefix+', '+(brief?(day?'brief day pass':'brief pass'):day?'day pass':'bot pass')+' for '+ps.routes.join(', ')+' only, valid until about '+(day?until.slice(0,16).replace('T',' ')+' UTC':until.slice(0,10))+' ('+(day?'24 hours':ps.days+' days')+' from this payment), '+(brief?'each brief route answers one call every ${KEYLIB.BRIEF_PASS.pace[KEYLIB.BRIEF_PASS.allow[0]] / 1000} seconds':ps.routes.length>1?'/api/liq-feed and /api/liquidations each answer one call every 10 seconds (6 a minute)':'one call every 10 seconds')+', nothing drawn per call':'prefix '+body.data.prefix+', balance $'+body.data.balance_usd+', '+body.data.rate_per_min+' requests a minute';
+    const brief=!!ps&&ps.routes.every((r)=>SIGNALS_ROUTES.indexOf(r)>=0), day=!!ps&&ps.days===1, until=ps&&new Date(Date.now()+ps.days*864e5).toISOString();
+    $('meta').textContent=ps?'prefix '+body.data.prefix+', '+(brief?(day?'signals day pass':'signals pass'):day?'day pass':'bot pass')+' for '+ps.routes.join(', ')+' only, valid until about '+(day?until.slice(0,16).replace('T',' ')+' UTC':until.slice(0,10))+' ('+(day?'24 hours':ps.days+' days')+' from this payment), '+(brief?'each route answers one call every ${KEYLIB.SIGNALS_PASS.pace[KEYLIB.SIGNALS_PASS.allow[0]] / 1000} seconds':ps.routes.length>1?'/api/liq-feed and /api/liquidations each answer one call every 10 seconds (6 a minute)':'one call every 10 seconds')+', nothing drawn per call':'prefix '+body.data.prefix+', balance $'+body.data.balance_usd+', '+body.data.rate_per_min+' requests a minute';
     if(ps) $('examples').textContent='curl "https://x402.ochinimus.app'+ps.routes[0]+(brief?'':'?symbols=BTCUSDT,ETHUSDT')+'" -H "X-AgentFeed-Key: afk_..."'+(ps.routes.indexOf('/api/liquidations')>=0?'\\ncurl "https://x402.ochinimus.app/api/liquidations?symbol=SOLUSDT" -H "X-AgentFeed-Key: afk_..."':'')+'\\ncurl https://x402.ochinimus.app/api/keys/balance -H "X-AgentFeed-Key: afk_..."   # shows the expiry';
     $('result').style.display='block';
     say('paid and active. Copy the key now: this page is the only place it exists.','ok');
@@ -104,15 +104,15 @@ const HTML = `<!doctype html>
 <label><input type="radio" name="pack" value="20">$20</label>
 <label><input type="radio" name="pack" value="pass">bot pass $25: 30 days, /api/liq-feed only, no per-call charge</label>
 <label><input type="radio" name="pack" value="day-pass">day pass $1: 24 hours, /api/liq-feed and /api/liquidations, one call every 10 s each, no per-call charge</label>
-<label><input type="radio" name="pack" value="brief-pass">brief pass $${KEYLIB.BRIEF_PASS.usd}: ${KEYLIB.BRIEF_PASS.days} days, the brief routes (${KEYLIB.BRIEF_PASS.allow.join(", ")}), one call a minute each, no per-call charge</label>
-<label><input type="radio" name="pack" value="brief-day-pass">brief day pass $${KEYLIB.BRIEF_DAY_PASS.usd}: 24 hours, the same routes, no per-call charge</label>
+<label><input type="radio" name="pack" value="signals-pass">signals pass $${KEYLIB.SIGNALS_PASS.usd}: ${KEYLIB.SIGNALS_PASS.days} days, one flat key for the briefs and the perp signal routes (${KEYLIB.SIGNALS_PASS.allow.map(KEYLIB.showRoute).join(", ")}), one call a minute each, no per-call charge</label>
+<label><input type="radio" name="pack" value="signals-day-pass">signals day pass $${KEYLIB.SIGNALS_DAY_PASS.usd}: 24 hours, the same routes, no per-call charge</label>
 </div>
 <button id="buy">Buy with USDC on Base</button>
 <div id="status"></div>
 <div id="result"><b>Your key, shown once:</b><code id="key"></code><button id="copy">Copy</button><p id="meta" class="dim"></p>
 <pre id="examples">curl https://x402.ochinimus.app/api/signal-board -H "X-AgentFeed-Key: afk_..."
 curl https://x402.ochinimus.app/api/keys/balance -H "X-AgentFeed-Key: afk_..."</pre></div>
-<p class="dim">This page runs only in your browser. It creates the key here, sends AgentFeed only the key's sha256, and asks your wallet to sign one USDC transfer authorization on Base for exactly the pack price, payable to the address in AgentFeed's fresh 402 answer. Nothing else is loaded or contacted. A prepaid balance is a usage credit: non-refundable, no expiry. The bot pass is a flat price: non-refundable, valid 30 days from the payment, <code>/api/liq-feed</code> only, and it cannot be topped up (buy another when it ends). The day pass is the same for 24 hours on <code>/api/liq-feed</code> and <code>/api/liquidations</code>. The key is a bearer secret: anyone holding it spends the balance or uses the pass; abuse means revocation. This page pays from an EVM wallet on Base. No EVM wallet, or a Solana wallet: the same routes take USDC on Solana, Polygon, Arbitrum, Arc, Optimism, Monad and Avalanche from any x402 client, and the key comes back in the response; script: <a href="https://github.com/seekdaseek/agentfeed/blob/main/docs/nofx.md#c-from-a-solana-wallet-or-another-rail">docs</a>.</p>
+<p class="dim">This page runs only in your browser. It creates the key here, sends AgentFeed only the key's sha256, and asks your wallet to sign one USDC transfer authorization on Base for exactly the pack price, payable to the address in AgentFeed's fresh 402 answer. Nothing else is loaded or contacted. A prepaid balance is a usage credit: non-refundable, no expiry. The bot pass is a flat price: non-refundable, valid 30 days from the payment, <code>/api/liq-feed</code> only, and it cannot be topped up (buy another when it ends). The day pass is the same for 24 hours on <code>/api/liq-feed</code> and <code>/api/liquidations</code>. The signals pass is the same flat terms for ${KEYLIB.SIGNALS_PASS.days} days (or 24 hours) on the brief and perp signal routes, one call a minute per route; <code>/api/coin-signal/{coin}</code> keeps one clock for every coin, so read several coins at once with <code>/api/signal-board?coins=BTC,ETH,SOL</code>. The key is a bearer secret: anyone holding it spends the balance or uses the pass; abuse means revocation. This page pays from an EVM wallet on Base. No EVM wallet, or a Solana wallet: the same routes take USDC on Solana, Polygon, Arbitrum, Arc, Optimism, Monad and Avalanche from any x402 client, and the key comes back in the response; script: <a href="https://github.com/seekdaseek/agentfeed/blob/main/docs/nofx.md#c-from-a-solana-wallet-or-another-rail">docs</a>.</p>
 <script>${SCRIPT}</script>
 </body></html>`;
 

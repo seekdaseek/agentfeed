@@ -57,7 +57,7 @@ test('control: the three routes are priced from the config and the server is the
   assert.equal(ROUTES.length, 3);
   for (const r of ROUTES) {
     assert.ok(r.usd > 0, r.key);
-    assert.equal(r.usd, BC.PRICES_PROPOSED[{ get_morning_brief: 'morning', get_move_alert: 'move', get_anomaly_flag: 'anomaly' }[r.tool]], `${r.tool} is priced from tools/briefs/config.js`);
+    assert.equal(r.usd, BC.BRIEF_PRICES[{ get_morning_brief: 'morning', get_move_alert: 'move', get_anomaly_flag: 'anomaly' }[r.tool]], `${r.tool} is priced from tools/briefs/config.js`);
     const c = await get(s, r.path);
     assert.equal(c.status, 402, `unpaid GET ${r.path}`);
     assert.ok(c.headers['payment-required']);
@@ -233,9 +233,9 @@ test('a stale liquidation tape (the real accessor reads the tape\'s newest print
   assert.deepEqual(tapeStale.fac.log.filter((x) => x.op === 'settle'), [], 'the 503 was not settled');
 });
 
-test('the brief pass on the real server: the purchase is a paid 402, a stub-settled purchase activates the key, the key reads a brief with nothing drawn, and another route is a 403', async () => {
+test('the signals pass on the real server: the purchase is a paid 402, a stub-settled purchase activates the key, the key reads a brief with nothing drawn, and another route is a 403', async () => {
   const KL = require('../lib/keys');
-  for (const kind of [KL.BRIEF_PASS, KL.BRIEF_DAY_PASS]) {
+  for (const kind of [KL.SIGNALS_PASS, KL.SIGNALS_DAY_PASS]) {
     const ch = await get(s, kind.path);
     assert.equal(ch.status, 402, `unpaid ${kind.path}`);
     const accepts = H.unb64(ch.headers['payment-required']).accepts;
@@ -276,4 +276,37 @@ test('the free samples: /api/sample/<route> serves each brief\'s example for not
       assert.ok(j.sample_response && j.sample_response.data && j.sample_response.data.headline, `${slug}: the sample has the brief's envelope`);
     }
   }
+});
+
+test('the signals pass on the real server covers the perp signal routes too: every covered route is admitted (never a 401, 402, 403 or 429), signal-board and coin-signal answer 200 from the fixture files, draws are zero, and an uncovered priced route is a 403 that names all of them', async () => {
+  const KL = require('../lib/keys');
+  const BCfg = require('../tools/briefs/config');
+  const key = newKey(); const hash = hashKey(key);
+  const url = `${KL.SIGNALS_PASS.path}?key_hash=${hash}&prefix=${key.slice(4, 12)}`;
+  const c2 = await get(s, url);
+  const bought = await get(s, url, { 'payment-signature': H.b64(H.payBase(c2.headers['payment-required'])) });
+  assert.equal(bought.status, 200, bought.body.slice(0, 200));
+  const body = JSON.parse(bought.body).data;
+  for (const r of BCfg.SIGNAL_ROUTES) assert.ok(body.pass.routes.includes(r) && body.terms.includes(KL.showRoute(r)), `the purchase body names ${r}`);
+  s.fac.log.length = 0;
+  const seenStatus = {};
+  for (const r of KL.SIGNALS_PASS.allow) {
+    const res = await get(s, r.replace(':coin', 'BTC'), { 'x-agentfeed-key': key });
+    seenStatus[r] = res.status;
+    assert.ok(![401, 402, 403, 429].includes(res.status), `${r} -> ${res.status}: ${res.body.slice(0, 160)}`);
+  }
+  for (const r of ['/api/signal-board', '/api/coin-signal/:coin', '/api/liq-heatmap', '/api/oi-spike-scan']) assert.equal(seenStatus[r], 200, `${r} is served from the fixture files`);
+  assert.deepEqual(s.fac.log, [], 'no facilitator call for any of them');
+  const early = await get(s, '/api/coin-signal/ETH', { 'x-agentfeed-key': key });      // BTC was read a moment ago in the loop: the route's one clock
+  assert.equal(early.status, 429, 'the pace holds on the real server too');
+  assert.ok(Number(early.headers['retry-after']) > 0 && JSON.parse(early.body).retry_after > 0);
+  const refused = await get(s, '/api/funding-rate', { 'x-agentfeed-key': key });
+  assert.equal(refused.status, 403);
+  assert.deepEqual(JSON.parse(refused.body).routes, KL.SIGNALS_PASS.allow);
+  await new Promise((r) => setTimeout(r, 800));
+  const d = s.db();
+  try {
+    const row = d.prepare('SELECT balance_micro, spent_micro FROM api_keys WHERE key_hash = ?').get(hash);
+    assert.deepEqual(row, { balance_micro: 0, spent_micro: 0 }, 'nothing was drawn');
+  } finally { d.close(); }
 });

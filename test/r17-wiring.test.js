@@ -42,7 +42,7 @@ test('item 9: the paper route shows the slash form as its example on every surfa
   const D = require('../tools/discovery');
   const key = 'GET /api/paper/:doi';
   assert.ok(PRICES[key], 'same route key');
-  assert.equal(Object.keys(PRICES).length, 91 + 3, 'the route count is unchanged by the paper change (91 routes at R20e, plus the three pensio briefs)');
+  assert.equal(Object.keys(PRICES).length, 91 + 3 + 2, 'the route count is unchanged by the paper change (91 routes at R20e, plus the three pensio briefs and the two signals-pass purchase routes; the news brief is off)');
   assert.equal(PRICES[key].usd, 0.005, 'same price');
   assert.ok(PRICES[key].desc.length >= 180 && PRICES[key].desc.length <= 255, `${PRICES[key].desc.length} chars`);
   assert.ok(PRICES[key].desc.includes('/api/paper/10.1038/nature14539') && !/%2F/i.test(PRICES[key].desc));
@@ -52,7 +52,12 @@ test('item 9: the paper route shows the slash form as its example on every surfa
   const api = D.buildOpenApi(ctx);
   assert.deepEqual(api.paths['/api/paper/{doi}'].get['x-example-path'], { doi: '10.1038/nature14539' });
   const OLD_INSTRUCTION = /Send the slash of the DOI|slash sent as %2F|10\.1038%2F/i;   // the %2F form still works and is mentioned once, as the alternative
-  assert.ok(!OLD_INSTRUCTION.test(JSON.stringify(api.paths['/api/paper/{doi}'])), 'openapi: the old %2F instruction and example are gone');
+  // The documented 400 (error-responses.json, regenerated in pensio round 2) quotes the guard's own example URL, which R20f publishes as ONE segment on purpose
+  // (lib/route-urls.js: 10.1038%2Fnature14539, the form CDP's validate accepts). That URL is the guard's, not the instruction this check retired, so the
+  // responses are tested for exactly that form below and the rest of the operation must still be free of the old text.
+  const { responses: paperResponses, ...paperOp } = api.paths['/api/paper/{doi}'].get;
+  assert.ok(!OLD_INSTRUCTION.test(JSON.stringify({ ...api.paths['/api/paper/{doi}'], get: paperOp })), 'openapi: the old %2F instruction and example are gone');
+  assert.ok(JSON.stringify(paperResponses).includes('/api/paper/10.1038%2Fnature14539'), 'the documented 400 carries the one-segment example R20f publishes');
   const entry = D.buildWellKnown(ctx).resourceCatalog.find((r) => /\/api\/paper\/\{doi\}$/.test(r.url));
   assert.deepEqual(entry.path_params_example, { doi: '10.1038/nature14539' }, '/.well-known/x402 resourceCatalog');
   for (const [name, text] of [['llms.txt', D.buildLlmsTxt(ctx)], ['SKILL.md', D.buildSkillMd(ctx)]]) assert.ok(!OLD_INSTRUCTION.test(text), `${name}: the old %2F instruction is gone`);

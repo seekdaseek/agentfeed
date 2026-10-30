@@ -24,7 +24,7 @@ test('every anchor still matches the source, and the limits it reads are the lim
   assert.equal(r.code, 0, r.stderr);
   assert.match(r.stdout, /all anchors matched/);
   const { LIMITS, WINDOW_MS } = require('../lib/ratelimit.js');
-  const want = { get: LIMITS.metered, other: LIMITS.other, windowSeconds: WINDOW_MS / 1000 };
+  const want = { get: LIMITS.metered, other: LIMITS.other, docs: LIMITS.docs, unpaid: LIMITS.unpaid, windowSeconds: WINDOW_MS / 1000 };
   assert.deepEqual(JSON.parse(r.stdout.slice(r.stdout.indexOf('limits ') + 7)), want);
 });
 
@@ -32,7 +32,7 @@ test('the committed error-responses.json agrees with the code: the limiter\'s nu
   const { LIMITS, WINDOW_MS } = require('../lib/ratelimit.js');
   const { PRICES } = require('../payments.js');
   const j = JSON.parse(fs.readFileSync(path.join(ROOT, 'error-responses.json'), 'utf8'));
-  assert.deepEqual(j.limits, { get: LIMITS.metered, other: LIMITS.other, windowSeconds: WINDOW_MS / 1000 });
+  assert.deepEqual(j.limits, { get: LIMITS.metered, other: LIMITS.other, docs: LIMITS.docs, unpaid: LIMITS.unpaid, windowSeconds: WINDOW_MS / 1000 });
   const missing = Object.keys(PRICES).filter((p) => !(p in j.routes));
   assert.deepEqual(missing, [], `error-responses.json lacks ${missing.length} priced route(s); regenerate: see the header of gen-error-meta.js`);
   assert.deepEqual(Object.keys(j.routes).filter((p) => !(p in PRICES)), [], 'error-responses.json documents a route that is no longer priced');
@@ -47,6 +47,15 @@ test('against a server that answers every probe with a plain caller error, it wr
     assert.equal(r.code, 0, r.stderr);
     const j = JSON.parse(fs.readFileSync(out, 'utf8'));
     assert.deepEqual(Object.keys(j.routes).sort(), Object.keys(PRICES).sort());
+    // R22 (QUESTIONS 15): the 429 entry the generator WRITES names all four buckets, each number read from the limiter
+    const { LIMITS, WINDOW_MS } = require('../lib/ratelimit.js');
+    const e = j.shared.find((x) => x.status === 429);
+    assert.match(e.when, new RegExp(`^More than ${LIMITS.metered} GET \\(or POST /mcp\\) requests from one IP in ${WINDOW_MS / 1000}s\\.`));
+    assert.match(e.when, new RegExp(`${LIMITS.other} for other HTTP methods`));
+    assert.match(e.note, /The number in the error text is the limit of the bucket that tripped\./);
+    assert.match(e.when, new RegExp(`${LIMITS.docs} for the discovery documents`));
+    assert.match(e.when, new RegExp(`${LIMITS.unpaid} for GETs on a priced route that carry no payment, key or credential`));
+    assert.deepEqual(j.limits, { get: LIMITS.metered, other: LIMITS.other, docs: LIMITS.docs, unpaid: LIMITS.unpaid, windowSeconds: WINDOW_MS / 1000 });
   } finally { s.srv.close(); }
 });
 

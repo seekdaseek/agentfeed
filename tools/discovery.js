@@ -44,6 +44,10 @@ try {
 // They now come from the generator, which reads them out of server.js.
 const LIMIT_GET = ERROR_META.limits.get || 240;
 const LIMIT_OTHER = ERROR_META.limits.other || 2400;
+const LIMIT_DOCS = ERROR_META.limits.docs || 120;
+const LIMIT_UNPAID = ERROR_META.limits.unpaid || 1200;
+// the two further buckets, said once for the three documents that state the limits (R22, QUESTIONS 15)
+const LIMIT_EXTRA = `${LIMIT_DOCS} for the discovery documents (/openapi.json, /llms.txt, /SKILL.md and the /.well-known files) and ${LIMIT_UNPAID} for an unpaid GET on a priced route (the plain 402 challenge)`;
 const LIMIT_WINDOW_S = ERROR_META.limits.windowSeconds || 60;
 
 /**
@@ -450,7 +454,7 @@ function buildOpenApi({ PRICES, META, FREE_TOOLS, mpp, tempo }) {
         'Before paying, GET /api/sample/liq-pulse (or any other route name from GET /api/sample) for that route\'s real captured response, free.',
         'Start cheap: /api/price, /api/sol-price, /api/btc-price and /api/eth-price are $0.001; /api/perp, /api/liq-pulse and /api/funding-pulse are $0.005 and cover most questions. The premium routes are the liquidation tape, cascade detection and the tokenized-equity peg tape.',
         'It never returns fabricated or zero-filled data. An unsupported symbol answers 400 and a source that failed, is stale or has no history yet answers 503 with Retry-After; neither is ever billed. Only where the decline is the product (squeeze-score on a coin whose inputs do not resolve) does a supported symbol return 200 with a decline field naming the reason.',
-        `Limits: GET only on /api/* (HEAD on a paid route answers the 402 challenge headers with no body, on a free route the GET answer's status and headers with no body); per caller per minute ${LIMIT_GET} GET or POST /mcp and ${LIMIT_OTHER} of any other method; a 429 carries Retry-After.`,
+        `Limits: GET only on /api/* (HEAD on a paid route answers the 402 challenge headers with no body, on a free route the GET answer's status and headers with no body); per caller per minute ${LIMIT_GET} GET or POST /mcp, ${LIMIT_OTHER} of any other method, ${LIMIT_EXTRA}; a 429 carries Retry-After.`,
       ].join(' '),
     },
     externalDocs: { description: 'AgentFeed agent skill: when to use each route, what it answers and what it costs', url: `${ORIGIN}/SKILL.md` },
@@ -583,7 +587,7 @@ function buildLlmsTxt({ PRICES, TAGS, META, FREE_TOOLS, mpp, tempo }) {
     '',
     '- Path-parameter routes also accept the parameter as a query string: /api/token-risk?mint=<mint> is rewritten to the canonical path form before the paywall.',
     '- HEAD on a paid route answers the 402 challenge headers with no body; it never pays and never reaches a handler. HEAD on a free route answers like GET, with no body. The paid surface is GET-only.',
-    `- Rate limit, per caller per minute: ${LIMIT_GET} for GET and POST /mcp, ${LIMIT_OTHER} for every other method. A 429 carries Retry-After.`,
+    `- Rate limit, per caller per minute: ${LIMIT_GET} for GET and POST /mcp, ${LIMIT_OTHER} for every other method, ${LIMIT_EXTRA}. A 429 carries Retry-After.`,
     '- A route that cannot reach its upstream returns an error rather than a stale or invented value.',
     '',
   ];
@@ -700,7 +704,7 @@ function buildSkillMd({ PRICES, TAGS, META, FREE_TOOLS, mpp, tempo }) {
     ),
     '| `502` | An upstream failed on a FREE route | Only `/api/forecast-record` returns this. Retry later; nothing stale is served silently |',
     '',
-    `- **Rate limit**, per caller per ${LIMIT_WINDOW_S}s: ${LIMIT_GET} for \`GET\` and \`POST /mcp\`, ${LIMIT_OTHER} for every other method. A 429 carries \`Retry-After\`.`,
+    `- **Rate limit**, per caller per ${LIMIT_WINDOW_S}s: ${LIMIT_GET} for \`GET\` and \`POST /mcp\`, ${LIMIT_OTHER} for every other method, ${LIMIT_EXTRA}. A 429 carries \`Retry-After\`.`,
     `- Every paid route's error responses are documented per operation in [openapi.json](${ORIGIN}/openapi.json) and once for the whole surface in [/.well-known/x402](${ORIGIN}/.well-known/x402). ${Object.values(ERROR_META.routes || {}).filter((r) => r.callerError).length} routes carry a real observed \`400\` example.`,
     '- A path parameter may also be sent as a query parameter (`/api/token-risk?mint=...`); it is rewritten to the canonical form before the paywall.',
     '- It never returns fabricated or zero-filled data. An unsupported symbol answers 400 and a source that failed, is stale or has no history yet answers 503 with `Retry-After`; neither is ever billed. Only where the decline is the product (squeeze-score on a coin whose inputs do not resolve) does a supported symbol return 200 with a `decline` field naming the reason.',

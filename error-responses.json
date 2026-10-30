@@ -1,8 +1,10 @@
 {
-  "generatedAt": "2026-10-30T08:08:47.222Z",
+  "generatedAt": "2026-10-30T09:26:20.440Z",
   "limits": {
     "get": 240,
     "other": 2400,
+    "docs": 120,
+    "unpaid": 1200,
     "windowSeconds": 60
   },
   "shared": [
@@ -34,12 +36,12 @@
     {
       "status": 429,
       "name": "Too Many Requests",
-      "when": "More than 240 GET (or POST /mcp) requests from one IP in 60s. Other HTTP methods have a separate 2400/60s allowance.",
+      "when": "More than 240 GET (or POST /mcp) requests from one IP in 60s. Three further allowances are counted separately, per IP and per 60s: 2400 for other HTTP methods, 120 for the discovery documents (/openapi.json, /llms.txt, /SKILL.md, /auth.md and the /.well-known discovery files), and 1200 for GETs on a priced route that carry no payment, key or credential (the plain 402 challenge).",
       "body": {
         "error": "rate limit: 240 req/min",
         "retry_after": "<seconds>"
       },
-      "note": "Retry-After is also set as a response header."
+      "note": "Retry-After is also set as a response header. The number in the error text is the limit of the bucket that tripped."
     },
     {
       "status": 503,

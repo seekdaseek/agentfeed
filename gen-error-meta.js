@@ -51,8 +51,8 @@ const m410 = must('lib/compat.js', /res\.status\(410\)\.json\(\{\s*error: 'gone'
 const m410w = must('lib/compat.js', /res\.status\(410\)\.json\(\{ error: 'gone', status: 'withdrawn',/, '410 emitter (withdrawn routes)');
 const m503 = must('lib/tool.js', /res\.status\(503\)\.json\(\{\s*tool:\s*name,\s*error:\s*e\.message,\s*retry_after:\s*ra,\s*\.\.\.\(e\.warming \? \{ warming: e\.warming \} : \{\}\)\s*\}\)/, '503 emitter');
 // The limiter lives in lib/ratelimit.js (one object of named buckets, whatever their order). 'metered' is what this file has always
-// called the GET limit (GET and POST /mcp) and 'other' the other-method limit; the docs and unpaid buckets are not stated in the
-// shared 429 entry (QUESTIONS 15).
+// called the GET limit (GET and POST /mcp) and 'other' the other-method limit; since R22 the shared 429 entry names the docs and
+// unpaid buckets too, each number read from LIMITS (QUESTIONS 15).
 const mLimits = must('lib/ratelimit.js', /const LIMITS = \{([^}]*)\};/, 'rate limit buckets');
 const bucket = (name) => {
   const m = mLimits[1].match(new RegExp(`\\b${name}:\\s*(\\d+)`));
@@ -63,11 +63,13 @@ const mWindow = must('lib/ratelimit.js', /const WINDOW_MS = ([\d_]+);/, 'rate li
 
 const GET_LIMIT = bucket('metered');
 const OTHER_LIMIT = bucket('other');
+const DOCS_LIMIT = bucket('docs');
+const UNPAID_LIMIT = bucket('unpaid');
 const WINDOW_S = Number(mWindow[1].replace(/_/g, '')) / 1000;
 
 // Structured, so SKILL.md and openapi.json render these numbers instead of
 // carrying their own copies. discovery.js had LIMIT_GET/LIMIT_OTHER hardcoded.
-const LIMITS = { get: GET_LIMIT, other: OTHER_LIMIT, windowSeconds: WINDOW_S };
+const LIMITS = { get: GET_LIMIT, other: OTHER_LIMIT, docs: DOCS_LIMIT, unpaid: UNPAID_LIMIT, windowSeconds: WINDOW_S };
 
 const SHARED = [
   {
@@ -86,9 +88,9 @@ const SHARED = [
   {
     status: 429,
     name: 'Too Many Requests',
-    when: `More than ${GET_LIMIT} GET (or POST /mcp) requests from one IP in ${WINDOW_S}s. Other HTTP methods have a separate ${OTHER_LIMIT}/${WINDOW_S}s allowance.`,
+    when: `More than ${GET_LIMIT} GET (or POST /mcp) requests from one IP in ${WINDOW_S}s. Three further allowances are counted separately, per IP and per ${WINDOW_S}s: ${OTHER_LIMIT} for other HTTP methods, ${DOCS_LIMIT} for the discovery documents (/openapi.json, /llms.txt, /SKILL.md, /auth.md and the /.well-known discovery files), and ${UNPAID_LIMIT} for GETs on a priced route that carry no payment, key or credential (the plain 402 challenge).`,
     body: { error: `rate limit: ${GET_LIMIT} req/min`, retry_after: '<seconds>' },
-    note: 'Retry-After is also set as a response header.',
+    note: 'Retry-After is also set as a response header. The number in the error text is the limit of the bucket that tripped.',
   },
   {
     status: 503,

@@ -6,7 +6,10 @@
 //   node ops/discovery-check.mjs http://127.0.0.1:3998 --against https://x402.ochinimus.app     the staged server against live
 //   node ops/discovery-check.mjs https://x402.ochinimus.app                                      live, after the deploy
 import crypto from 'node:crypto';
+import { createRequire } from 'node:module';
 import { robotsVerdict } from './fresh-verdict.mjs';
+// the route and tool counts are what this checkout's own PRICES and TOOL_DEFS say (R22), not literals: run it where the checkout can load (the box: `cd /opt/agentfeed && node --env-file=.env ops/discovery-check.mjs <url>`)
+const want = createRequire(import.meta.url)('./discovery-expect.cjs').loadExpected();
 const ORIGIN_OF = (base) => (base.startsWith('http://') ? 'https://x402.ochinimus.app' : base);   // the documents name the public origin, also when read from a local server
 
 const BASE = (process.argv[2] || '').replace(/\/$/, '');
@@ -17,7 +20,9 @@ const OTHER = i > 0 ? process.argv[i + 1].replace(/\/$/, '') : null;
 const IP = `198.51.100.${1 + (crypto.randomBytes(1)[0] % 250)}`;
 const HDR = { 'cf-connecting-ip': IP };   // only sent to a local server: Cloudflare answers 403 to a request that carries this header itself
 let failed = 0;
+let skipped = 0;
 const ok = (cond, msg) => { console.log(`${cond ? 'OK  ' : 'FAIL'} ${msg}`); if (!cond) failed++; };
+const skip = (msg) => { console.log(`SKIP ${msg}`); skipped++; };
 const get = async (base, p) => { const r = await fetch(base + p, { headers: base.startsWith('http://') ? HDR : {} }); const body = await r.text(); return { r, body, type: r.headers.get('content-type') || '' }; };
 const json = (s) => { try { return JSON.parse(s); } catch { return undefined; } };
 
@@ -158,10 +163,12 @@ for (const p of NOCACHE_PATHS) {
   ok(sl.status === 402 && en.status === 402 && sl.accepts && sl.accepts === en.accepts, '/api/paper: the slash form and the %2F form both answer 402 with the same accepts');
   // counts
   const man = json((await raw('/.well-known/x402.json')).text);
-  ok(man && man.resources.length === 91, `manifest: ${man && man.resources.length} routes (expected 91, unchanged)`);
+  const nRoutes = man && man.resources.length;
+  if (want.error) skip(`manifest route count and MCP tool count: this checkout's PRICES and TOOL_DEFS cannot be loaded here (${want.error}); run it on the box`);
+  else ok(man && nRoutes === want.routes, `manifest: ${nRoutes} routes (PRICES: ${want.routes})`);
   const tl = await fetch(BASE + '/mcp', { method: 'POST', headers: { ...hdr, 'content-type': 'application/json', accept: 'application/json, text/event-stream' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }) });
   const tj = json((await tl.text()).split('\n').map((l) => l.replace(/^data: /, '')).find((l) => l.startsWith('{')) || '');
-  ok(tj && tj.result.tools.length === 90, `MCP tools/list: ${tj && tj.result.tools.length} tools (expected 90, unchanged)`);
+  if (!want.error) ok(tj && tj.result.tools.length === want.tools, `MCP tools/list: ${tj && tj.result.tools.length} tools (TOOL_DEFS + the pricing tool: ${want.tools})`);
 }
-console.log(failed ? `\n${failed} check(s) FAILED` : '\nall checks passed; nothing was paid');
+console.log(failed ? `\n${failed} check(s) FAILED` : `\nall checks passed${skipped ? ` (${skipped} skipped)` : ''}; nothing was paid`);
 process.exit(failed ? 1 : 0);

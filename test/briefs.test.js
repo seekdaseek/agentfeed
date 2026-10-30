@@ -164,6 +164,18 @@ test('move-alert tiers: notable is below the surfaced tier, extreme means larger
   assert.equal(MV.tierOf(0.39, { notable_pct: 0.4, sharp_pct: 0.8, extreme_pct: 3 }), null);
   assert.equal(MV.tierOf(0.4, { notable_pct: 0.4, sharp_pct: 0.8, extreme_pct: 3 }), 'notable');
 });
+test('move-alert wording: the tier word takes the right article ("an extreme move", "a sharp move", "an extreme change", "a sharp change", "a notable change") in every item text', async () => {
+  const ext = keep(await getMoveAlert({}, { now: NOW, deps: moveDeps({ shock: { ETH: { markPct: 7, steps: 12 }, SOL: { markPct: -3.4, steps: 12 } } }), calibration: calOf() }));
+  assert.match(ext.items.find((i) => i.what.startsWith('ETH ')).what, /: an extreme move, larger than every one of its last 4999 hourly moves$/);
+  assert.match(ext.items.find((i) => i.what.startsWith('SOL ')).what, /: a sharp move, larger than 99\.8% of its last 4999 hourly moves$/);
+  const spikes = [{ coin: 'C00', oi_change_1h_pct: 14.2, spike_z: 6.1 }, { coin: 'C01', oi_change_1h_pct: 9, spike_z: 4.3 }, { coin: 'C02', oi_change_1h_pct: 6, spike_z: 3.2 }];
+  const oi = keep(await getMoveAlert({}, { now: NOW, deps: moveDeps({ spikes }), calibration: calOf(), minTier: 'notable' }));
+  const what = (c) => oi.items.find((i) => i.what.startsWith(`${c} `)).what;
+  assert.match(what('C00'), /counted in coins: an extreme change \(z 6\.1 /);
+  assert.match(what('C01'), /counted in coins: a sharp change \(z 4\.3 /);
+  assert.match(what('C02'), /counted in coins: a notable change \(z 3\.2 /);
+  for (const b of [ext, oi]) for (const i of b.items) assert.doesNotMatch(i.what, /\ba (?:extreme|[aeiou]\w*) (?:move|change)\b/i, i.what);
+});
 test('move-alert open interest: a spike scan row past the rule is an item; the scan failing is a stale part, not a failure', async () => {
   const spikes = [{ coin: 'C00', oi_change_1h_pct: 14.2, spike_z: 6.1 }, { coin: 'C01', oi_change_1h_pct: 3, spike_z: 1.2 }];
   const b = keep(await getMoveAlert({}, { now: NOW, deps: moveDeps({ spikes }), calibration: calOf() }));

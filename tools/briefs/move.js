@@ -29,6 +29,8 @@ const OI_MIN_1H_PCT = 1;                              // oi-spike-scan: a 1 h ch
 const EVENT_BEFORE_S = 15 * 60;                       // a scheduled release explains moves from 15 minutes before it ...
 const EVENT_AFTER_S = 2 * 3600;                       // ... to 2 hours after it
 const MAX_ITEMS = 12;
+/** the indefinite article of a tier word: "an extreme move", "a sharp move" */
+const article = (word) => (/^[aeiou]/i.test(word) ? 'an' : 'a');
 
 // The table is read from the newer of two files: brief-calibration.json beside the code (git-ignored runtime data, written by the weekly cron job
 // bin/brief-calibrate.js; a deploy never touches it) and the table that ships with the code. BRIEF_CALIBRATION (tests) names the file or files, comma separated, to read.
@@ -159,7 +161,7 @@ async function getMoveAlert(_p = {}, { now = Date.now(), deps = S.real, calibrat
       const ev = macro ? eventFor(events, lastS - h.s, lastS) : null;
       const lvl = E.levelOf(deps.clusters(S.tapeSymbol(coin), mark), mark);
       items.push({
-        what: `${coin} ${E.pct(chg, 2)} in ${h.label}: a ${tier} move, larger than ${qLabel(cc, tier)} ${h.each} moves`,
+        what: `${coin} ${E.pct(chg, 2)} in ${h.label}: ${article(tier)} ${tier} move, larger than ${qLabel(cc, tier)} ${h.each} moves`,
         why_it_matters: !macro
           ? 'The macro calendar could not be read, so this move cannot be checked against scheduled releases.'
           : ev
@@ -176,7 +178,7 @@ async function getMoveAlert(_p = {}, { now = Date.now(), deps = S.real, calibrat
       const m0 = (cur.get(row.coin) || {}).mark;
       const lvl = m0 > 0 ? E.levelOf(deps.clusters(S.tapeSymbol(row.coin), m0), m0) : null;
       items.push({
-        what: `${row.coin} open interest ${E.pct(row.oi_change_1h_pct)} in 1 hour, counted in coins: a ${tier} change (z ${E.num(row.spike_z)} against its previous day)`,
+        what: `${row.coin} open interest ${E.pct(row.oi_change_1h_pct)} in 1 hour, counted in coins: ${article(tier)} ${tier} change (z ${E.num(row.spike_z)} against its previous day)`,
         why_it_matters: !macro
           ? 'The macro calendar could not be read, so this change cannot be checked against scheduled releases.'
           : ev

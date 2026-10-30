@@ -5,7 +5,7 @@
 // is how documentation starts lying, so nothing here is typed:
 //
 //   the shared contract (402/400/429/405) is extracted from the emitters in
-//   lib/tool.js and server.js, with every anchor asserted -- if someone changes
+//   lib/tool.js, lib/ratelimit.js, lib/x402v1.js and lib/compat.js, with every anchor asserted -- if someone changes
 //   a status code or a body shape, this generator fails instead of publishing a
 //   stale promise.
 //
@@ -21,6 +21,8 @@
 //   file exists to avoid.
 //
 // Usage:  BASE=http://127.0.0.1:3998 node gen-error-meta.js
+//         ERROR_META_OUT=/some/file.json node gen-error-meta.js     (writes there instead of error-responses.json; the test uses it)
+//         node gen-error-meta.js --anchors     (checks every anchor above and exits; needs no server, writes nothing)
 'use strict';
 
 const fs = require('node:fs');
@@ -29,6 +31,7 @@ const path = require('node:path');
 const ROOT = __dirname;
 const BASE = process.env.BASE || 'http://127.0.0.1:3998';
 const HOST = 'x402.ochinimus.app';
+const OUT = process.env.ERROR_META_OUT || path.join(ROOT, 'error-responses.json');
 
 // ---- 1. the shared contract, extracted from the emitters -------------------
 function must(file, re, label) {
@@ -39,7 +42,7 @@ function must(file, re, label) {
 }
 
 const m400 = must('lib/tool.js', /res\.status\(400\)\.json\(\{\s*tool:\s*name,\s*error:\s*e\.message,\s*\.\.\.\(Array\.isArray\(e\.supported\) \? \{ supported: e\.supported \} : \{\}\)\s*\}\)/, '400 emitter');
-const m429 = must('server.js', /res\.status\(429\)\.json\(\{\s*error:\s*`rate limit: \$\{limit\} req\/min`,\s*retry_after:\s*retryAfter\s*\}\)/, '429 emitter');
+const m429 = must('lib/ratelimit.js', /res\.status\(429\)\.json\(\{\s*error:\s*`rate limit: \$\{limit\} req\/min`,\s*retry_after:\s*retryAfter\s*\}\)/, '429 emitter');
 // R10 F7: HEAD on a free /api route is answered like GET now; the bare 405 emitter is gone, and must stay gone.
 if (/res\.set\('Allow',\s*'GET'\);\s*\n\s*res\.status\(405\)\.end\(\)/.test(fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8'))) throw new Error('ABORT: server.js answers HEAD on a free route with a bare 405 again; update the 405 entry below');
 const m402v1 = must('lib/x402v1.js', /x402Version: 1,\s*error: pr\.error \|\| 'Payment required',\s*accepts:/, 'x402 v1 402 body');
@@ -47,12 +50,19 @@ const m405json = must('lib/compat.js', /res\.set\('Allow', 'GET'\)\.status\(405\
 const m410 = must('lib/compat.js', /res\.status\(410\)\.json\(\{\s*error: 'gone',/, '410 emitter');
 const m410w = must('lib/compat.js', /res\.status\(410\)\.json\(\{ error: 'gone', status: 'withdrawn',/, '410 emitter (withdrawn routes)');
 const m503 = must('lib/tool.js', /res\.status\(503\)\.json\(\{\s*tool:\s*name,\s*error:\s*e\.message,\s*retry_after:\s*ra,\s*\.\.\.\(e\.warming \? \{ warming: e\.warming \} : \{\}\)\s*\}\)/, '503 emitter');
-const mLimit = must('server.js', /const LIMIT = (\d+);/, 'GET rate limit');
-const mOther = must('server.js', /const OTHER_LIMIT = (\d+);/, 'other-method rate limit');
-const mWindow = must('server.js', /const WINDOW_MS = ([\d_]+);/, 'rate limit window');
+// The limiter lives in lib/ratelimit.js (one object of named buckets, whatever their order). 'metered' is what this file has always
+// called the GET limit (GET and POST /mcp) and 'other' the other-method limit; the docs and unpaid buckets are not stated in the
+// shared 429 entry (QUESTIONS 15).
+const mLimits = must('lib/ratelimit.js', /const LIMITS = \{([^}]*)\};/, 'rate limit buckets');
+const bucket = (name) => {
+  const m = mLimits[1].match(new RegExp(`\\b${name}:\\s*(\\d+)`));
+  if (!m) throw new Error(`ABORT: the ${name} bucket is not in LIMITS in lib/ratelimit.js — the error contract moved, fix this generator`);
+  return Number(m[1]);
+};
+const mWindow = must('lib/ratelimit.js', /const WINDOW_MS = ([\d_]+);/, 'rate limit window');
 
-const GET_LIMIT = Number(mLimit[1]);
-const OTHER_LIMIT = Number(mOther[1]);
+const GET_LIMIT = bucket('metered');
+const OTHER_LIMIT = bucket('other');
 const WINDOW_S = Number(mWindow[1].replace(/_/g, '')) / 1000;
 
 // Structured, so SKILL.md and openapi.json render these numbers instead of
@@ -101,11 +111,18 @@ const SHARED = [
   },
 ];
 
+if (process.argv.includes('--anchors')) {
+  console.log(`[error-meta] shared contract: ${SHARED.map((s) => s.status).join(', ')} — all anchors matched; limits ${JSON.stringify(LIMITS)}`);
+  process.exit(0);
+}
+
 // ---- 2. per-route: probe the real 400 on a free-mode scratch ---------------
 const META = JSON.parse(fs.readFileSync(path.join(ROOT, 'bazaar-examples.json'), 'utf8')).routes || {};
 const { PRICES } = require('./payments.js');
 
 const BAD_PATH_VALUE = 'not-a-valid-address';
+// What a scratch missing a table, a file or a socket says (R2 step 4: an empty tape recorded "no such table: liquidations" as /api/liquidations' caller error).
+const ENV_FAULT = /no such table|no such column|SQLITE_|ENOENT|ECONNREFUSED|unable to open database|readonly database/i;
 // Optional inputs worth probing, with a value no validator accepts. Whatever the
 // route really answers is recorded; only a 400 with an error body becomes the
 // documented caller error.
@@ -151,6 +168,7 @@ async function main() {
   const out = { generatedAt: new Date().toISOString(), limits: LIMITS, shared: SHARED, routes: {} };
   const patterns = Object.keys(PRICES);
   let probed = 0, observed = 0, skipped = 0;
+  const envFaults = [];
 
   for (const pattern of patterns) {
     const req = requiredOf(pattern);
@@ -167,6 +185,8 @@ async function main() {
       let body = null;
       try { body = JSON.parse(text); } catch { body = text.slice(0, 200); }
       if (res.status === 400 && body && body.error) {
+        // A scratch with a missing table or file answers a 400 that is not a caller error at all; recorded, it would be published as one.
+        if (ENV_FAULT.test(String(body.error))) envFaults.push(`${pattern}: ${body.error}`);
         observed++;
         entry.callerError = { status: 400, violated: probe.violated, body };
       } else {
@@ -179,7 +199,8 @@ async function main() {
     out.routes[pattern] = entry;
   }
 
-  fs.writeFileSync(path.join(ROOT, 'error-responses.json'), JSON.stringify(out, null, 2) + '\n');
+  if (envFaults.length) throw new Error(`ABORT: ${envFaults.length} probe(s) hit the scratch's own fault, not a caller error (seed or fix the scratch, nothing was written):\n  ${envFaults.join('\n  ')}`);
+  fs.writeFileSync(OUT, JSON.stringify(out, null, 2) + '\n');
   console.log(`[error-meta] ${patterns.length} paid routes`);
   console.log(`[error-meta]   probed ${probed}, real 400 observed on ${observed}`);
   console.log(`[error-meta]   ${skipped} have no input a caller can get wrong (no caller-error example, by design)`);

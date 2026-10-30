@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-13T04:50:11.920Z",
+  "generatedAt": "2026-10-30T08:08:47.222Z",
   "limits": {
     "get": 240,
     "other": 2400,
@@ -111,7 +111,13 @@
         "violated": "path param wallet = not-a-valid-address",
         "body": {
           "tool": "get_wallet_holdings",
-          "error": "invalid wallet address"
+          "error": "invalid wallet address",
+          "param": "wallet",
+          "expected": "a Solana wallet address: 32 to 44 base58 characters (the alphabet has no 0, O, I or l)",
+          "received": "not-a-valid-address",
+          "example": "https://x402.ochinimus.app/api/wallet-holdings/Gack9UtqfeZxFA1LqeqjLgC3JGuD7rS6CsSHKoXsD4Tu",
+          "charged": false,
+          "note": "Nothing was asked of you and nothing was charged: this value can never be served. Call https://x402.ochinimus.app/api/wallet-holdings/Gack9UtqfeZxFA1LqeqjLgC3JGuD7rS6CsSHKoXsD4Tu to see a working request and its 402 challenge."
         }
       }
     },
@@ -124,7 +130,13 @@
         "violated": "path param mint = not-a-valid-address",
         "body": {
           "tool": "get_token_metadata",
-          "error": "invalid mint address"
+          "error": "invalid mint address",
+          "param": "mint",
+          "expected": "an SPL token mint address: 32 to 44 base58 characters (the alphabet has no 0, O, I or l)",
+          "received": "not-a-valid-address",
+          "example": "https://x402.ochinimus.app/api/token-metadata/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+          "charged": false,
+          "note": "Nothing was asked of you and nothing was charged: this value can never be served. Call https://x402.ochinimus.app/api/token-metadata/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263 to see a working request and its 402 challenge."
         }
       }
     },
@@ -172,16 +184,25 @@
         "violated": "path param mint = not-a-valid-address",
         "body": {
           "tool": "get_token_risk",
-          "error": "invalid mint address"
+          "error": "invalid mint address",
+          "param": "mint",
+          "expected": "an SPL token mint address: 32 to 44 base58 characters (the alphabet has no 0, O, I or l)",
+          "received": "not-a-valid-address",
+          "example": "https://x402.ochinimus.app/api/token-risk/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+          "charged": false,
+          "note": "Nothing was asked of you and nothing was charged: this value can never be served. Call https://x402.ochinimus.app/api/token-risk/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263 to see a working request and its 402 challenge."
         }
       }
     },
     "GET /api/cascade-forecast": {
       "requiredInputs": [],
-      "callerError": null,
-      "probe": {
+      "callerError": {
+        "status": 400,
         "violated": "optional query param symbol = not-a-symbol",
-        "observedStatus": 200
+        "body": {
+          "tool": "get_cascade_forecast",
+          "error": "unknown symbol \"NOT-A-SYMBOLUSDT\": our liquidation tape has never recorded it. Use USDT perps such as BTCUSDT or SOLUSDT. Not charged."
+        }
       }
     },
     "GET /api/liq-history": {
@@ -362,7 +383,13 @@
         "violated": "path param mint = not-a-valid-address",
         "body": {
           "tool": "get_token_holders",
-          "error": "invalid mint address"
+          "error": "invalid mint address",
+          "param": "mint",
+          "expected": "an SPL token mint address: 32 to 44 base58 characters (the alphabet has no 0, O, I or l)",
+          "received": "not-a-valid-address",
+          "example": "https://x402.ochinimus.app/api/token-holders/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+          "charged": false,
+          "note": "Nothing was asked of you and nothing was charged: this value can never be served. Call https://x402.ochinimus.app/api/token-holders/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263 to see a working request and its 402 challenge."
         }
       }
     },
@@ -375,7 +402,13 @@
         "violated": "path param wallet = not-a-valid-address",
         "body": {
           "tool": "get_wallet_activity",
-          "error": "invalid wallet address"
+          "error": "invalid wallet address",
+          "param": "wallet",
+          "expected": "a Solana wallet address: 32 to 44 base58 characters (the alphabet has no 0, O, I or l)",
+          "received": "not-a-valid-address",
+          "example": "https://x402.ochinimus.app/api/wallet-activity/Gack9UtqfeZxFA1LqeqjLgC3JGuD7rS6CsSHKoXsD4Tu",
+          "charged": false,
+          "note": "Nothing was asked of you and nothing was charged: this value can never be served. Call https://x402.ochinimus.app/api/wallet-activity/Gack9UtqfeZxFA1LqeqjLgC3JGuD7rS6CsSHKoXsD4Tu to see a working request and its 402 challenge."
         }
       }
     },
@@ -475,7 +508,13 @@
         "violated": "optional query param limit = 0",
         "body": {
           "tool": "get_base_launches",
-          "error": "limit must be a number from 1 to 100"
+          "error": "limit must be a number from 1 to 100",
+          "param": "limit",
+          "expected": "a number from 1 to 100 (default 20)",
+          "received": "0",
+          "example": "https://x402.ochinimus.app/api/base-launches",
+          "charged": false,
+          "note": "Nothing was asked of you and nothing was charged: this value can never be served. Send limit as a number from 1 to 100 (default 20), or leave it out. Call https://x402.ochinimus.app/api/base-launches to see a working request and its 402 challenge."
         }
       }
     },
@@ -486,7 +525,13 @@
         "violated": "optional query param top = 0",
         "body": {
           "tool": "get_hl_whales",
-          "error": "top must be an integer from 1 to 50"
+          "error": "top must be an integer from 1 to 50",
+          "param": "top",
+          "expected": "an integer from 1 to 50 (default 20)",
+          "received": "0",
+          "example": "https://x402.ochinimus.app/api/hl-whales",
+          "charged": false,
+          "note": "Nothing was asked of you and nothing was charged: this value can never be served. Send top as an integer from 1 to 50 (default 20), or leave it out. Call https://x402.ochinimus.app/api/hl-whales to see a working request and its 402 challenge."
         }
       }
     },
@@ -549,7 +594,13 @@
         "violated": "optional query param hours = 0",
         "body": {
           "tool": "get_sec_8k",
-          "error": "hours must be an integer from 1 to 72"
+          "error": "hours must be an integer from 1 to 72",
+          "param": "hours",
+          "expected": "an integer from 1 to 72 (default 24)",
+          "received": "0",
+          "example": "https://x402.ochinimus.app/api/sec-8k",
+          "charged": false,
+          "note": "Nothing was asked of you and nothing was charged: this value can never be served. Send hours as an integer from 1 to 72 (default 24), or leave it out. Call https://x402.ochinimus.app/api/sec-8k to see a working request and its 402 challenge."
         }
       }
     },
@@ -560,7 +611,13 @@
         "violated": "optional query param symbol = not a symbol!",
         "body": {
           "tool": "get_tradfi_perps",
-          "error": "symbol must be a HIP-3 ticker such as TSLA, GOLD or EUR, or a dex-qualified market such as xyz:TSLA"
+          "error": "symbol must be a HIP-3 ticker such as TSLA, GOLD or EUR, or a dex-qualified market such as xyz:TSLA",
+          "param": "symbol",
+          "expected": "a HIP-3 ticker such as TSLA, GOLD or EUR, or a dex-qualified market such as xyz:TSLA",
+          "received": "not a symbol!",
+          "example": "https://x402.ochinimus.app/api/tradfi-perps",
+          "charged": false,
+          "note": "Nothing was asked of you and nothing was charged: this value can never be served. Send symbol as a HIP-3 ticker such as TSLA, GOLD or EUR, or a dex-qualified market such as xyz:TSLA, or leave it out. Call https://x402.ochinimus.app/api/tradfi-perps to see a working request and its 402 challenge."
         }
       }
     },
@@ -571,7 +628,13 @@
         "violated": "optional query param base = XX",
         "body": {
           "tool": "get_fx_rates",
-          "error": "base must be a 3-letter currency code such as EUR, USD or JPY"
+          "error": "base must be a 3-letter currency code such as EUR, USD or JPY",
+          "param": "base",
+          "expected": "a 3-letter currency code such as EUR, USD or JPY (default EUR)",
+          "received": "XX",
+          "example": "https://x402.ochinimus.app/api/fx-rates",
+          "charged": false,
+          "note": "Nothing was asked of you and nothing was charged: this value can never be served. Send base as a 3-letter currency code such as EUR, USD or JPY (default EUR), or leave it out. Call https://x402.ochinimus.app/api/fx-rates to see a working request and its 402 challenge."
         }
       }
     },
@@ -587,6 +650,10 @@
       }
     },
     "GET /api/liq-pulse": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/liq-feed": {
       "requiredInputs": [],
       "callerError": null
     },
@@ -609,6 +676,374 @@
           ]
         }
       }
+    },
+    "GET /api/signal-board": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/coin-signal/:coin": {
+      "requiredInputs": [
+        "coin"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "path param coin = not-a-valid-address",
+        "body": {
+          "tool": "get_coin_signal",
+          "error": "not a Hyperliquid perp ticker: \"not-a-valid-address\"",
+          "param": "coin",
+          "expected": "a Hyperliquid perp ticker: 1 to 20 letters or digits, e.g. BTC, ETH, SOL, HYPE, kPEPE",
+          "received": "not-a-valid-address",
+          "example": "https://x402.ochinimus.app/api/coin-signal/BTC",
+          "charged": false,
+          "note": "Nothing was asked of you and nothing was charged: this value can never be served. Call https://x402.ochinimus.app/api/coin-signal/BTC to see a working request and its 402 challenge."
+        }
+      }
+    },
+    "GET /api/keys/buy-trial": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/keys/buy-1": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/keys/buy-5": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/keys/buy-20": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/keys/buy-pass": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/keys/buy-day-pass": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/keys/buy-signals-pass": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/keys/buy-signals-day-pass": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/keys/topup-5": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/keys/topup-20": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/sanctions-check/:address": {
+      "requiredInputs": [
+        "address"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "path param address = not-a-valid-address",
+        "body": {
+          "tool": "get_sanctions_check",
+          "error": "address must be 14-120 letters and digits (a Bitcoin, Ethereum, Tron, Solana, XRP, Litecoin or similar address)",
+          "param": "address",
+          "expected": "a crypto address: 14 to 120 letters and digits",
+          "received": "not-a-valid-address",
+          "example": "https://x402.ochinimus.app/api/sanctions-check/6wjqWWra8ombzaw6VHrG5xpQ972jCYF6bbHiFCbWmr4U",
+          "charged": false,
+          "note": "Nothing was asked of you and nothing was charged: this value can never be served. Call https://x402.ochinimus.app/api/sanctions-check/6wjqWWra8ombzaw6VHrG5xpQ972jCYF6bbHiFCbWmr4U to see a working request and its 402 challenge."
+        }
+      }
+    },
+    "GET /api/email-verify": {
+      "requiredInputs": [
+        "email"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param email omitted",
+        "body": {
+          "tool": "get_email_verify",
+          "error": "missing required parameter: email"
+        }
+      }
+    },
+    "GET /api/domain/:domain": {
+      "requiredInputs": [
+        "domain"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "path param domain = not-a-valid-address",
+        "body": {
+          "tool": "get_domain",
+          "error": "domain is not a valid hostname",
+          "param": "domain",
+          "expected": "a hostname such as example.com (no URL, no IP address, no local names)",
+          "received": "not-a-valid-address",
+          "example": "https://x402.ochinimus.app/api/domain/wikipedia.org",
+          "charged": false,
+          "note": "Nothing was asked of you and nothing was charged: this value can never be served. Call https://x402.ochinimus.app/api/domain/wikipedia.org to see a working request and its 402 challenge."
+        }
+      }
+    },
+    "GET /api/papers": {
+      "requiredInputs": [
+        "q"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param q omitted",
+        "body": {
+          "tool": "get_papers",
+          "error": "missing required parameter: q"
+        }
+      }
+    },
+    "GET /api/paper/:doi": {
+      "requiredInputs": [
+        "doi"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "path param doi = not-a-valid-address",
+        "body": {
+          "tool": "get_paper",
+          "error": "doi must look like 10.1038/s43586-024-00294-7 (the slash goes in the path as written; %2F also works)",
+          "param": "doi",
+          "expected": "a DOI such as 10.1038/nature14539 (the slash may be sent as written or as %2F)",
+          "received": "not-a-valid-address",
+          "example": "https://x402.ochinimus.app/api/paper/10.1038%2Fnature14539",
+          "charged": false,
+          "note": "Nothing was asked of you and nothing was charged: this value can never be served. Call https://x402.ochinimus.app/api/paper/10.1038%2Fnature14539 to see a working request and its 402 challenge."
+        }
+      }
+    },
+    "GET /api/wiki": {
+      "requiredInputs": [
+        "title"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param title omitted",
+        "body": {
+          "tool": "get_wiki",
+          "error": "missing required parameter: title"
+        }
+      }
+    },
+    "GET /api/qr": {
+      "requiredInputs": [
+        "data"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param data omitted",
+        "body": {
+          "tool": "get_qr",
+          "error": "missing required parameter: data"
+        }
+      }
+    },
+    "GET /api/hash": {
+      "requiredInputs": [
+        "alg",
+        "data"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param alg omitted",
+        "body": {
+          "tool": "get_hash",
+          "error": "missing required parameter: alg"
+        }
+      }
+    },
+    "GET /api/time": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/convert": {
+      "requiredInputs": [
+        "value",
+        "from",
+        "to"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param value omitted",
+        "body": {
+          "tool": "get_convert",
+          "error": "missing required parameter: value"
+        }
+      }
+    },
+    "GET /api/sol-token-check/:mint": {
+      "requiredInputs": [
+        "mint"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "path param mint = not-a-valid-address",
+        "body": {
+          "tool": "get_sol_token_check",
+          "error": "invalid mint address",
+          "param": "mint",
+          "expected": "an SPL token mint address: 32 to 44 base58 characters (the alphabet has no 0, O, I or l)",
+          "received": "not-a-valid-address",
+          "example": "https://x402.ochinimus.app/api/sol-token-check/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+          "charged": false,
+          "note": "Nothing was asked of you and nothing was charged: this value can never be served. Call https://x402.ochinimus.app/api/sol-token-check/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263 to see a working request and its 402 challenge."
+        }
+      }
+    },
+    "GET /api/sol-token-flow/:mint": {
+      "requiredInputs": [
+        "mint"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "path param mint = not-a-valid-address",
+        "body": {
+          "tool": "get_sol_token_flow",
+          "error": "invalid mint address",
+          "param": "mint",
+          "expected": "an SPL token mint address: 32 to 44 base58 characters (the alphabet has no 0, O, I or l)",
+          "received": "not-a-valid-address",
+          "example": "https://x402.ochinimus.app/api/sol-token-flow/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+          "charged": false,
+          "note": "Nothing was asked of you and nothing was charged: this value can never be served. Call https://x402.ochinimus.app/api/sol-token-flow/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263 to see a working request and its 402 challenge."
+        }
+      }
+    },
+    "GET /api/sol-holder-clusters/:mint": {
+      "requiredInputs": [
+        "mint"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "path param mint = not-a-valid-address",
+        "body": {
+          "tool": "get_sol_holder_clusters",
+          "error": "invalid mint address",
+          "param": "mint",
+          "expected": "an SPL token mint address: 32 to 44 base58 characters (the alphabet has no 0, O, I or l)",
+          "received": "not-a-valid-address",
+          "example": "https://x402.ochinimus.app/api/sol-holder-clusters/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+          "charged": false,
+          "note": "Nothing was asked of you and nothing was charged: this value can never be served. Call https://x402.ochinimus.app/api/sol-holder-clusters/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263 to see a working request and its 402 challenge."
+        }
+      }
+    },
+    "GET /api/ocr": {
+      "requiredInputs": [
+        "url"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param url omitted",
+        "body": {
+          "tool": "get_ocr",
+          "error": "missing required parameter: url (an absolute http or https URL)"
+        }
+      }
+    },
+    "GET /api/summarize": {
+      "requiredInputs": [
+        "url"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param url omitted",
+        "body": {
+          "tool": "get_summarize",
+          "error": "missing required parameter: url (an absolute http or https URL)"
+        }
+      }
+    },
+    "GET /api/extract": {
+      "requiredInputs": [
+        "url",
+        "schema"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param url omitted",
+        "body": {
+          "tool": "get_extract",
+          "error": "missing required parameter: url (an absolute http or https URL)"
+        }
+      }
+    },
+    "GET /api/translate": {
+      "requiredInputs": [
+        "to",
+        "text"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param to omitted",
+        "body": {
+          "tool": "get_translate",
+          "error": "missing required parameter: to (a language code such as de)"
+        }
+      }
+    },
+    "GET /api/classify": {
+      "requiredInputs": [
+        "text",
+        "labels"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param text omitted",
+        "body": {
+          "tool": "get_classify",
+          "error": "missing required parameter: text"
+        }
+      }
+    },
+    "GET /api/injection-check": {
+      "requiredInputs": [
+        "text"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param text omitted",
+        "body": {
+          "tool": "get_injection_check",
+          "error": "missing required parameter: text"
+        }
+      }
+    },
+    "GET /api/transcribe": {
+      "requiredInputs": [
+        "url"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param url omitted",
+        "body": {
+          "tool": "get_transcribe",
+          "error": "missing required parameter: url (an absolute http or https URL)"
+        }
+      }
+    },
+    "GET /api/morning-brief": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/move-alert": {
+      "requiredInputs": [],
+      "callerError": null
+    },
+    "GET /api/anomaly-flag": {
+      "requiredInputs": [],
+      "callerError": null
     }
   }
 }

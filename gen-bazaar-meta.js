@@ -38,7 +38,7 @@ const fs = require('fs');
 const path = require('path');
 const { z } = require('zod');
 
-const OUT_FILE = path.join(__dirname, 'bazaar-examples.json');
+const OUT_FILE = process.env.BAZAAR_EXAMPLES_FILE || path.join(__dirname, 'bazaar-examples.json'); // the env override is for test/gen-bazaar-recapture.test.js
 // A tool whose real answer cannot be captured inside one short-lived process
 // leaves its response here instead. The file is a real captured response, written
 // by a real call, not a hand-written fixture. (R7: oi-spike-scan's own warm-up moved
@@ -358,21 +358,24 @@ const BASE_RUN = {
 // R9: the six prepaid-key routes cannot be CAPTURED (a capture would create a key and a pending row). Their example is built by
 // the same function the handler uses, with a placeholder key (lib/keys.js exampleBody), and the entry says so (`static: true`).
 const KEYLIB = require('./lib/keys');
-// pensio: the three briefs are constructed the same way, from a seeded synthetic market (tools/briefs/example.js); recapture them live on the box
+// pensio: the three briefs are constructed the same way, from a seeded synthetic market (tools/briefs/example.js). A full run keeps them
+// constructed; --recapture reads them live (buildRoutes(true)), which is how the synthetic example is replaced on the box.
 const BRIEFX = require('./tools/briefs/example');
-const isStatic = (tool) => KEYLIB.exampleBody(tool) !== null || BRIEFX.TOOLS.includes(tool);
+const isKeyStatic = (tool) => KEYLIB.exampleBody(tool) !== null;
+const isBrief = (tool) => BRIEFX.TOOLS.includes(tool);
+const isStatic = (tool) => isKeyStatic(tool) || isBrief(tool);
 
 const expByRoute = new Map(EXP.map((t) => [t.route, t]));
 const defByName = new Map(TOOL_DEFS.map((d) => [d.name, d]));
 
-function buildRoutes() {
+function buildRoutes(live = false) {
   const rows = [];
   for (const [pattern, p] of Object.entries(PRICES)) {
     const httpPath = pattern.replace('GET ', '');
     const pathParamKeys = (httpPath.match(/:([A-Za-z0-9_]+)/g) || []).map((s) => s.slice(1));
     const exp = expByRoute.get(pattern);
     const zodSchema = exp ? exp.schema : (defByName.get(p.tool) || {}).schema;
-    const run = exp ? (BRIEFX.TOOLS.includes(p.tool) ? () => BRIEFX.exampleFor(p.tool) : isStatic(p.tool) ? async () => KEYLIB.exampleBody(p.tool) : (a) => exp.run(a)) : BASE_RUN[p.tool];
+    const run = exp ? (isBrief(p.tool) && !live ? () => BRIEFX.exampleFor(p.tool) : isKeyStatic(p.tool) ? async () => KEYLIB.exampleBody(p.tool) : (a) => exp.run(a)) : BASE_RUN[p.tool];
     rows.push({ pattern, httpPath, tool: p.tool, usd: p.usd, pathParamKeys, zodSchema: zodSchema || {}, run, source: exp ? 'expansion' : 'server' });
   }
   return rows;
@@ -498,7 +501,7 @@ function redactOnly() {
  * is written unless every named route captured cleanly.
  */
 async function recapture(tools) {
-  const rows = buildRoutes().filter((r) => tools.includes(r.tool));
+  const rows = buildRoutes(true).filter((r) => tools.includes(r.tool));
   const unknown = tools.filter((t) => !rows.some((r) => r.tool === t));
   if (unknown.length) { console.error(`FATAL: no paid route for ${unknown.join(', ')}`); process.exit(1); }
   const prev = JSON.parse(fs.readFileSync(OUT_FILE, 'utf8'));
@@ -519,8 +522,9 @@ async function recapture(tools) {
     // R6: `redacted` marks a stored sample whose values were nulled (it lives on the entry, never inside `output`,
     // which payments.js spreads into the 402 challenge); /api/sample says so only for those routes
     if (JSON.stringify(redExample) !== JSON.stringify(c.example)) entryNext.redacted = true; else delete entryNext.redacted;
-    if (isStatic(r.tool)) entryNext.static = true; // a constructed example, never a capture (see KEYLIB above); /api/sample says so
-    if (BRIEFX.TOOLS.includes(r.tool)) entryNext.synthetic = true; // the briefs' example is a seeded synthetic market, not a reading (tools/briefs/example.js)
+    if (isKeyStatic(r.tool)) entryNext.static = true; // a constructed example, never a capture (see KEYLIB above); /api/sample says so
+    else delete entryNext.static;
+    delete entryNext.synthetic; // a recapture of a brief is a live reading of our own collectors: the synthetic marker goes with the synthetic example
     next.push([r.pattern, entryNext]);
   }
   for (const [pattern, entry] of next) prev.routes[pattern] = entry;

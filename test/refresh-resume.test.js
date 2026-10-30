@@ -76,7 +76,7 @@ const TREASURY = '4a8o45skRPcyjAdyR8yES215Swvh8uTpZD6KLarhxCJ7';
 const MINT = 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263';
 const ROUTES = [['/api/time', '/api/time', 0.005], ['/api/perp', '/api/perp', 0.005], ['/api/token-risk/:mint', `/api/token-risk/${MINT}`, 0.01], ['/api/funding-rate', '/api/funding-rate', 0.005]];
 
-function startOrigin() {
+function startOrigin({ records = [] } = {}) {
   const srv = http.createServer((req, res) => {
     const u = new URL(req.url, 'http://x');
     const origin = `http://127.0.0.1:${srv.address().port}`;
@@ -84,10 +84,10 @@ function startOrigin() {
       res.setHeader('content-type', 'application/json');
       return res.end(JSON.stringify({ resources: ROUTES.map(([pattern, concrete, usd]) => ({ resource: origin + concrete, ...(pattern.includes(':') ? { resource_template: origin + pattern.replace(/:(\w+)/, '{$1}') } : {}), price_usd: usd })) }));
     }
-    if (u.pathname.startsWith('/cdp/discovery/merchant')) { res.setHeader('content-type', 'application/json'); return res.end('{"resources":[],"pagination":{"total":0}}'); }
+    if (u.pathname.startsWith('/cdp/discovery/merchant')) { res.setHeader('content-type', 'application/json'); return res.end(JSON.stringify({ resources: records.map((r) => ({ ...r, resource: origin + r.path })), pagination: { total: records.length } })); }
     const hit = ROUTES.find(([, concrete]) => concrete === u.pathname);
     if (hit) {
-      const pr = { x402Version: 2, accepts: [{ scheme: 'exact', network: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp', amount: String(Math.round(hit[2] * 1e6)), payTo: TREASURY }] };
+      const pr = { x402Version: 2, resource: { url: origin + hit[1], description: 'live ' + hit[1] }, accepts: [{ scheme: 'exact', network: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp', amount: String(Math.round(hit[2] * 1e6)), payTo: TREASURY }] };
       res.statusCode = 402; res.setHeader('payment-required', Buffer.from(JSON.stringify(pr)).toString('base64')); return res.end('{}');
     }
     res.statusCode = 404; res.end('{}');
@@ -187,4 +187,21 @@ test('the real script: a live lock refuses a second payer before anything is sig
     assert.equal(calls(dir).length, 4);
     assert.ok(!fs.existsSync(path.join(dir, '.bazaar-refresh-state.json.lock')), 'the lock is released at exit');
   } finally { srv.close(); }
+});
+
+test('the real script: a record keyed by the route template is judged by its description like any other: fresh = nothing to pay, stale = planned, no record = ABSENT (R20i)', async () => {
+  for (const [label, description, expectPlanned] of [['fresh', `live /api/token-risk/${MINT}`, false], ['stale', 'an older description', true]]) {
+    const { srv, url } = await startOrigin({ records: [{ path: '/api/token-risk/:mint', description }] });
+    const dir = workDir();
+    try {
+      const r = await runScript(dir, url, []);   // dry run
+      assert.equal(r.code, 0, r.out.slice(-600));
+      assert.match(r.out, /1 index records are keyed by the route template/, label);
+      const planned = /would pay\s+(STALE|ABSENT)\s+\$\s*0\.010\s+\S*\/api\/token-risk\//.test(r.out);
+      assert.equal(planned, expectPlanned, `${label}: token-risk planned = ${planned}\n${r.out.slice(-700)}`);
+      if (expectPlanned) assert.match(r.out, /would pay\s+STALE\s+\$\s*0\.010/, 'a stale template record is a STALE entry, not an ABSENT one');
+      assert.match(r.out, /would pay\s+ABSENT\s+\$\s*0\.005\s+\S*\/api\/time/, `${label}: a route with no record at all is still ABSENT`);
+      assert.deepEqual(calls(dir), [], 'a dry run pays nothing');
+    } finally { srv.close(); }
+  }
 });

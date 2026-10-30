@@ -104,17 +104,30 @@ const { recs, declared } = await readIndex();
 console.log(`index: ${recs.size} records on ${ORIGIN} (CDP states ${declared} for the payTo(s)); manifest data routes: ${manifest.length}`);
 const byRoute = new Map(); // manifest path -> [{resource, indexed, live, status}]
 const orphans = [];
-const retiredTemplates = [];
+const templateKeyed = [];
 let n = 0;
 for (const r of recs.values()) {
   const pathname = new URL(r.resource).pathname;
   if (pathname.startsWith('/api/keys/')) continue; // key purchases: never paid or judged here
-  // R20e: an index record whose URL is a literal template (/api/wallet-activity/:wallet, indexed in October from the old manifest) is retired: the server answers it
-  // with a 400 now, so it can never validate. It is not judged, and it does not hide the route: with no other record the route is ABSENT and gets one paid call on its
-  // concrete example URL, which creates the record that replaces it.
-  if (/\/:[A-Za-z_]|%7B|\{/.test(pathname)) { retiredTemplates.push(pathname); continue; }
+  // R20i (30 Oct 2026): CDP indexes a dynamic route under the routeTemplate of its 402 (/api/wallet-activity/:wallet), so the record's URL IS the template and a paid call on a
+  // concrete example URL refreshes THAT record (measured: wallet-holdings and token-metadata were paid on concrete URLs at 05:44Z and their template records, not new ones, took
+  // lastUpdated 05:44:32 and 05:44:34; the total stayed 84). R20e had called these records "retired" and planned every such route as ABSENT, which pays for routes whose record is
+  // already right and can never remove the record. A template-keyed record is judged like any other: its description against the live challenge of the route's example URL
+  // (CDP /validate cannot be used on the template URL, our server answers it 400). Fresh = no payment.
+  const isTemplate = /\/:[A-Za-z_]|%7B|\{/.test(pathname);
   const m = routeOf(pathname);
   if (!m) { orphans.push(pathname); continue; }
+  if (isTemplate) {
+    templateKeyed.push(pathname);
+    let live = null;
+    try {
+      const res = await fetch(payUrl(m), { signal: AbortSignal.timeout(30000) });
+      live = JSON.parse(Buffer.from(res.headers.get('payment-required') || '', 'base64').toString()).resource?.description ?? null;
+    } catch { live = null; }
+    n++;
+    (byRoute.get(m.path) || byRoute.set(m.path, []).get(m.path)).push({ resource: r.resource, indexed: String(r.description || ''), live, status: live === null ? null : 402 });
+    continue;
+  }
   const v = await validate(r.resource);
   n++;
   const live = v?.paymentRequirements?.resource?.description ?? null;
@@ -122,7 +135,7 @@ for (const r of recs.values()) {
   (byRoute.get(m.path) || byRoute.set(m.path, []).get(m.path)).push(row);
 }
 console.log(`validated ${n} records (CDP /validate simulates, never settles); ${orphans.length} index records are for routes no longer in the manifest (left to age out)`);
-if (retiredTemplates.length) console.log(`  ${retiredTemplates.length} index records are literal template URLs (retired, not judged): ${retiredTemplates.map((t) => t.replace('/api/', '')).join(', ')}`);
+if (templateKeyed.length) console.log(`  ${templateKeyed.length} index records are keyed by the route template (CDP's way of indexing a dynamic route), judged against the live challenge of the route's example URL: ${templateKeyed.map((t) => t.replace('/api/', '')).join(', ')}`);
 
 const plan = []; // {m, why}
 let match = 0, known = 0, unknown = 0;

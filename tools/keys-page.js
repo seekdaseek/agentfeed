@@ -91,6 +91,11 @@ $('copy').addEventListener('click',async()=>{try{await navigator.clipboard.write
 const sha = (s) => "'sha256-" + crypto.createHash('sha256').update(s, 'utf8').digest('base64') + "'";
 const CSP = ["default-src 'none'", `script-src ${sha(SCRIPT)}`, `style-src ${sha(STYLE)}`, "connect-src 'self'", "img-src 'self'", "base-uri 'none'", "form-action 'none'", "frame-ancestors 'none'"].join('; ');
 
+// The passes are listed first and every prepaid pack names what it is, so no two options start with the same bare price: on 30 Oct 2026 the owner bought the
+// "$1" prepaid balance when he meant the "signals day pass $1". Prices come from KEYLIB.PACKS; the trial stays the preselected option (the cheapest, never a pass).
+const PREPAID_LABELS = Object.entries(KEYLIB.PACKS).sort((a, b) => a[1] - b[1])
+  .map(([id, usd]) => `<label><input type="radio" name="pack" value="${id}"${id === 'trial' ? ' checked' : ''}>$${usd} ${id === 'trial' ? 'trial ' : ''}prepaid balance (all routes, half price per call)</label>`).join('\n');
+
 const HTML = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AgentFeed prepaid keys</title><link rel="icon" href="/icon.png"><style>${STYLE}</style></head>
@@ -98,14 +103,11 @@ const HTML = `<!doctype html>
 <h1>AgentFeed prepaid key</h1>
 <p>For bots that can send a header but cannot pay x402. Send the key as <code>X-AgentFeed-Key</code>. A prepaid pack: each call costs half the route's x402 price (minimum $0.0005). The bot pass: a flat $25 for 30 days of <code>/api/liq-feed</code> only, nothing drawn per call. The day pass: a flat $1 for 24 hours of <code>/api/liq-feed</code> and <code>/api/liquidations</code>, nothing drawn per call, each route one call every 10 seconds per key (6 a minute).</p>
 <div class="packs">
-<label><input type="radio" name="pack" value="trial" checked>trial $0.25</label>
-<label><input type="radio" name="pack" value="1">$1</label>
-<label><input type="radio" name="pack" value="5">$5</label>
-<label><input type="radio" name="pack" value="20">$20</label>
-<label><input type="radio" name="pack" value="pass">bot pass $25: 30 days, /api/liq-feed only, no per-call charge</label>
-<label><input type="radio" name="pack" value="day-pass">day pass $1: 24 hours, /api/liq-feed and /api/liquidations, one call every 10 s each, no per-call charge</label>
 <label><input type="radio" name="pack" value="signals-pass">signals pass $${KEYLIB.SIGNALS_PASS.usd}: ${KEYLIB.SIGNALS_PASS.days} days, one flat key for the briefs and the perp signal routes (${KEYLIB.SIGNALS_PASS.allow.map(KEYLIB.showRoute).join(", ")}), one call a minute each, no per-call charge</label>
 <label><input type="radio" name="pack" value="signals-day-pass">signals day pass $${KEYLIB.SIGNALS_DAY_PASS.usd}: 24 hours, the same routes, no per-call charge</label>
+<label><input type="radio" name="pack" value="pass">bot pass $25: 30 days, /api/liq-feed only, no per-call charge</label>
+<label><input type="radio" name="pack" value="day-pass">day pass $1: 24 hours, /api/liq-feed and /api/liquidations, one call every 10 s each, no per-call charge</label>
+${PREPAID_LABELS}
 </div>
 <button id="buy">Buy with USDC on Base</button>
 <div id="status"></div>

@@ -127,3 +127,66 @@ test('keys page: the day pass is offered with its price, term and routes, and th
   assert.match(HTML, /The day pass is the same for 24 hours on <code>\/api\/liq-feed<\/code> and <code>\/api\/liquidations<\/code>\./);
   assert.match(HTML, /The day pass: a flat \$1 for 24 hours of <code>\/api\/liq-feed<\/code> and <code>\/api\/liquidations<\/code>, nothing drawn per call, each route one call every 10 seconds per key \(6 a minute\)\.<\/p>/);   // R15c: the cadence is on the page
 });
+
+// ---- 30 Oct 2026: the owner bought the "$1" prepaid balance when he meant the "signals day pass $1" (two options both read "$1").
+// The passes are listed first and every prepaid pack says what it is. The checker below is run on the page's options, and on the OLD option list as a negative control.
+const optionsOf = (html) => [...html.matchAll(/<label><input type="radio" name="pack" value="([^"]+)"( checked)?>([\s\S]*?)<\/label>/g)]
+  .map((m) => ({ value: m[1], checked: !!m[2], text: m[3].replace(/<[^>]+>/g, '').trim() }));
+/** violations of: every option leads with what it is; no two options share a leading label (text up to and including the first price); a label that starts with a price goes on to say "prepaid balance" */
+function labelProblems(opts) {
+  const out = [];
+  const leads = new Map();
+  for (const o of opts) {
+    const m = /\$\d+(?:\.\d+)?/.exec(o.text);
+    if (!m) { out.push(`${o.value}: no price in "${o.text}"`); continue; }
+    const lead = o.text.slice(0, m.index + m[0].length);
+    if (leads.has(lead)) out.push(`${o.value} and ${leads.get(lead)} share the leading label "${lead}"`);
+    leads.set(lead, o.value);
+    if (m.index === 0 && !/^\$\d+(?:\.\d+)? (?:trial )?prepaid balance \(/.test(o.text)) out.push(`${o.value}: a bare price "${o.text}"`);
+  }
+  return out;
+}
+
+test('keys page: no two options share a leading price label and none is a bare price (the "$1" mix-up of 30 Oct 2026)', () => {
+  const opts = optionsOf(HTML);
+  assert.equal(opts.length, 8, 'four passes and four prepaid packs');
+  assert.deepEqual(labelProblems(opts), []);
+  assert.equal(new Set(opts.map((o) => o.value)).size, 8, 'values are unique');
+});
+
+test('keys page: the labels name the prepaid packs and list the passes first, in the order signals pass, signals day pass, bot pass, day pass', () => {
+  const opts = optionsOf(HTML);
+  assert.deepEqual(opts.map((o) => o.value), ['signals-pass', 'signals-day-pass', 'pass', 'day-pass', 'trial', '1', '5', '20']);
+  assert.deepEqual(opts.slice(4).map((o) => o.text), [
+    '$0.25 trial prepaid balance (all routes, half price per call)',
+    '$1 prepaid balance (all routes, half price per call)',
+    '$5 prepaid balance (all routes, half price per call)',
+    '$20 prepaid balance (all routes, half price per call)',
+  ]);
+  assert.match(opts[1].text, /^signals day pass \$1: 24 hours/);
+  assert.deepEqual(opts.filter((o) => o.checked).map((o) => o.value), ['trial'], 'exactly one option is preselected: the cheapest prepaid pack, never a pass');
+});
+
+test('keys page: the labels agree with the script (same ids, same prices as lib/keys PACKS and the pass terms)', () => {
+  const m = /const PACKS=(\{[^\n]*\});/.exec(_SCRIPT);
+  const packs = new Function(`return ${m[1]}`)();
+  const KEYLIB = require('../lib/keys');
+  for (const [id, usd] of Object.entries(KEYLIB.PACKS)) assert.equal(packs[id], usd, `script price of ${id}`);
+  assert.equal(packs['signals-pass'], KEYLIB.SIGNALS_PASS.usd);
+  assert.equal(packs['signals-day-pass'], KEYLIB.SIGNALS_DAY_PASS.usd);
+  const opts = optionsOf(HTML);
+  for (const o of opts) assert.ok(o.value in packs, `${o.value} is a pack the script can buy`);
+  for (const o of opts) assert.ok(o.text.includes(`$${packs[o.value]}`), `${o.value}: the label shows the price the script signs ($${packs[o.value]})`);
+});
+
+test('negative control: the checker flags the page as it was before (bare "$1", "$5", "$20" next to "day pass $1")', () => {
+  const old = [
+    ['trial', 'trial $0.25'], ['1', '$1'], ['5', '$5'], ['20', '$20'],
+    ['pass', 'bot pass $25: 30 days'], ['day-pass', 'day pass $1: 24 hours'], ['signals-pass', 'signals pass $25: 30 days'], ['signals-day-pass', 'signals day pass $1: 24 hours'],
+  ].map(([value, text]) => ({ value, text }));
+  const problems = labelProblems(old);
+  assert.ok(problems.some((p) => /1: a bare price "\$1"/.test(p)), problems.join('\n'));
+  assert.ok(problems.some((p) => /20: a bare price/.test(p)));
+  const dup = labelProblems([{ value: 'a', text: '$1 prepaid balance (x)' }, { value: 'b', text: '$1 prepaid balance (y)' }]);
+  assert.ok(dup.some((p) => /^b and a share the leading label "\$1"$/.test(p)), `two options with the same leading label are reported: ${dup.join(' | ')}`);
+});

@@ -18,15 +18,18 @@ const BRIEFS = [['GET /api/morning-brief', 'get_morning_brief'], ['GET /api/move
 function recapture(tools) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gbr-'));
   const copy = path.join(dir, 'bazaar-examples.json');
-  fs.copyFileSync(path.join(ROOT, 'bazaar-examples.json'), copy);
+  // the starting file is the checked-in one with the three briefs put back to what they were before the live recapture: constructed (static + synthetic)
+  const start = JSON.parse(fs.readFileSync(path.join(ROOT, 'bazaar-examples.json'), 'utf8'));
+  for (const [pattern] of BRIEFS) { start.routes[pattern].static = true; start.routes[pattern].synthetic = true; }
+  fs.writeFileSync(copy, JSON.stringify(start, null, 1) + '\n');
   const env = { ...process.env, ...writeFiles(dir), BAZAAR_EXAMPLES_FILE: copy, AF_ROOT: ROOT, AF_NET_LOG: path.join(dir, 'net.log'), NODE_ENV: 'test' };
   return new Promise((resolve) => execFile(process.execPath, ['--require', path.join(__dirname, 'helpers', 'af-test-preload.js'), path.join(ROOT, 'gen-bazaar-meta.js'), `--recapture=${tools.join(',')}`],
     { cwd: dir, env, timeout: 120000 }, (err, stdout, stderr) => resolve({ code: err ? (err.code === undefined ? 1 : err.code) : 0, stdout, stderr, copy, dir })));
 }
 
 test('--recapture of the three briefs replaces the synthetic example with a reading of the collector files, and drops both markers', async () => {
-  const orig = JSON.parse(fs.readFileSync(path.join(ROOT, 'bazaar-examples.json'), 'utf8')).routes;
-  for (const [pattern] of BRIEFS) assert.equal(orig[pattern].synthetic, true, `${pattern} is shipped as a synthetic example`);
+  const { NOW } = require('../tools/briefs/example');
+  const SYNTHETIC_DAY = new Date(NOW).toISOString().slice(0, 10);   // the constructed examples run on a fixed clock; a reading carries today's date
   const r = await recapture(BRIEFS.map(([, t]) => t));
   assert.equal(r.code, 0, r.stdout + r.stderr);
   assert.match(r.stdout, /recapture: 3 route outputs replaced/);
@@ -36,9 +39,8 @@ test('--recapture of the three briefs replaces the synthetic example with a read
     assert.equal(e.synthetic, undefined, `${pattern} must not stay marked synthetic after a live capture`);
     assert.equal(e.static, undefined, `${pattern} must not stay marked static after a live capture`);
     assert.equal(e.output.example.tool, tool);
-    assert.notDeepEqual(e.output.example, orig[pattern].output.example, `${pattern} must be a new reading, not the constructed example again`);
+    assert.ok(!JSON.stringify(e.output.example).includes(SYNTHETIC_DAY), `${pattern} must be a new reading, not the constructed example (its clock is ${SYNTHETIC_DAY}) again`);
   }
-  assert.equal(fs.readFileSync(path.join(ROOT, 'bazaar-examples.json'), 'utf8').includes('"synthetic": true'), true, 'the checked-in file is untouched');
   // the morning brief's one upstream is the fear-and-greed index (tools/briefs/sources.js); the preload refuses it here and the brief carries on without it
   const tried = fs.existsSync(path.join(r.dir, 'net.log')) ? [...new Set(fs.readFileSync(path.join(r.dir, 'net.log'), 'utf8').split('\n').filter(Boolean))] : [];
   assert.deepEqual(tried.filter((h) => h !== 'api.alternative.me'), [], 'no host but the declared fear-and-greed upstream was attempted');

@@ -261,21 +261,34 @@ test('the signals pass on the real server: the purchase is a paid 402, a stub-se
   }
 });
 
-test('the free samples: /api/sample/<route> serves each brief\'s example for nothing, and says plainly that its numbers are generated', async () => {
+const SYNTHETIC_CAPTION = /seeded synthetic market.*every number in it is generated and none is a market reading/;
+const LIVE_CAPTION = /^a real response from this service, trimmed/;
+const hasSample = async (srv, r, caption) => {
+  for (const slug of [r.path.replace('/api/', ''), r.tool]) {
+    const res = await get(srv, `/api/sample/${slug}`);
+    assert.equal(res.status, 200, slug);
+    const j = JSON.parse(res.body);
+    assert.equal(j.tool, r.tool);
+    assert.equal(j.price_usd, r.usd);
+    assert.match(j.captured, caption, `${slug}: the caption follows the entry's markers`);
+    assert.doesNotMatch(j.captured, /placeholder key/);
+    assert.ok(j.sample_response && j.sample_response.data && j.sample_response.data.headline, `${slug}: the sample has the brief's envelope`);
+  }
+};
+
+test('the free samples: /api/sample/<route> serves each brief\'s example for nothing, and its caption follows the stored entry (a live recapture says so, a synthetic one says its numbers are generated)', async () => {
   const idx = JSON.parse((await get(s, '/api/sample')).body);
   for (const r of ROUTES) assert.ok(idx.routes.some((x) => x.endsWith(r.path)), `${r.path} has a sample`);
+  const stored = require('../bazaar-examples.json').routes;
   for (const r of ROUTES) {
-    for (const slug of [r.path.replace('/api/', ''), r.tool]) {
-      const res = await get(s, `/api/sample/${slug}`);
-      assert.equal(res.status, 200, slug);
-      const j = JSON.parse(res.body);
-      assert.equal(j.tool, r.tool);
-      assert.equal(j.price_usd, r.usd);
-      assert.match(j.captured, /seeded synthetic market.*every number in it is generated and none is a market reading/);
-      assert.doesNotMatch(j.captured, /placeholder key/);
-      assert.ok(j.sample_response && j.sample_response.data && j.sample_response.data.headline, `${slug}: the sample has the brief's envelope`);
-    }
+    const e = stored[`GET ${r.path}`];
+    await hasSample(s, r, e.synthetic ? SYNTHETIC_CAPTION : LIVE_CAPTION);
   }
+});
+
+test('the free samples: an entry marked synthetic says plainly that its numbers are generated (the branch the recapture retired from the checked-in file, reached with a preload)', async () => {
+  const syn = await H.boot({ ...writeFiles(tmp(), {}), NODE_OPTIONS: `--require ${path.join(__dirname, 'helpers', 'synthetic-examples-preload.js')}` });
+  try { for (const r of ROUTES) await hasSample(syn, r, SYNTHETIC_CAPTION); } finally { syn.close(); }
 });
 
 test('the signals pass on the real server covers the perp signal routes too: every covered route is admitted (never a 401, 402, 403 or 429), signal-board and coin-signal answer 200 from the fixture files, draws are zero, and an uncovered priced route is a 403 that names all of them', async () => {

@@ -9203,69 +9203,76 @@
      "tool": "get_morning_brief",
      "data": {
       "brief": "morning-brief",
-      "as_of": "2026-01-15T08:02:00.…",
+      "as_of": "2026-10-30T08:58:48.…",
       "window": {
        "hours": 8,
-       "from": "2026-01-15T00:00:00.…",
-       "to": "2026-01-15T08:00:00.…"
+       "from": "2026-10-30T00:55:01.…",
+       "to": "2026-10-30T08:55:01.…"
       },
-      "headline": "SOL open interest +5…",
+      "headline": "HYPE saw $1.84M liqu…",
       "items": [
        {
-        "what": "SOL open interest +5…",
-        "why_it_matters": "Open interest in coi…",
+        "what": "HYPE saw $1.84M liqu…",
+        "why_it_matters": "Both sides were forc…",
         "level_to_watch": {
          "kind": "liquidation_cluster",
-         "side_of_price": "above",
-         "price_low": 137.2253984106928,
-         "price_high": 137.76565588475066,
-         "distance_pct": 1.8,
-         "usd_24h": 4200000,
+         "side_of_price": "below",
+         "price_low": 90.3052,
+         "price_high": 91.2241,
+         "distance_pct": -1.21,
+         "usd_24h": 3392199,
          "text": "Nearest liquidation…"
         },
         "numbers": {
-         "oi_change_8h_pct": 5.9,
-         "oi_z": 8.06,
-         "windows_n": 152,
-         "price_change_8h_pct": -4.72
+         "total_usd": 1840830,
+         "longs_usd": 788708,
+         "shorts_usd": 1052118,
+         "biggest_usd": 200102,
+         "multiple": 26.92,
+         "prints": 536
         },
-        "source": "AgentFeed Hyperliqui…",
-        "as_of": "2026-01-15T08:00:00.…",
-        "abnormality": 4.03
+        "source": "AgentFeed liquidatio…",
+        "as_of": "2026-10-30T08:58:44.…",
+        "abnormality": 8.97
        }
       ],
       "sources": [
        {
         "name": "AgentFeed Hyperliqui…",
-        "as_of": "2026-01-15T08:00:00.…",
-        "age_s": 120
+        "as_of": "2026-10-30T08:55:01.…",
+        "age_s": 227
        }
       ],
-      "stale_parts": [],
+      "stale_parts": [
+       {
+        "part": "BTC liquidation heat…",
+        "reason": "no cluster holding 1…"
+       }
+      ],
       "method": "Window: the last 8 h…",
       "coins": {
        "BTC": {
-        "mark": 61968.089935,
-        "change_8h_pct": -1.32,
-        "price_windows_n": 152,
-        "price_z": -1.35,
-        "oi_change_8h_pct": 1.03,
-        "oi_windows_n": 152,
-        "oi_z": 1.31,
-        "funding_annualised_pct": 15.97,
-        "funding_z_30d": 0.4,
-        "liquidations_8h_usd": 157928,
-        "liquidated_longs_share_pct": 50,
-        "biggest_liquidation_usd": 1232,
-        "liquidations_vs_usual": 1.03
+        "mark": 78054,
+        "change_8h_pct": 1.17,
+        "price_windows_n": 150,
+        "price_z": 1.31,
+        "oi_change_8h_pct": -0.9,
+        "oi_windows_n": 150,
+        "oi_z": -0.52,
+        "funding_annualised_pct": -3.56,
+        "funding_z_30d": -2.84,
+        "liquidations_8h_usd": 31153799,
+        "liquidated_longs_share_pct": 62.7,
+        "biggest_liquidation_usd": 2530995,
+        "liquidations_vs_usual": 11.07
        }
       },
       "context": {
        "fear_greed": {
-        "value": 31,
+        "value": 30,
         "classification": "Fear"
        },
-       "macro_today": 1
+       "macro_today": 0
       }
      },
      "paid": true
@@ -9316,9 +9323,7 @@
       }
      }
     }
-   },
-   "static": true,
-   "synthetic": true
+   }
   },
   "GET /api/move-alert": {
    "tool": "get_move_alert",
@@ -9333,69 +9338,60 @@
      "tool": "get_move_alert",
      "data": {
       "brief": "move-alert",
-      "as_of": "2026-01-15T08:02:00.…",
+      "as_of": "2026-10-30T08:58:49.478Z",
       "window": {
        "horizons": [
         "5m",
         "1h",
         "4h"
        ],
-       "to": "2026-01-15T08:00:00.…"
+       "to": "2026-10-30T08:55:01.000Z"
       },
-      "headline": "SOL -3.40% in 1 hour…",
+      "headline": "ONDO open interest +12.2% in 1…",
       "items": [
        {
-        "what": "SOL -3.40% in 1 hour…",
-        "why_it_matters": "No scheduled release…",
+        "what": "ONDO open interest +12.2% in 1…",
+        "why_it_matters": "Positions were added faster th…",
         "level_to_watch": {
          "kind": "liquidation_cluster",
-         "side_of_price": "above",
-         "price_low": 138.87789243304564,
-         "price_high": 139.42465578908127,
-         "distance_pct": 1.8,
-         "usd_24h": 4200000,
-         "text": "Nearest liquidation…"
+         "side_of_price": "below",
+         "price_low": 0.38191,
+         "price_high": 0.385945,
+         "distance_pct": -1.68,
+         "usd_24h": 300690,
+         "text": "Nearest liquidation cluster be…"
         },
         "numbers": {
-         "horizon": "1h",
-         "change_pct": -3.4,
-         "from_mark": 141.501904,
-         "mark": 136.690839,
+         "oi_change_1h_pct": 12.15,
+         "oi_change_4h_pct": 9.21,
+         "oi_change_24h_pct": 7.87,
+         "spike_z": 4.13,
+         "oi_usd": 22607767,
+         "price_change_1h_pct": 0.49,
          "tier": "sharp",
          "label": "unexplained",
-         "event": null,
-         "threshold_pct": {
-          "notable": 1.5,
-          "sharp": 2.4,
-          "extreme": 6
-         },
-         "effective_quantile": {
-          "notable": 0.99,
-          "sharp": 0.998,
-          "extreme": "sample_max"
-         },
-         "n": 4999,
-         "oi_change_pct": 0
+         "event": null
         },
-        "source": "AgentFeed Hyperliqui…",
-        "as_of": "2026-01-15T08:00:00.…",
-        "abnormality": 2.27
+        "source": "AgentFeed open-interest spike…",
+        "as_of": "2026-10-30T08:55:01.000Z",
+        "abnormality": 1.38
        }
       ],
       "sources": [
        {
-        "name": "AgentFeed Hyperliqui…",
-        "as_of": "2026-01-15T08:00:00.…",
-        "age_s": 120
+        "name": "AgentFeed Hyperliquid sampler…",
+        "as_of": "2026-10-30T08:55:01.000Z",
+        "age_s": 228
        }
       ],
       "stale_parts": [],
-      "method": "Price tails are meas…",
-      "coins_checked": 6,
+      "method": "Price tails are measured per c…",
+      "coins_checked": 30,
       "min_tier": "sharp",
       "calibration": {
-       "fetched_at": "2026-01-13T08:02:00.…",
-       "source": "Hyperliquid info API…"
+       "fetched_at": "2026-10-29T21:22:55.575Z",
+       "source": "Hyperliquid info API, candleSn…",
+       "age_days": 0
       }
      },
      "paid": true
@@ -9449,9 +9445,7 @@
       }
      }
     }
-   },
-   "static": true,
-   "synthetic": true
+   }
   },
   "GET /api/anomaly-flag": {
    "tool": "get_anomaly_flag",
@@ -9466,61 +9460,48 @@
      "tool": "get_anomaly_flag",
      "data": {
       "brief": "anomaly-flag",
-      "as_of": "2026-01-15T08:02:00.…",
+      "as_of": "2026-10-30T08:58:50.359Z",
       "window": {
        "liquidations": "last 60 minutes",
-       "open_interest": "last hour against th…",
-       "funding": "30-day z-score at th…",
-       "to": "2026-01-15T08:00:00.…"
+       "open_interest": "last hour against the previous day",
+       "funding": "30-day z-score at the latest radar snapshot",
+       "to": "2026-10-30T08:55:01.000Z"
       },
-      "headline": "SOL saw $721k liquid…",
+      "headline": "POL funding is 8.3 standard deviations below…",
       "items": [
        {
-        "what": "SOL saw $721k liquid…",
-        "why_it_matters": "Mostly long position…",
-        "level_to_watch": {
-         "kind": "liquidation_cluster",
-         "side_of_price": "above",
-         "price_low": 143.753677681148,
-         "price_high": 144.3196370420974,
-         "distance_pct": 1.8,
-         "usd_24h": 4200000,
-         "text": "Nearest liquidation…"
-        },
+        "what": "POL funding is 8.3 standard deviations below…",
+        "why_it_matters": "Shorts are paying longs an unusually high rat…",
         "numbers": {
-         "last_hour_usd": 720582,
-         "longs_usd": 612492,
-         "shorts_usd": 108087,
-         "biggest_usd": 30270,
-         "multiple": 36.03,
-         "hourly_median_usd": 20000,
-         "rule_multiple": 3,
-         "kind": "liquidations",
-         "also_flagged": [
-          "funding"
-         ]
+         "funding_z_30d": -8.29,
+         "funding_rate_8h": -0.00074861,
+         "funding_annualised_pct": -81.97,
+         "samples": 720,
+         "oi_usd": 5341947,
+         "rule_z": 2,
+         "kind": "funding"
         },
-        "source": "AgentFeed liquidatio…",
-        "as_of": "2026-01-15T08:01:20.…",
-        "abnormality": 12.01
+        "source": "AgentFeed funding radar snapshot (30-day z-sc…",
+        "as_of": "2026-10-30T08:55:01.582Z",
+        "abnormality": 4.14
        }
       ],
       "sources": [
        {
-        "name": "AgentFeed Hyperliqui…",
-        "as_of": "2026-01-15T08:00:00.…",
-        "age_s": 120
+        "name": "AgentFeed Hyperliquid sampler (mark, open int…",
+        "as_of": "2026-10-30T08:55:01.000Z",
+        "age_s": 229
        }
       ],
       "stale_parts": [],
-      "method": "Universe: the 60 Hyp…",
+      "method": "Universe: the 60 Hyperliquid perps with the m…",
       "checked": {
-       "funding_perps": 337,
-       "liquidation_coins": 24,
-       "open_interest_coins": 74,
-       "universe": 24
+       "funding_perps": 345,
+       "liquidation_coins": 60,
+       "open_interest_coins": 179,
+       "universe": 60
       },
-      "flagged_total": 3,
+      "flagged_total": 16,
       "rules": {
        "funding_abs_z": 2,
        "liquidation_multiple": 3,
@@ -9579,9 +9560,7 @@
       }
      }
     }
-   },
-   "static": true,
-   "synthetic": true
+   }
   },
   "GET /api/keys/buy-signals-pass": {
    "tool": "buy_key_signals_pass",
@@ -9772,7 +9751,7 @@
    "static": true
   }
  },
- "_outputs_recaptured_at": "2026-10-30T07:51:47.304Z",
+ "_outputs_recaptured_at": "2026-10-30T08:58:52.100Z",
  "_pruned_at": "2026-10-30T07:49:09.331Z",
  "_schemas_regenerated_at": "2026-10-29T21:07:44.425Z",
  "_outputs_dropped_at": "2026-10-13T04:50:35.546Z",

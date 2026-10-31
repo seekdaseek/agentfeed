@@ -83,9 +83,9 @@ Notional uses `filled_qty × avg_fill_price` — what actually executed — not 
 
 Every paid route, cheapest question last. Generated from
 [`/.well-known/x402.json`](https://x402.ochinimus.app/.well-known/x402.json),
-read 2026-10-30 — names, prices and routes are the manifest's, not a copy kept
+read 2026-10-31 — names, prices and routes are the manifest's, not a copy kept
 in sync by hand. What each one returns is under
-[93 tools](#93-tools-86-paid-data-routes--7-free--pricing), word for word as
+[98 tools](#98-tools-91-paid-data-routes--7-free--pricing), word for word as
 the service publishes it.
 
 | Tool | Price | Route |
@@ -99,11 +99,15 @@ the service publishes it.
 | `buy_key_1` | $1 | `/api/keys/buy-1` |
 | `buy_key_day_pass` | $1 | `/api/keys/buy-day-pass` |
 | `buy_key_signals_day_pass` | $1 | `/api/keys/buy-signals-day-pass` |
+| `get_x402_test` | $1 | `/api/x402-test` |
+| `get_cascade_backtest` | $0.5 | `/api/cascade-backtest` |
 | `buy_key_trial` | $0.25 | `/api/keys/buy-trial` |
+| `get_claim_check` | $0.15 | `/api/claim-check` |
 | `get_squeeze_score` | $0.1 | `/api/squeeze-score` |
 | `get_cascade_scan` | $0.05 | `/api/cascade-scan` |
 | `get_liq_history` | $0.05 | `/api/liq-history` |
 | `get_peg_universe` | $0.05 | `/api/peg-universe` |
+| `get_x402_lint` | $0.05 | `/api/x402-lint` |
 | `get_ocr` | $0.04 | `/api/ocr` |
 | `get_translate` | $0.04 | `/api/translate` |
 | `get_cascade_history` | $0.03 | `/api/cascade-history` |
@@ -124,6 +128,7 @@ the service publishes it.
 | `get_move_alert` | $0.02 | `/api/move-alert` |
 | `get_oi_spike_scan` | $0.02 | `/api/oi-spike-scan` |
 | `get_peg_deviation` | $0.02 | `/api/peg-deviation` |
+| `get_site_signals` | $0.02 | `/api/site-signals` |
 | `get_summarize` | $0.02 | `/api/summarize` |
 | `get_token_holders` | $0.02 | `/api/token-holders/{mint}` |
 | `get_tradfi_radar` | $0.02 | `/api/tradfi-radar` |
@@ -490,11 +495,11 @@ Without the `spendControls` line the same client throws "All payment requirement
 
 All of them were paid from our own test wallets.
 
-## 93 tools (86 paid data routes + 7 free) & pricing
+## 98 tools (91 paid data routes + 7 free) & pricing
 
-**86 paid + 7 free**, 93 total on the MCP rail (the eight prepaid-key routes below are HTTP only). Every call is metered individually in USDC over
-x402 — no bundles, no minimums. Calling all 86 paid data tools once costs **$1.207**. Counts and prices are summed from
-[the live manifest](https://x402.ochinimus.app/.well-known/x402.json), read 2026-10-30.
+**91 paid + 7 free**, 98 total on the MCP rail (the eight prepaid-key routes below are HTTP only). Every call is metered individually in USDC over
+x402 — no bundles, no minimums. Calling all 91 paid data tools once costs **$2.927**. Counts and prices are summed from
+[the live manifest](https://x402.ochinimus.app/.well-known/x402.json), read 2026-10-31.
 
 The flagship is [`get_squeeze_score`](#the-moat--our-own-liquidation-tape) — a 0-100 short-squeeze / long-flush composite built from funding, crowding, OI build and the liq-skew of our exclusive tape. One number, one dime, answers "is this trade crowded and about to hurt someone."
 
@@ -654,6 +659,20 @@ Sampled every 5 minutes. Deviation is measured against the underlying's last rea
 Sources and their terms: the OFAC SDN list (a US federal government work), the CC0 disposable-email-domains list, DNS and a live
 TLS handshake, OpenAlex (CC0 data), Wikipedia (CC BY-SA 4.0, attribution in every answer); details in
 [docs/SOURCES.md](docs/SOURCES.md).
+
+### Checks on other services, sites and claims
+
+Five routes that look outward: two read the payment challenge of an x402 endpoint you name (one of them also makes a single real payment to it from a dedicated wallet), one checks a claim against filings, Wikipedia and pages you give it, one reads the public signals of a website, one measures what price did after past liquidation cascades on our tape. Every URL you give is fetched only through one guard (private, loopback and metadata addresses refused after DNS, 3 redirects, 5 MB, 10 s). A route that cannot answer returns 503 or 404 with "Not charged" and settles nothing; `get_x402_test` answers that way while its wallet is unfunded.
+
+| Tool | Price | Route | What you get |
+|---|---|---|---|
+| `get_x402_lint` | $0.05 | `/api/x402-lint` | Use when an agent needs to check an x402 endpoint's payment challenge before paying it. Returns a verdict, a 0 to 100 score and 32 checks, paywall bypass included. Never pays. An unreachable endpoint answers 503 and a refused URL 400, neither charged. |
+| `get_x402_test` | $1 | `/api/x402-test` | Use when an agent needs proof that an x402 endpoint takes a real payment. Returns PASS, FAIL or INCONCLUSIVE with the receipt after paying it once from our own wallet, up to $0.05, in Base or Solana USDC. A 503 or 404 is not charged. |
+| `get_claim_check` | $0.15 | `/api/claim-check` | Use when an agent needs a short claim checked against sources. Returns SUPPORTED, CONTRADICTED or INSUFFICIENT, with every supporting line quoted word for word from a filing, Wikipedia article or URL. No readable source answers 404 or 503, not charged. |
+| `get_site_signals` | $0.02 | `/api/site-signals` | Use when an agent needs the technical facts of one website. Returns its TLS certificate, DNS records, a security-header grade over 8 checks, tech stack and social links. A bad URL (400) or unreachable site (503) is not charged. |
+| `get_cascade_backtest` | $0.5 | `/api/cascade-backtest` | Use when an agent needs what price did after past liquidation cascades. Returns a symbol's events with 15 m, 1 h, 4 h and 24 h forward returns, n, mean, median, hit rate, a bootstrap interval and a random-time baseline. Not charged on 400, 404 or 503. |
+
+Sources and their terms: the caller's own endpoint or site, SEC EDGAR filings, Wikipedia (CC BY-SA 4.0, licence named in every answer), Hyperliquid 15-minute candles, our own liquidation tape (sums and counts only), DNS and a live TLS handshake; what was left out for data-terms reasons, and why, is in [docs/SOURCES.md](docs/SOURCES.md).
 
 ### Language tasks (fixed-purpose, Gemini)
 

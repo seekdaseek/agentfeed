@@ -23,6 +23,8 @@ app.disable('x-powered-by');
 const compat = require('./lib/compat');
 const { canonPath, isApiPath, pricedMatcher } = require('./lib/canon-path');
 app.use(compat.stripNetworkSuffix);
+// R23 F1: the old /telegraph/api/<route> path (130 requests in October) is a 308 to /api/<route> when that route exists (lib/telegraph-redirect.js)
+app.use(require('./lib/telegraph-redirect').telegraphRedirect());
 // R17: /api/paper/10.1038/nature14539 (a literal slash in the DOI) is the same route as /api/paper/10.1038%2Fnature14539: rewritten to the
 // canonical one-segment form before the rate limiter, the key rail and the paywall (lib/slash-path.js).
 app.use(require('./lib/slash-path').slashPathCanonical());

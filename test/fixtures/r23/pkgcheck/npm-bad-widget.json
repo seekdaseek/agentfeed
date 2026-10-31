@@ -1,0 +1,7 @@
+{
+  "name": "example-bad-widget",
+  "dist-tags": { "latest": "1.0.0" },
+  "maintainers": [ { "name": "maint-x" } ],
+  "time": { "created": "2026-10-10T00:00:00.000Z", "modified": "2026-10-10T00:00:00.000Z", "1.0.0": "2026-10-10T00:00:00.000Z" },
+  "versions": { "1.0.0": { "name": "example-bad-widget", "version": "1.0.0", "scripts": { "preinstall": "node a.js", "install": "node b.js" }, "maintainers": [ { "name": "maint-x" } ], "_npmUser": { "name": "maint-x" } } }
+}

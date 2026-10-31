@@ -1,0 +1,7 @@
+{ "description": "RDAP bootstrap file for Domain Name System registrations (fixture)", "publication": "2026-10-28T22:00:04Z", "version": "1.0",
+  "services": [
+    [["com", "net"], ["https://rdap.registry.example/com/v1/"]],
+    [["uk"], ["https://rdap.uk.example/uk"]],
+    [["dev"], ["http://rdap.dev.example/", "https://rdap.dev.example/rdap/"]],
+    [["xx"], ["http://rdap.xx.example/"]]
+  ] }

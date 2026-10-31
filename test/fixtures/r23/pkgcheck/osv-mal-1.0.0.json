@@ -1,0 +1,11 @@
+{
+  "vulns": [
+    {
+      "id": "MAL-2099-0001",
+      "summary": "Malicious code in example-bad-widget (npm) (synthetic fixture)",
+      "published": "2026-10-20T00:00:00Z",
+      "modified": "2026-10-20T00:00:00Z",
+      "affected": [ { "package": { "name": "example-bad-widget", "ecosystem": "npm" }, "versions": [ "1.0.0" ] } ]
+    }
+  ]
+}

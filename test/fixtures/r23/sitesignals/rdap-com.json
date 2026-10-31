@@ -1,0 +1,5 @@
+{ "objectClassName": "domain", "ldhName": "FIXTURE.COM", "status": ["client transfer prohibited", "server delete prohibited"],
+  "events": [ { "eventAction": "registration", "eventDate": "2001-05-17T04:00:00Z" }, { "eventAction": "expiration", "eventDate": "2027-05-17T04:00:00Z" }, { "eventAction": "last changed", "eventDate": "2026-04-02T13:20:44Z" }, { "eventAction": "last update of RDAP database", "eventDate": "2026-10-31T10:00:00Z" } ],
+  "nameservers": [ { "ldhName": "NS1.FIXTURE.COM" }, { "ldhName": "ns2.fixture.com" }, { "ldhName": "NS1.FIXTURE.COM" } ],
+  "entities": [ { "roles": ["registrant"], "vcardArray": ["vcard", [["fn", {}, "text", "Private Person Redacted"]]] },
+                { "roles": ["registrar"], "vcardArray": ["vcard", [["version", {}, "text", "4.0"], ["fn", {}, "text", "Fixture Registrar LLC"]]], "publicIds": [ { "type": "IANA Registrar ID", "identifier": "4242" } ] } ] }

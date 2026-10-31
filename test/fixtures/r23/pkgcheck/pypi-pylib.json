@@ -1,0 +1,88 @@
+{
+  "info": {
+    "name": "example-pylib",
+    "version": "1.2.0",
+    "project_urls": {
+      "Source": "https://github.com/example-org/pylib",
+      "Documentation": "https://example.invalid/docs"
+    },
+    "home_page": null,
+    "yanked": false
+  },
+  "ownership": {
+    "organization": null,
+    "roles": [
+      {
+        "role": "Owner",
+        "user": "owner-one"
+      },
+      {
+        "role": "Maintainer",
+        "user": "owner-two"
+      }
+    ]
+  },
+  "releases": {
+    "0.9.0": [
+      {
+        "packagetype": "sdist",
+        "upload_time_iso_8601": "2026-03-01T08:00:00.000000Z",
+        "yanked": true
+      }
+    ],
+    "1.0.0": [
+      {
+        "packagetype": "sdist",
+        "upload_time_iso_8601": "2026-05-01T08:00:00.000000Z",
+        "yanked": false
+      },
+      {
+        "packagetype": "bdist_wheel",
+        "upload_time_iso_8601": "2026-05-01T08:00:05.000000Z",
+        "yanked": false
+      }
+    ],
+    "1.1.0": [
+      {
+        "packagetype": "bdist_wheel",
+        "upload_time_iso_8601": "2026-08-01T08:00:00.000000Z",
+        "yanked": false
+      }
+    ],
+    "1.2.0": [
+      {
+        "packagetype": "sdist",
+        "upload_time_iso_8601": "2026-10-01T08:00:00.000000Z",
+        "yanked": false
+      },
+      {
+        "packagetype": "bdist_wheel",
+        "upload_time_iso_8601": "2026-10-01T08:00:04.000000Z",
+        "yanked": false
+      },
+      {
+        "packagetype": "bdist_wheel",
+        "upload_time_iso_8601": "2026-10-01T08:00:06.000000Z",
+        "yanked": false
+      }
+    ]
+  },
+  "urls": [
+    {
+      "packagetype": "sdist",
+      "upload_time_iso_8601": "2026-10-01T08:00:00.000000Z",
+      "yanked": false
+    },
+    {
+      "packagetype": "bdist_wheel",
+      "upload_time_iso_8601": "2026-10-01T08:00:04.000000Z",
+      "yanked": false
+    },
+    {
+      "packagetype": "bdist_wheel",
+      "upload_time_iso_8601": "2026-10-01T08:00:06.000000Z",
+      "yanked": false
+    }
+  ],
+  "vulnerabilities": []
+}

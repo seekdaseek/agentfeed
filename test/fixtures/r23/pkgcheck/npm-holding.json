@@ -1,0 +1,8 @@
+{
+  "name": "example-holder",
+  "dist-tags": { "latest": "0.0.1-security" },
+  "maintainers": [ { "name": "npm" } ],
+  "repository": { "type": "git", "url": "git+https://github.com/npm/security-holder.git" },
+  "time": { "created": "2020-01-01T00:00:00.000Z", "modified": "2020-01-01T00:00:00.000Z", "0.0.1-security": "2020-01-01T00:00:00.000Z" },
+  "versions": { "0.0.1-security": { "name": "example-holder", "version": "0.0.1-security", "description": "security holding package", "repository": { "type": "git", "url": "git+https://github.com/npm/security-holder.git" }, "maintainers": [ { "name": "npm" } ], "_npmUser": { "name": "npm" } } }
+}

@@ -1,0 +1,6 @@
+{
+  "info": { "name": "example-pylib", "version": "1.1.0", "project_urls": { "Source": "https://github.com/example-org/pylib" }, "home_page": null },
+  "ownership": { "organization": null, "roles": [ { "role": "Owner", "user": "owner-one" } ] },
+  "urls": [ { "packagetype": "bdist_wheel", "upload_time_iso_8601": "2026-08-01T08:00:00.000000Z", "yanked": false } ],
+  "vulnerabilities": []
+}

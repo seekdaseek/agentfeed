@@ -1,0 +1,17 @@
+{
+  "name": "ledger-score",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Scores each new LaunchLedger cohort pool once, from its frozen t0 columns, into its own SQLite file (R23 T1)",
+  "main": "score.js",
+  "scripts": {
+    "start": "node score.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0"
+  },
+  "license": "UNLICENSED"
+}

@@ -1,0 +1,80 @@
+{
+ "note": "constructed: made-up mint and pool addresses; scores are the production model on real feature rows of the parity fixture; the clock is fixed",
+ "now": 1793600000,
+ "model_version": "hgb-t3-20261031-3fa0bd67",
+ "example_mint_index": 0,
+ "pools": [
+  {
+   "mint": "3mRFwgiEZgJCDnCmbZULuX6ecQbFxCMfunXa9VafpDcJ",
+   "pool": "DKhcSsG3uuk33oBEQWWWh7ifbaTmNhfQS8dui2KcaqMG",
+   "dex": "pumpswap",
+   "score": 0.8302678249182076,
+   "minutes_ago": 3,
+   "t0_liquidity_usd": 12312.8,
+   "t0_fdv_usd": 28712.8
+  },
+  {
+   "mint": "EKzpNGzUVjx2fv9USNWLSVj3X77UpPM8Rtvo2iBcZt2i",
+   "pool": "9G3jiqDW7i8vLGkNYXzkpa9d4UyaE6kv7Q2WYY8JpnVz",
+   "dex": "pumpswap",
+   "score": 0.5501994631930361,
+   "minutes_ago": 11,
+   "t0_liquidity_usd": 12172.48,
+   "t0_fdv_usd": 31039.47
+  },
+  {
+   "mint": "CcGYqPrMj8h2mzizSCdK1RdVxzpMGmoEonKLFuSJYErN",
+   "pool": "BJb9hDtB2K7jAvgrhGGgWR8zN9k3L4ZX7spGE64etftq",
+   "dex": "pumpswap",
+   "score": 0.05037982801626231,
+   "minutes_ago": 24,
+   "t0_liquidity_usd": 39286.88,
+   "t0_fdv_usd": 47906.61
+  },
+  {
+   "mint": "5vzujy7fGzmhXZNy5PyJLaxQnJPubr16RpyXmjAD8mAJ",
+   "pool": "H82RLeVxKH67G3ZYnJTj8peEwfe2rUgFaLFYowtQ299T",
+   "dex": "pumpswap",
+   "score": 0.007708711304847195,
+   "minutes_ago": 41,
+   "t0_liquidity_usd": 37743.01,
+   "t0_fdv_usd": 87137.78
+  },
+  {
+   "mint": "7b8KSa7mCnymFKbogzyQNhgKgaCCJTj3bgiPf3JidyWy",
+   "pool": "3nh3TBKMr48MapikcZc3f1Fbr4ny9d4Ti9vM33Pw6kyA",
+   "dex": "pump-fun",
+   "score": 0.0014734965277824026,
+   "minutes_ago": 70,
+   "t0_liquidity_usd": 4004.36,
+   "t0_fdv_usd": 4563.01
+  },
+  {
+   "mint": "Du38MwrHcLRNFnPHvFXVVYudcYWTSNHnPhH87WwmJFb9",
+   "pool": "8aKGUzGrLA5CkkZYrTYqVK6gujLGT1RdUqmkLmCTwZWd",
+   "dex": "pump-fun",
+   "score": 0.0007592861519519639,
+   "minutes_ago": 120,
+   "t0_liquidity_usd": 1719.07,
+   "t0_fdv_usd": 2167.54
+  },
+  {
+   "mint": "AS5VAfgySZoHq4zXq6UkzQuBTgvDPxTFPQwiTcjqjqrq",
+   "pool": "8s4DCphU4BvHD7Bh9Kb7BooQGFBqT3VgSxiH5RgCeEJc",
+   "dex": "pump-fun",
+   "score": 0.0003759194620188989,
+   "minutes_ago": 300,
+   "t0_liquidity_usd": 2509.98,
+   "t0_fdv_usd": 3169.4
+  },
+  {
+   "mint": "B2zZVUStn2zeEax7EUbBkaRNu3aMZHC541ECVQEpGwz3",
+   "pool": "GmQEMXLk1po3fPrge4ST9nm46ZSok1R33oRDqvwcSZGN",
+   "dex": "meteora-dbc",
+   "score": 0.000209473553857268,
+   "minutes_ago": 900,
+   "t0_liquidity_usd": 0,
+   "t0_fdv_usd": 58744.07
+  }
+ ]
+}

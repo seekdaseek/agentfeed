@@ -1,0 +1,18 @@
+{
+  "vulns": [
+    {
+      "id": "GHSA-aaaa-bbbb-cccc",
+      "aliases": [ "CVE-2099-0001" ],
+      "summary": "Prototype pollution in example-widget-kit (synthetic fixture)",
+      "details": "A synthetic advisory used only by the pkg-check tests.",
+      "published": "2026-10-30T00:00:00Z",
+      "modified": "2026-10-30T06:00:00Z",
+      "database_specific": { "severity": "HIGH" },
+      "severity": [ { "type": "CVSS_V3", "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" } ],
+      "affected": [
+        { "package": { "name": "example-widget-kit", "ecosystem": "npm" }, "ranges": [ { "type": "SEMVER", "events": [ { "introduced": "2.0.0" }, { "fixed": "2.0.1" } ] } ] },
+        { "package": { "name": "unrelated-package", "ecosystem": "npm" }, "ranges": [ { "type": "SEMVER", "events": [ { "introduced": "0" }, { "fixed": "9.9.9" } ] } ] }
+      ]
+    }
+  ]
+}

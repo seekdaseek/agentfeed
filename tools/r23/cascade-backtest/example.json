@@ -1,0 +1,245 @@
+{
+ "symbol": "BTCUSDT",
+ "hyperliquid_coin": "BTC",
+ "params": {
+  "side": "both",
+  "min_usd": 100000,
+  "window_min": 5,
+  "cooldown_min": 60,
+  "limit": 20
+ },
+ "period": {
+  "from": "2026-01-05T06:03:37.328Z",
+  "to": "2026-01-11T12:28:30.093Z",
+  "days": 6.3
+ },
+ "price_data": {
+  "source": "Hyperliquid candleSnapshot, 15-minute candles (close of the candle that ends at the time)",
+  "first_candle": "2026-01-05T06:00:00.000Z",
+  "newest_candle_end": "2026-01-11T12:00:00.000Z"
+ },
+ "tape": "agentfeed_liq_tape",
+ "events_found": 6,
+ "events_listed": 6,
+ "events_order": "largest window_usd first",
+ "events": [
+  {
+   "start_time": "2026-01-10T20:10:30.000Z",
+   "last_qualifying_print_time": "2026-01-10T20:15:13.357Z",
+   "window_usd": 300000,
+   "prints": 3,
+   "longs_usd": 300000,
+   "shorts_usd": 0,
+   "entry_time": "2026-01-10T20:15:00.000Z",
+   "entry_close": 93770.16,
+   "forward_return_pct": {
+    "15m": 0.1347,
+    "1h": -0.2937,
+    "4h": 0.3095,
+    "24h": null
+   },
+   "left_out": {
+    "24h": "not_elapsed"
+   }
+  },
+  {
+   "start_time": "2026-01-11T07:00:16.000Z",
+   "last_qualifying_print_time": "2026-01-11T07:00:56.000Z",
+   "window_usd": 240000,
+   "prints": 3,
+   "longs_usd": 0,
+   "shorts_usd": 240000,
+   "entry_time": "2026-01-11T07:15:00.000Z",
+   "entry_close": 94097.19,
+   "forward_return_pct": {
+    "15m": -0.3756,
+    "1h": -0.5566,
+    "4h": 0.5495,
+    "24h": null
+   },
+   "left_out": {
+    "24h": "not_elapsed"
+   }
+  },
+  {
+   "start_time": "2026-01-08T23:50:20.000Z",
+   "last_qualifying_print_time": "2026-01-08T23:55:08.407Z",
+   "window_usd": 210000,
+   "prints": 3,
+   "longs_usd": 0,
+   "shorts_usd": 210000,
+   "entry_time": "2026-01-09T00:00:00.000Z",
+   "entry_close": 94844.64,
+   "forward_return_pct": {
+    "15m": 0.1073,
+    "1h": -0.0687,
+    "4h": 1.2724,
+    "24h": -0.9324
+   }
+  },
+  {
+   "start_time": "2026-01-06T09:12:18.000Z",
+   "last_qualifying_print_time": "2026-01-06T09:13:21.000Z",
+   "window_usd": 180000,
+   "prints": 3,
+   "longs_usd": 180000,
+   "shorts_usd": 0,
+   "entry_time": "2026-01-06T09:15:00.000Z",
+   "entry_close": 92524.13,
+   "forward_return_pct": {
+    "15m": 0.1074,
+    "1h": 0.03,
+    "4h": 0.0916,
+    "24h": 1.0982
+   }
+  },
+  {
+   "start_time": "2026-01-09T03:05:24.000Z",
+   "last_qualifying_print_time": "2026-01-09T03:10:38.851Z",
+   "window_usd": 150000,
+   "prints": 3,
+   "longs_usd": 150000,
+   "shorts_usd": 0,
+   "entry_time": "2026-01-09T03:15:00.000Z",
+   "entry_close": 95406.23,
+   "forward_return_pct": {
+    "15m": 0.1836,
+    "1h": 0.614,
+    "4h": -0.0293,
+    "24h": -1.161
+   }
+  },
+  {
+   "start_time": "2026-01-07T14:30:44.000Z",
+   "last_qualifying_print_time": "2026-01-07T14:31:47.000Z",
+   "window_usd": 120000,
+   "prints": 3,
+   "longs_usd": 120000,
+   "shorts_usd": 0,
+   "entry_time": "2026-01-07T14:45:00.000Z",
+   "entry_close": 93245.3,
+   "forward_return_pct": {
+    "15m": -0.0979,
+    "1h": -0.2091,
+    "4h": 0.3227,
+    "24h": 1.7051
+   }
+  }
+ ],
+ "horizons": {
+  "15m": {
+   "events": {
+    "n": 6,
+    "mean_pct": 0.0099,
+    "median_pct": 0.1073,
+    "hit_rate_pct": 66.67,
+    "mean_ci95_pct": [
+     -0.1638,
+     0.1374
+    ]
+   },
+   "baseline": {
+    "n": 6,
+    "mean_pct": -0.1621,
+    "median_pct": -0.2383,
+    "hit_rate_pct": 33.33,
+    "mean_ci95_pct": [
+     -0.2945,
+     -0.0292
+    ]
+   },
+   "events_left_out": {},
+   "baseline_left_out": {}
+  },
+  "1h": {
+   "events": {
+    "n": 6,
+    "mean_pct": -0.0807,
+    "median_pct": -0.1389,
+    "hit_rate_pct": 33.33,
+    "mean_ci95_pct": [
+     -0.3297,
+     0.2282
+    ]
+   },
+   "baseline": {
+    "n": 6,
+    "mean_pct": -0.2308,
+    "median_pct": -0.164,
+    "hit_rate_pct": 33.33,
+    "mean_ci95_pct": [
+     -0.5,
+     -0.0034
+    ]
+   },
+   "events_left_out": {},
+   "baseline_left_out": {}
+  },
+  "4h": {
+   "events": {
+    "n": 6,
+    "mean_pct": 0.4194,
+    "median_pct": 0.3161,
+    "hit_rate_pct": 83.33,
+    "mean_ci95_pct": [
+     0.1261,
+     0.7946
+    ]
+   },
+   "baseline": {
+    "n": 6,
+    "mean_pct": 0.3734,
+    "median_pct": 0.5197,
+    "hit_rate_pct": 83.33,
+    "mean_ci95_pct": [
+     -0.0058,
+     0.681
+    ]
+   },
+   "events_left_out": {},
+   "baseline_left_out": {}
+  },
+  "24h": {
+   "events": {
+    "n": 4,
+    "mean_pct": 0.1775,
+    "median_pct": 0.0829,
+    "hit_rate_pct": 50,
+    "mean_ci95_pct": null
+   },
+   "baseline": {
+    "n": 5,
+    "mean_pct": 0.1904,
+    "median_pct": 0.6094,
+    "hit_rate_pct": 60,
+    "mean_ci95_pct": [
+     -0.7041,
+     0.9211
+    ]
+   },
+   "events_left_out": {
+    "not_elapsed": 2
+   },
+   "baseline_left_out": {
+    "not_elapsed": 1
+   }
+  }
+ },
+ "baseline": {
+  "times_requested": 6,
+  "times_drawn": 6
+ },
+ "method": {
+  "event": "Prints of the chosen side on our liquidation tape are summed over a rolling 5-minute window. An event starts at the first print where that window holds at least 3 prints and at least 100,000 USD. Windows that stay at or above the threshold belong to the same event; the next event needs 60 minutes with no such window, so one cascade is one event.",
+  "side": "long counts liquidated long positions only, short counts liquidated short positions only, both counts either. With both, events of opposite direction are pooled and their signed returns partly cancel; query long and short separately to see each direction.",
+  "forward_return": "Entry is the first 15m candle close after the event starts (the close of the candle that contains the start). The forward return at each horizon is that symbol's close 15 m, 1 h, 4 h and 24 h later divided by the entry close, minus one, in percent. It is the signed price change, not adjusted for direction.",
+  "hit_rate": "The share of events (or baseline times) with a forward return above zero.",
+  "baseline": "Random times with the same count as the events, drawn with the fixed seed 20261031 from the 15m grid of the same symbol and period, never inside an event window (from 5 minutes before the event starts to 60 minutes after its last qualifying print), each priced the same way.",
+  "interval": "Percentile bootstrap of the mean: 2,000 resamples with replacement, fixed seeds, the 95 percent interval taken from the sorted resample means. No interval is given when n is below 5.",
+  "left_out": "An event is left out of a horizon when its price window cannot be read: not_cached (no cached candle there), candle_gap (the exchange printed no candle), or not_elapsed (the horizon ends after the newest cached candle). The counts are given per horizon.",
+  "limits": "Events closer together than a horizon share price moves, so the intervals understate the real uncertainty. Some of the exchange streams the tape records are throttled by the exchanges, so USD totals are lower bounds. Hyperliquid keeps 5,000 candles of this interval, so the price history is cached from the day it was first read. This describes past data; it is not a forecast and not financial advice."
+ },
+ "notes": [
+  "At least one row has fewer than 5 observations: no interval is given for it."
+ ]
+}

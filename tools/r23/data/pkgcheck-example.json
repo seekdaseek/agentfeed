@@ -1,0 +1,131 @@
+{
+  "name": "example-widget-kit",
+  "ecosystem": "npm",
+  "version": "2.0.0",
+  "found": true,
+  "advisories": [
+    {
+      "id": "GHSA-aaaa-bbbb-cccc",
+      "aliases": [
+        "CVE-2099-0001"
+      ],
+      "summary": "Prototype pollution in example-widget-kit (synthetic fixture)",
+      "severity": {
+        "label": "high",
+        "score": 8.8,
+        "source": "database_specific"
+      },
+      "published": "2026-10-30T00:00:00Z",
+      "modified": "2026-10-30T06:00:00Z",
+      "fixed_versions": [
+        "2.0.1"
+      ],
+      "malicious": false
+    }
+  ],
+  "advisory_count": 1,
+  "malicious": false,
+  "release": {
+    "version": "2.0.0",
+    "published_at": "2026-10-29T12:00:00.000Z",
+    "age_days": 2,
+    "first_published_at": "2026-04-01T00:00:00.000Z",
+    "package_age_days": 213,
+    "version_count": 3,
+    "latest_version": "2.0.0",
+    "is_latest": true,
+    "deprecated": false
+  },
+  "maintainers": {
+    "available": true,
+    "count": 2,
+    "added_since_previous_version": 1,
+    "removed_since_previous_version": 0,
+    "published_by_new_account": true,
+    "source": "registry document"
+  },
+  "install_scripts": [
+    {
+      "script": "postinstall",
+      "command": "node setup.js"
+    }
+  ],
+  "downloads": {
+    "period": "last-week",
+    "count": 123456,
+    "from": "2026-10-24",
+    "to": "2026-10-30"
+  },
+  "typosquat": {
+    "checked": true,
+    "is_top_package": false,
+    "rank": null,
+    "nearest": [
+      {
+        "name": "example-widget-kits",
+        "distance": 1,
+        "rank": 2,
+        "pattern": "edit_distance"
+      }
+    ]
+  },
+  "repository": {
+    "url": "https://github.com/example-org/widget-kit",
+    "present": true,
+    "host": "github.com",
+    "recognized_host": true
+  },
+  "flags": [
+    {
+      "id": "known_vulnerability",
+      "severity": "error",
+      "detail": "1 OSV advisory affects example-widget-kit@2.0.0; highest severity high; GHSA-aaaa-bbbb-cccc lists a fix in 2.0.1"
+    },
+    {
+      "id": "typosquat_candidate",
+      "severity": "warn",
+      "detail": "the name is 1 edit from example-widget-kits, rank 2 in the bundled list of commonly installed npm packages (1 match)"
+    },
+    {
+      "id": "install_script",
+      "severity": "info",
+      "detail": "npm runs postinstall when this version is installed"
+    },
+    {
+      "id": "new_release",
+      "severity": "info",
+      "detail": "this version was published 2 days ago"
+    },
+    {
+      "id": "maintainer_change",
+      "severity": "info",
+      "detail": "the maintainer list differs from the previous version (1 added, 0 removed)"
+    },
+    {
+      "id": "new_publisher",
+      "severity": "info",
+      "detail": "this version was published by an account that published no earlier version"
+    }
+  ],
+  "sources": [
+    {
+      "name": "npm registry",
+      "url": "https://registry.npmjs.org/example-widget-kit",
+      "fetched_at": "2026-10-31T12:00:00.000Z",
+      "ok": true
+    },
+    {
+      "name": "OSV.dev",
+      "url": "https://api.osv.dev/v1/query",
+      "fetched_at": "2026-10-31T12:00:00.000Z",
+      "ok": true
+    },
+    {
+      "name": "npm downloads",
+      "url": "https://api.npmjs.org/downloads/point/last-week/example-widget-kit",
+      "fetched_at": "2026-10-31T12:00:00.000Z",
+      "ok": true
+    }
+  ],
+  "method": "Advisories: OSV.dev, queried for this exact version, a MAL- id marking a malicious-package advisory. Release, maintainer and script facts: the npm registry document. Typosquat: Damerau-Levenshtein distance 1 or 2, separator and word-order variants, and unscoped copies, against a bundled list of the most-downloaded npm packages. Flags are factual signals from public records, not a verdict."
+}

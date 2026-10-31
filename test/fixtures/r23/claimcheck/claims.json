@@ -1,0 +1,190 @@
+{
+ "version": 1,
+ "note": "Hand-made claims for the claim-check gate. Every passage is copied from the cached filing text (tools/r23/claim-check/text.js htmlToText). A CONTRADICTED claim alters exactly one fact of its passage; `altered` names the change.",
+ "filings": {
+  "aapl-10k-fy2024": {
+   "company": "Apple Inc.",
+   "form": "10-K",
+   "period_end": "2024-09-28",
+   "accession": "0000320193-24-000123",
+   "url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+   "file": "aapl-10k-fy2024.html"
+  },
+  "msft-10q-q1fy25": {
+   "company": "Microsoft Corporation",
+   "form": "10-Q",
+   "period_end": "2024-09-30",
+   "accession": "0000950170-24-118967",
+   "url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024118967/msft-20240930.htm",
+   "file": "msft-10q-q1fy25.html"
+  },
+  "tsla-10q-q3-2024": {
+   "company": "Tesla, Inc.",
+   "form": "10-Q",
+   "period_end": "2024-09-30",
+   "accession": "0001628280-24-043486",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828024043486/tsla-20240930.htm",
+   "file": "tsla-10q-q3-2024.html"
+  },
+  "nvda-10k-fy2025": {
+   "company": "NVIDIA Corporation",
+   "form": "10-K",
+   "period_end": "2025-01-26",
+   "accession": "0001045810-25-000023",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm",
+   "file": "nvda-10k-fy2025.html"
+  }
+ },
+ "claims": [
+  {
+   "id": "A1",
+   "filing": "aapl-10k-fy2024",
+   "claim": "Apple reported total net sales of $391,035 million for fiscal year 2024.",
+   "expected": "SUPPORTED",
+   "passage": "Total net sales $ 391,035 $ 383,285 $ 394,328"
+  },
+  {
+   "id": "A2",
+   "filing": "aapl-10k-fy2024",
+   "claim": "Apple reported net income of $99,803 million for fiscal year 2024.",
+   "expected": "CONTRADICTED",
+   "passage": "Net income $ 93,736 $ 96,995 $ 99,803",
+   "altered": "net income 93,736 -> 99,803 (the fiscal 2022 figure)"
+  },
+  {
+   "id": "A3",
+   "filing": "aapl-10k-fy2024",
+   "claim": "As of September 28, 2024, Apple had approximately 164,000 full-time equivalent employees.",
+   "expected": "SUPPORTED",
+   "passage": "As of September 28, 2024, the Company had approximately 164,000 full-time equivalent employees."
+  },
+  {
+   "id": "A4",
+   "filing": "aapl-10k-fy2024",
+   "claim": "During fiscal 2024 Apple repurchased 599 million shares of its common stock for $95.0 billion.",
+   "expected": "CONTRADICTED",
+   "passage": "During 2024, the Company repurchased 499 million shares of its common stock for $95.0 billion.",
+   "altered": "shares repurchased 499 million -> 599 million"
+  },
+  {
+   "id": "A5",
+   "filing": "aapl-10k-fy2024",
+   "claim": "In May 2024 Apple announced a new share repurchase program of up to $110 billion.",
+   "expected": "SUPPORTED",
+   "passage": "In May 2024, the Company announced a new share repurchase program of up to $110 billion and raised its quarterly dividend from $0.24 to $0.25 per share beginning in May 2024."
+  },
+  {
+   "id": "M1",
+   "filing": "msft-10q-q1fy25",
+   "claim": "Microsoft reported total revenue of $65,585 million for the three months ended September 30, 2024.",
+   "expected": "SUPPORTED",
+   "passage": "Total revenue 65,585 56,517"
+  },
+  {
+   "id": "M2",
+   "filing": "msft-10q-q1fy25",
+   "claim": "Microsoft reported net income of $26,467 million for the three months ended September 30, 2024.",
+   "expected": "CONTRADICTED",
+   "passage": "Net income 24,667 22,291",
+   "altered": "net income 24,667 -> 26,467 (two digits swapped)"
+  },
+  {
+   "id": "M3",
+   "filing": "msft-10q-q1fy25",
+   "claim": "Microsoft said Azure and other cloud services revenue grew 33% in the quarter ended September 30, 2024.",
+   "expected": "SUPPORTED",
+   "passage": "Azure and other cloud services revenue grew 33% driven by demand for our portfolio of services, including 12 points from our AI services."
+  },
+  {
+   "id": "M4",
+   "filing": "msft-10q-q1fy25",
+   "claim": "Microsoft reported revenue allocated to remaining performance obligations of $366 billion as of September 30, 2024.",
+   "expected": "CONTRADICTED",
+   "passage": "Revenue allocated to remaining performance obligations, which includes unearned revenue and amounts that will be invoiced and recognized as revenue in future periods, was $266 billion as of September 30, 2024, of which $259 billion is related to the commercial portion of revenue.",
+   "altered": "remaining performance obligations $266 billion -> $366 billion"
+  },
+  {
+   "id": "M5",
+   "filing": "msft-10q-q1fy25",
+   "claim": "Microsoft said its effective tax rate was 25% for the three months ended September 30, 2024.",
+   "expected": "CONTRADICTED",
+   "passage": "Our effective tax rate was 19% and 18% for the three months ended September 30, 2024 and 2023, respectively.",
+   "altered": "effective tax rate 19% -> 25%"
+  },
+  {
+   "id": "T1",
+   "filing": "tsla-10q-q3-2024",
+   "claim": "Tesla deployed 20.41 GWh of energy storage products in 2024 through the third quarter.",
+   "expected": "SUPPORTED",
+   "passage": "In 2024, we deployed 20.41 GWh of energy storage products through the third quarter."
+  },
+  {
+   "id": "T2",
+   "filing": "tsla-10q-q3-2024",
+   "claim": "Tesla delivered approximately 1,394,000 consumer vehicles in 2024 through the third quarter.",
+   "expected": "CONTRADICTED",
+   "passage": "In 2024, we produced approximately 1,314,000 consumer vehicles and delivered approximately 1,294,000 consumer vehicles through the third quarter.",
+   "altered": "deliveries 1,294,000 -> 1,394,000"
+  },
+  {
+   "id": "T3",
+   "filing": "tsla-10q-q3-2024",
+   "claim": "Tesla recognized total revenues of $25.18 billion in the three months ended September 30, 2024.",
+   "expected": "SUPPORTED",
+   "passage": "During the three and nine months ended September 30, 2024, we recognized total revenues of $25.18 billion and $71.98 billion, respectively, representing increases of $1.83 billion and $377 million, respectively, compared to the same periods in the prior year."
+  },
+  {
+   "id": "T4",
+   "filing": "tsla-10q-q3-2024",
+   "claim": "Tesla ended the third quarter of 2024 with $38.65 billion in cash and cash equivalents and investments.",
+   "expected": "CONTRADICTED",
+   "passage": "We ended the third quarter of 2024 with $33.65 billion in cash and cash equivalents and investments, representing an increase of $4.55 billion from the end of 2023.",
+   "altered": "cash and investments $33.65 billion -> $38.65 billion"
+  },
+  {
+   "id": "T5",
+   "filing": "tsla-10q-q3-2024",
+   "claim": "Tesla reported cash flows provided by operating activities of $10.11 billion during the nine months ended September 30, 2024.",
+   "expected": "SUPPORTED",
+   "passage": "Our cash flows provided by operating activities were $10.11 billion during the nine months ended September 30, 2024, compared to $8.89 billion during the same period ended September 30, 2023, representing an increase of $1.22 billion."
+  },
+  {
+   "id": "N1",
+   "filing": "nvda-10k-fy2025",
+   "claim": "NVIDIA reported revenue of $130.5 billion for fiscal year 2025, up 114% from a year ago.",
+   "expected": "SUPPORTED",
+   "passage": "Revenue for fiscal year 2025 was $130.5 billion, up 114% from a year ago."
+  },
+  {
+   "id": "N2",
+   "filing": "nvda-10k-fy2025",
+   "claim": "At the end of fiscal year 2025 NVIDIA had approximately 42,000 employees in 38 countries.",
+   "expected": "CONTRADICTED",
+   "passage": "As of the end of fiscal year 2025, we had approximately 36,000 employees in 38 countries; 27,100 were engaged in research and development and 8,900 were engaged in sales, marketing, operations, and administrative positions.",
+   "altered": "employees 36,000 -> 42,000"
+  },
+  {
+   "id": "N3",
+   "filing": "nvda-10k-fy2025",
+   "claim": "In June 2024 NVIDIA executed a ten-for-one stock split of its common stock.",
+   "expected": "SUPPORTED",
+   "passage": "In June 2024, we executed a ten-for-one stock split of our common stock."
+  },
+  {
+   "id": "N4",
+   "filing": "nvda-10k-fy2025",
+   "claim": "NVIDIA reported net income of $79,880 million for fiscal year 2025.",
+   "expected": "CONTRADICTED",
+   "passage": "Net income $ 72,880 $ 29,760 $ 4,368",
+   "altered": "net income 72,880 -> 79,880"
+  },
+  {
+   "id": "N5",
+   "filing": "nvda-10k-fy2025",
+   "claim": "NVIDIA is headquartered in Austin, Texas.",
+   "expected": "CONTRADICTED",
+   "passage": "Headquartered in Santa Clara, California, NVIDIA was incorporated in California in April 1993 and reincorporated in Delaware in April 1998.",
+   "altered": "headquarters Santa Clara, California -> Austin, Texas"
+  }
+ ]
+}

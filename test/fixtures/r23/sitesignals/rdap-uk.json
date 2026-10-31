@@ -1,0 +1,4 @@
+{ "objectClassName": "domain", "ldhName": "fixture.co.uk", "status": ["active"],
+  "events": [ { "eventAction": "registered", "eventDate": "1999-12-01T00:00:00Z" }, { "eventAction": "expiration", "eventDate": "2026-12-01T00:00:00Z" } ],
+  "nameservers": [ { "ldhName": "dns1.fixture.co.uk" } ],
+  "entities": [ { "roles": ["registrant"], "entities": [ { "roles": ["registrar"], "vcardArray": ["vcard", [["fn", {}, "text", "Nested Registrar Ltd"]]] } ] } ] }

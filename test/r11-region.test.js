@@ -1,4 +1,4 @@
-// test/r11-region.test.js — the region gate for the seven language-model routes (R11 B review fix 1).
+// test/r11-region.test.js — the region gate for the eight language-model routes (the seventh and eighth: transcribe, and R23 claim-check) (R11 B review fix 1).
 // Driven over a real HTTP socket on a throwaway express app that mounts the gate where server.js will: above the payment layer
 // (a stub that stands for the 402 and counts how often it is reached) and, for MCP, in front of a route that parses its own body.
 'use strict';
@@ -16,7 +16,7 @@ test('the table: 230 places read from the page, ISO codes only, Moldova in, the 
   for (const legacy of ['UK', 'FX', 'DY', 'HV', 'TP', 'YU', 'CS', 'ZR', 'SU', 'EU', 'UN']) assert.ok(!(legacy in G.COUNTRIES), `${legacy} is not a current ISO code`);
   assert.equal(G.COUNTRIES.MD, 'Moldova');
   assert.equal(G.COUNTRIES.CZ, 'Czech Republic', 'names are the page\'s own words');
-  assert.equal(G.PHASE_B_PATHS.size, 7); assert.equal(G.PHASE_B_TOOLS.size, 7);
+  assert.equal(G.PHASE_B_PATHS.size, 8); assert.equal(G.PHASE_B_TOOLS.size, 8);
 });
 test('check(): absent is allowed; present and off the list is blocked, T1, XX and empty included; case does not matter', () => {
   assert.deepEqual(G.check(undefined), { blocked: false, country: null });
@@ -37,7 +37,7 @@ function boot() {
 const get = (base, p, country) => fetch(`${base}${p}`, { headers: country === undefined ? {} : { 'cf-ipcountry': country } });
 const rpc = (base, body, country, raw) => fetch(`${base}/mcp`, { method: 'POST', headers: { 'content-type': 'application/json', ...(country === undefined ? {} : { 'cf-ipcountry': country }) }, body: raw || JSON.stringify(body) });
 
-test('REST: all seven routes answer 451 {error, country} to a blocked country before the payment layer; allowed and header-less callers pass; other routes are untouched', async () => {
+test('REST: all eight routes answer 451 {error, country} to a blocked country before the payment layer; allowed and header-less callers pass; other routes are untouched', async () => {
   const { srv, base, reached } = await boot();
   try {
     for (const r of ['ocr', 'summarize', 'extract', 'translate', 'classify', 'injection-check', 'transcribe']) {
@@ -62,7 +62,7 @@ test('the alias path with a network suffix is the same route', () => {
   assert.equal(run('/api/ocr|eip155:8453', 'RU'), 451); assert.equal(run('/api/transcribe|solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp', 'XX'), 451); assert.equal(run('/api/ocr/', 'RU'), 451);
   assert.equal(run('/api/ocr|eip155:8453', 'MD'), 'next'); assert.equal(run('/api/prices|eip155:8453', 'RU'), 'next');
 });
-test('MCP: a blocked country cannot call the seven tools (single or batch), other tools and tools/list pass, and the body is still readable by the route', async () => {
+test('MCP: a blocked country cannot call the eight tools (single or batch), other tools and tools/list pass, and the body is still readable by the route', async () => {
   const { srv, base, reached } = await boot();
   try {
     const call = (name) => ({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: {} } });

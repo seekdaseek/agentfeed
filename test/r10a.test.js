@@ -217,7 +217,7 @@ test('Phase A: PAYMENT-REQUIRED stays at or under 12,000 bytes on every route, d
   const { prLen, EXT } = await prodShaped(t, { withExt: true });
   let max = 0, at = '';
   for (const pattern of Object.keys(PRICES)) {
-    const p = concrete(pattern).replace('/x', '/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263');
+    const p = concrete(pattern).replace(/\/x(?=\/|$)/, '/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263');   // only the '/x' placeholder segment: R23 routes begin with 'x402'
     for (const suffix of ['', ...EXT.filter((r) => !r.inDefault).map((r) => `|${r.network}`)]) {
       const n = await prLen(p + suffix);
       assert.ok(n > 0, `${p}${suffix} has a challenge`);

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-30T09:26:20.440Z",
+  "generatedAt": "2026-10-31T20:43:35.040Z",
   "limits": {
     "get": 240,
     "other": 2400,
@@ -1046,6 +1046,69 @@
     "GET /api/anomaly-flag": {
       "requiredInputs": [],
       "callerError": null
+    },
+    "GET /api/x402-lint": {
+      "requiredInputs": [
+        "url"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param url omitted",
+        "body": {
+          "tool": "get_x402_lint",
+          "error": "url is required: the x402 endpoint to check, URL-encoded"
+        }
+      }
+    },
+    "GET /api/x402-test": {
+      "requiredInputs": [
+        "url"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param url omitted",
+        "body": {
+          "tool": "get_x402_test",
+          "error": "url is required: the x402 endpoint to check, URL-encoded"
+        }
+      }
+    },
+    "GET /api/cascade-backtest": {
+      "requiredInputs": [],
+      "callerError": {
+        "status": 400,
+        "violated": "optional query param symbol = not-a-symbol",
+        "body": {
+          "tool": "get_cascade_backtest",
+          "error": "invalid symbol: not-a-symbol"
+        }
+      }
+    },
+    "GET /api/claim-check": {
+      "requiredInputs": [
+        "claim"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param claim omitted",
+        "body": {
+          "tool": "get_claim_check",
+          "error": "missing required parameter: claim (one statement of fact, up to 300 characters)"
+        }
+      }
+    },
+    "GET /api/site-signals": {
+      "requiredInputs": [
+        "url"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param url omitted",
+        "body": {
+          "tool": "get_site_signals",
+          "error": "missing required parameter: url (an absolute https URL)"
+        }
+      }
     }
   }
 }

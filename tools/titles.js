@@ -43,6 +43,10 @@ const TOOL_TITLES = {
   get_classify: 'Text classification', get_injection_check: 'Prompt injection check', get_transcribe: 'Speech to text',
   // pensio (30 Oct 2026)
   get_morning_brief: 'Morning brief', get_move_alert: 'Move alert', get_anomaly_flag: 'Anomaly flag', get_news_brief: 'Regulatory news brief',
+  // R23 (31 Oct 2026)
+  get_x402_lint: 'x402 challenge lint', get_x402_test: 'x402 paid test', get_cascade_backtest: 'Cascade backtest', get_claim_check: 'Claim check', get_site_signals: 'Site signals',
+  // held (R23_CRASH_ROUTES=off): present so the routes boot if the owner switches them on
+  get_crash_risk: 'Crash risk of a new pool', get_launch_radar: 'New launch crash-risk radar', get_crash_risk_record: 'Crash risk track record',
 };
 
 module.exports = { TOOL_TITLES };

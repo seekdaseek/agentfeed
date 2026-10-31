@@ -1,7 +1,7 @@
 // tools/llm/region-gate.js — the region gate for the language-model routes (R11 B, review fix 1).
 //
 // WHY: the Gemini API Additional Terms (ai.google.dev/gemini-api/terms): "You may only access the Services (or make API Clients
-// available to users) within an available region." AgentFeed's callers are agents anywhere, so the seven Phase B routes
+// available to users) within an available region." AgentFeed's callers are agents anywhere, so the eight language-model routes
 // (ocr, summarize, extract, translate, classify, injection-check, transcribe) are closed to callers outside that list.
 //
 // THE LIST: read live from https://ai.google.dev/gemini-api/docs/available-regions on 2026-10-13. The page says "Last updated
@@ -19,7 +19,7 @@
 //
 // WIRING (not done): mount regionGate once in server.js ABOVE the payment layer (after compat.stripNetworkSuffix). It also covers
 // POST /mcp: that route parses its own JSON body, so for a request that would be blocked anyway the gate parses it first
-// (express.json skips a body that is already parsed) and refuses only calls to the seven Phase B tools; other MCP calls pass.
+// (express.json skips a body that is already parsed) and refuses only calls to the eight language-model tools; other MCP calls pass.
 'use strict';
 
 const COUNTRIES = {
@@ -255,9 +255,9 @@ const COUNTRIES = {
   AX: "Åland Islands",
 };
 
-// the seven routes and their MCP tool names (the names in the Phase B wiring snippet)
-const PHASE_B_PATHS = new Set(['/api/ocr', '/api/summarize', '/api/extract', '/api/translate', '/api/classify', '/api/injection-check', '/api/transcribe']);
-const PHASE_B_TOOLS = new Set(['get_ocr', 'get_summarize', 'get_extract', 'get_translate', 'get_classify', 'get_injection_check', 'get_transcribe']);
+// the eight routes and their MCP tool names (the names in the Phase B wiring snippet)
+const PHASE_B_PATHS = new Set(['/api/ocr', '/api/summarize', '/api/extract', '/api/translate', '/api/classify', '/api/injection-check', '/api/transcribe', '/api/claim-check']);
+const PHASE_B_TOOLS = new Set(['get_ocr', 'get_summarize', 'get_extract', 'get_translate', 'get_classify', 'get_injection_check', 'get_transcribe', 'get_claim_check']);
 
 /** -> { blocked: boolean, country: string|null }. header is the raw CF-IPCountry value (undefined when absent). */
 function check(header) {

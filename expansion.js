@@ -589,10 +589,14 @@ if (BRC.newsOn()) {
     run: (a) => BR.getNewsBrief(a) });
 }
 
+// R23 (31 Oct 2026): the tools batch, ONE list (tools/r23/index.js). x402-lint, x402-test, cascade-backtest and claim-check; the held crash-risk routes join only while R23_CRASH_ROUTES=on.
+EXP.push(...require('./tools/r23').entries);
+
 // ---- derived exports ----
 const PRICES_ADD = {};
 const TAGS_ADD = {};
 for (const t of EXP) {
+  if (t.free) { TAGS_ADD[t.name] = t.tags; continue; }   // R23: a free entry (the held crash-risk record) is registered by register() below but never priced; no entry is free while the crash routes are off
   PRICES_ADD[t.route] = { usd: t.usd, tool: t.name, desc: t.desc, ...(t.noHf ? { noHf: true } : {}), ...(t.challengeNote ? { challengeNote: t.challengeNote() } : {}), ...(t.docNote ? { docNote: t.docNote() } : {}) };
   TAGS_ADD[t.name] = t.tags;
 }

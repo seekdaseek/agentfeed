@@ -26,7 +26,7 @@ const R11 = {
   'GET /api/translate': [0.04, 'get_translate'], 'GET /api/classify': [0.005, 'get_classify'], 'GET /api/injection-check': [0.004, 'get_injection_check'],
   'GET /api/transcribe': [0.02, 'get_transcribe'],
 };
-const PHASE_B = ['GET /api/ocr', 'GET /api/summarize', 'GET /api/extract', 'GET /api/translate', 'GET /api/classify', 'GET /api/injection-check', 'GET /api/transcribe'];
+const PHASE_B = ['GET /api/ocr', 'GET /api/summarize', 'GET /api/extract', 'GET /api/translate', 'GET /api/classify', 'GET /api/injection-check', 'GET /api/transcribe', 'GET /api/claim-check'];
 // the derived price, worked out by hand for each list price (half, minimum $0.0005)
 const HALF = { 0.004: 0.002, 0.005: 0.0025, 0.008: 0.004, 0.015: 0.0075, 0.02: 0.01, 0.025: 0.0125, 0.04: 0.02 };
 
@@ -125,5 +125,5 @@ test('server.js: the region gate is mounted once, right after the network-suffix
   assert.ok(strip < gate && gate < identify, 'after the suffix rewrite (so alias paths are clean), before the key rail');
   for (const later of ['app.use(keys.charge);', 'x402v1.payments', 'req.x402v1 || req.tempoPending || req.keyPaid ? next() : gate(req, res, next)', "require('./expansion').register(app, tool);"]) assert.ok(gate < at(later), `the gate precedes ${later}`);
   const { PHASE_B_PATHS } = require('../tools/llm/region-gate');
-  assert.deepEqual([...PHASE_B_PATHS].sort(), PHASE_B.map((r) => r.replace('GET ', '')).sort(), 'the gate covers exactly the seven Phase B routes');
+  assert.deepEqual([...PHASE_B_PATHS].sort(), PHASE_B.map((r) => r.replace('GET ', '')).sort(), 'the gate covers exactly the eight language-model routes (the seven Phase B routes and R23 claim-check)');
 });

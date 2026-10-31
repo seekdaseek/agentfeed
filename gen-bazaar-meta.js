@@ -114,6 +114,8 @@ const R11_URL = {
   get_ocr: 'https://x402.ochinimus.app/icon.png',          // our own logo: the text "402"
   get_transcribe: 'https://www.w3schools.com/html/horse.mp3', // a short public clip (no speech: the example shows no_speech_found)
   get_summarize: 'https://example.com/', get_extract: 'https://example.com/',
+  // R23: the two x402 tools are shown on our own cheapest paid route
+  get_x402_lint: 'https://x402.ochinimus.app/api/time', get_x402_test: 'https://x402.ochinimus.app/api/time',
 };
 const R11_TEXT = {
   get_translate: 'Good morning. The market opens at 9:30.',
@@ -136,6 +138,7 @@ function fixture(key, tool) {
     case 'amount': return '1000000000';        // 1 SOL in raw base units
     case 'target': return 'jito';
     case 'url': return R11_URL[tool] || (tool === 'get_pdf_markdown' ? 'https://bitcoin.org/bitcoin.pdf' : 'https://en.wikipedia.org/wiki/Stablecoin');
+    case 'claim': return 'The Eiffel Tower is 330 metres tall.';   // R23 get_claim_check: the input example shown in the listing
     case 'ticker': return tool === 'get_insider_trades' ? 'NVDA' : 'AAPL';
     case 'symbol': return SYMBOL_FOR[tool] || 'SOLUSDT';
     case 'coin': return 'BTC';                 // get_coin_signal (R9): a Hyperliquid perp
@@ -361,9 +364,13 @@ const KEYLIB = require('./lib/keys');
 // pensio: the three briefs are constructed the same way, from a seeded synthetic market (tools/briefs/example.js). A full run keeps them
 // constructed; --recapture reads them live (buildRoutes(true)), which is how the synthetic example is replaced on the box.
 const BRIEFX = require('./tools/briefs/example');
+// R23: the new tools' examples are constructed too: each entry of tools/r23 carries `example`, built by its own module from its test fixtures (no market reading, no live capture).
+// A full run keeps them constructed; --recapture=<tools> --constructed adds or refreshes them without any network or box data; --recapture alone reads them live on the box.
+const R23X = new Map(require('./tools/r23').entries.map((e) => [e.name, e.example]));
+const isR23 = (tool) => R23X.has(tool) && R23X.get(tool) != null;
 const isKeyStatic = (tool) => KEYLIB.exampleBody(tool) !== null;
 const isBrief = (tool) => BRIEFX.TOOLS.includes(tool);
-const isStatic = (tool) => isKeyStatic(tool) || isBrief(tool);
+const isStatic = (tool) => isKeyStatic(tool) || isBrief(tool) || isR23(tool);
 
 const expByRoute = new Map(EXP.map((t) => [t.route, t]));
 const defByName = new Map(TOOL_DEFS.map((d) => [d.name, d]));
@@ -375,7 +382,7 @@ function buildRoutes(live = false) {
     const pathParamKeys = (httpPath.match(/:([A-Za-z0-9_]+)/g) || []).map((s) => s.slice(1));
     const exp = expByRoute.get(pattern);
     const zodSchema = exp ? exp.schema : (defByName.get(p.tool) || {}).schema;
-    const run = exp ? (isBrief(p.tool) && !live ? () => BRIEFX.exampleFor(p.tool) : isKeyStatic(p.tool) ? async () => KEYLIB.exampleBody(p.tool) : (a) => exp.run(a)) : BASE_RUN[p.tool];
+    const run = exp ? (isBrief(p.tool) && !live ? () => BRIEFX.exampleFor(p.tool) : isR23(p.tool) && !live ? async () => JSON.parse(JSON.stringify(R23X.get(p.tool))) : isKeyStatic(p.tool) ? async () => KEYLIB.exampleBody(p.tool) : (a) => exp.run(a)) : BASE_RUN[p.tool];
     rows.push({ pattern, httpPath, tool: p.tool, usd: p.usd, pathParamKeys, zodSchema: zodSchema || {}, run, source: exp ? 'expansion' : 'server' });
   }
   return rows;
@@ -500,8 +507,8 @@ function redactOnly() {
  * one route does not drag 52 fresh captures into every other challenge. Nothing
  * is written unless every named route captured cleanly.
  */
-async function recapture(tools) {
-  const rows = buildRoutes(true).filter((r) => tools.includes(r.tool));
+async function recapture(tools, constructed = false) {
+  const rows = buildRoutes(!constructed).filter((r) => tools.includes(r.tool));
   const unknown = tools.filter((t) => !rows.some((r) => r.tool === t));
   if (unknown.length) { console.error(`FATAL: no paid route for ${unknown.join(', ')}`); process.exit(1); }
   const prev = JSON.parse(fs.readFileSync(OUT_FILE, 'utf8'));
@@ -522,7 +529,7 @@ async function recapture(tools) {
     // R6: `redacted` marks a stored sample whose values were nulled (it lives on the entry, never inside `output`,
     // which payments.js spreads into the 402 challenge); /api/sample says so only for those routes
     if (JSON.stringify(redExample) !== JSON.stringify(c.example)) entryNext.redacted = true; else delete entryNext.redacted;
-    if (isKeyStatic(r.tool)) entryNext.static = true; // a constructed example, never a capture (see KEYLIB above); /api/sample says so
+    if (isKeyStatic(r.tool) || (constructed && isR23(r.tool))) entryNext.static = true; // a constructed example, never a capture (see KEYLIB above); /api/sample says so
     else delete entryNext.static;
     delete entryNext.synthetic; // a recapture of a brief is a live reading of our own collectors: the synthetic marker goes with the synthetic example
     next.push([r.pattern, entryNext]);
@@ -570,7 +577,7 @@ async function main() {
   if (process.argv.includes('--schemas-only')) return schemasOnly();
   if (process.argv.includes('--redact-only')) return redactOnly();
   const only = process.argv.find((a) => a.startsWith('--recapture='));
-  if (only) return recapture(only.slice('--recapture='.length).split(',').filter(Boolean));
+  if (only) return recapture(only.slice('--recapture='.length).split(',').filter(Boolean), process.argv.includes('--constructed'));
   const rows = buildRoutes();
   const missing = rows.filter((r) => typeof r.run !== 'function');
   if (missing.length) {

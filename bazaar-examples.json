@@ -9749,9 +9749,827 @@
     }
    },
    "static": true
+  },
+  "GET /api/x402-lint": {
+   "tool": "get_x402_lint",
+   "price_usd": 0.05,
+   "input": {
+    "url": "https://x402.ochinimus.app/api/time"
+   },
+   "inputSchema": {
+    "properties": {
+     "url": {
+      "type": "string",
+      "description": "the x402 endpoint to check, URL-encoded: http or https, a public host, port 80 or 443"
+     },
+     "method": {
+      "description": "HTTP method to check, default GET (a POST is sent with an empty body)",
+      "type": "string",
+      "enum": [
+       "GET",
+       "POST"
+      ]
+     }
+    },
+    "required": [
+     "url"
+    ]
+   },
+   "output": {
+    "example": {
+     "tool": "get_x402_lint",
+     "data": {
+      "url": "https://api.example.com/v1/quote",
+      "checked_at": "2026-10-31T12:00:00.000Z",
+      "verdict": "valid",
+      "score": 100,
+      "version": 2,
+      "networks": [
+       "eip155:8453",
+       "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+      ],
+      "checks": [
+       {
+        "id": "http_402",
+        "severity": "error",
+        "pass": true,
+        "detail": "HTTP 402 Payment Required"
+       }
+      ],
+      "raw": {
+       "status": 402,
+       "headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "payment-required": "(1120 characters of base64, decoded in raw.challenge)"
+       },
+       "challenge": {
+        "x402Version": 2,
+        "error": "Payment required",
+        "resource": {
+         "url": "https://api.example.com/v1/quote",
+         "description": "Quote for one trading pair: bid, ask and the time it was tak…",
+         "mimeType": "application/json"
+        },
+        "accepts": [
+         {
+          "scheme": "exact",
+          "network": "eip155:8453",
+          "amount": "10000",
+          "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          "payTo": "0x1a2b3c4d5e1a2b3c4d5e1a2b3c4d5e1a2b3c4d5e",
+          "maxTimeoutSeconds": 300,
+          "extra": {
+           "name": "USD Coin",
+           "version": "2"
+          }
+         }
+        ],
+        "extensions": {
+         "bazaar": {
+          "info": {
+           "input": {
+            "type": "http",
+            "method": "GET"
+           },
+           "output": {
+            "type": "json"
+           }
+          }
+         }
+        }
+       },
+       "latency_ms": 142
+      }
+     },
+     "paid": true
+    },
+    "schema": {
+     "type": "object",
+     "properties": {
+      "tool": {
+       "type": "string"
+      },
+      "data": {
+       "type": "object",
+       "properties": {
+        "url": {
+         "type": "string"
+        },
+        "checked_at": {
+         "type": "string"
+        },
+        "verdict": {
+         "type": "string"
+        },
+        "score": {
+         "type": "number"
+        },
+        "version": {
+         "type": "number"
+        },
+        "networks": {
+         "type": "array"
+        },
+        "checks": {
+         "type": "array"
+        },
+        "raw": {
+         "type": "object"
+        }
+       }
+      },
+      "paid": {
+       "type": "boolean"
+      }
+     }
+    }
+   },
+   "static": true
+  },
+  "GET /api/x402-test": {
+   "tool": "get_x402_test",
+   "price_usd": 1,
+   "input": {
+    "url": "https://x402.ochinimus.app/api/time"
+   },
+   "inputSchema": {
+    "properties": {
+     "url": {
+      "type": "string",
+      "description": "the x402 endpoint to pay once, URL-encoded: https only, a public host, port 443; the paid request goes to exactly this URL"
+     },
+     "method": {
+      "description": "HTTP method to pay with, default GET (a POST is sent with an empty body)",
+      "type": "string",
+      "enum": [
+       "GET",
+       "POST"
+      ]
+     }
+    },
+    "required": [
+     "url"
+    ]
+   },
+   "output": {
+    "example": {
+     "tool": "get_x402_test",
+     "data": {
+      "url": "https://api.example.com/v1/quote",
+      "checked_at": "2026-10-31T12:00:00.000Z",
+      "method": "GET",
+      "verdict": "PASS",
+      "reasons": [
+       "the endpoint answered HTTP 200 to the signed payment and reported a settlement of eip155:8453 USDC from the test wallet"
+      ],
+      "notes": [],
+      "lint": {
+       "verdict": "valid",
+       "score": 100,
+       "version": 2,
+       "networks": [
+        "eip155:8453",
+        "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+       ],
+       "failed": []
+      },
+      "payment": {
+       "sent": true,
+       "network": "eip155:8453",
+       "scheme": "exact",
+       "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+       "amount_atomic": "10000",
+       "amount_usd": 0.01,
+       "pay_to": "0x1a2b3c4d5e1a2b3c4d5e1a2b3c4d5e1a2b3c4d5e",
+       "payer": "0x9f8e7d6c5b9f8e7d6c5b9f8e7d6c5b9f8e7d6c5b"
+      },
+      "timing": {
+       "time_to_402_ms": 142,
+       "time_to_paid_response_ms": 388
+      },
+      "response": {
+       "status": 200,
+       "content_type": "application/json",
+       "size_bytes": 72,
+       "valid_json": true,
+       "json_type": "object",
+       "json_keys": [
+        "pair",
+        "bid",
+        "ask",
+        "at"
+       ]
+      },
+      "settlement": {
+       "success": true,
+       "transaction": "0xab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12",
+       "network": "eip155:8453",
+       "payer": "0x9f8e7d6c5b9f8e7d6c5b9f8e7d6c5b9f8e7d6c5b",
+       "payer_is_test_wallet": true
+      }
+     },
+     "paid": true
+    },
+    "schema": {
+     "type": "object",
+     "properties": {
+      "tool": {
+       "type": "string"
+      },
+      "data": {
+       "type": "object",
+       "properties": {
+        "url": {
+         "type": "string"
+        },
+        "checked_at": {
+         "type": "string"
+        },
+        "method": {
+         "type": "string"
+        },
+        "verdict": {
+         "type": "string"
+        },
+        "reasons": {
+         "type": "array"
+        },
+        "notes": {
+         "type": "array"
+        },
+        "lint": {
+         "type": "object"
+        },
+        "payment": {
+         "type": "object"
+        },
+        "timing": {
+         "type": "object"
+        },
+        "response": {
+         "type": "object"
+        },
+        "settlement": {
+         "type": "object"
+        }
+       }
+      },
+      "paid": {
+       "type": "boolean"
+      }
+     }
+    }
+   },
+   "static": true
+  },
+  "GET /api/cascade-backtest": {
+   "tool": "get_cascade_backtest",
+   "price_usd": 0.5,
+   "input": {
+    "symbol": "SOLUSDT"
+   },
+   "inputSchema": {
+    "properties": {
+     "symbol": {
+      "description": "BTC, ETH, SOL or any symbol the backtest covers (default SOLUSDT); a symbol it does not cover answers 400 with the list that works",
+      "type": "string"
+     },
+     "side": {
+      "description": "which liquidations count: long, short or both (default both)",
+      "type": "string",
+      "enum": [
+       "long",
+       "short",
+       "both"
+      ]
+     },
+     "min_usd": {
+      "description": "USD liquidated inside the window, 10,000 to 1,000,000,000, default 100,000",
+      "type": "number",
+      "minimum": 10000,
+      "maximum": 1000000000
+     },
+     "window_min": {
+      "description": "rolling window in minutes, 1 to 60, default 5",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 60
+     },
+     "cooldown_min": {
+      "description": "minutes without a qualifying window before the next event can start, 15 to 1,440, default 60",
+      "type": "integer",
+      "minimum": 15,
+      "maximum": 1440
+     },
+     "limit": {
+      "description": "events listed, largest first, 1 to 100, default 20; the statistics always use every event",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+     }
+    },
+    "required": []
+   },
+   "output": {
+    "example": {
+     "tool": "get_cascade_backtest",
+     "data": {
+      "symbol": "BTCUSDT",
+      "hyperliquid_coin": "BTC",
+      "params": {
+       "side": "both",
+       "min_usd": 100000,
+       "window_min": 5,
+       "cooldown_min": 60,
+       "limit": 20
+      },
+      "period": {
+       "from": "2026-01-05T06:03:37.…",
+       "to": "2026-01-11T12:28:30.…",
+       "days": 6.3
+      },
+      "price_data": {
+       "source": "Hyperliquid candleSn…",
+       "first_candle": "2026-01-05T06:00:00.…",
+       "newest_candle_end": "2026-01-11T12:00:00.…"
+      },
+      "tape": "agentfeed_liq_tape",
+      "events_found": 6,
+      "events_listed": 6,
+      "events_order": "largest window_usd f…",
+      "events": [
+       {
+        "start_time": "2026-01-10T20:10:30.…",
+        "last_qualifying_print_time": "2026-01-10T20:15:13.…",
+        "window_usd": 300000,
+        "prints": 3,
+        "longs_usd": 300000,
+        "shorts_usd": 0,
+        "entry_time": "2026-01-10T20:15:00.…",
+        "entry_close": 93770.16,
+        "forward_return_pct": {
+         "15m": 0.1347,
+         "1h": -0.2937,
+         "4h": 0.3095,
+         "24h": null
+        },
+        "left_out": {
+         "24h": "not_elapsed"
+        }
+       }
+      ],
+      "horizons": {
+       "15m": {
+        "events": {
+         "n": 6,
+         "mean_pct": 0.0099,
+         "median_pct": 0.1073,
+         "hit_rate_pct": 66.67,
+         "mean_ci95_pct": [
+          -0.1638,
+          0.1374
+         ]
+        },
+        "baseline": {
+         "n": 6,
+         "mean_pct": -0.1621,
+         "median_pct": -0.2383,
+         "hit_rate_pct": 33.33,
+         "mean_ci95_pct": [
+          -0.2945,
+          -0.0292
+         ]
+        },
+        "events_left_out": {},
+        "baseline_left_out": {}
+       }
+      },
+      "baseline": {
+       "times_requested": 6,
+       "times_drawn": 6
+      },
+      "method": {
+       "event": "Prints of the chosen…",
+       "side": "long counts liquidat…",
+       "forward_return": "Entry is the first 1…",
+       "hit_rate": "The share of events…",
+       "baseline": "Random times with th…",
+       "interval": "Percentile bootstrap…",
+       "left_out": "An event is left out…",
+       "limits": "Events closer togeth…"
+      },
+      "notes": [
+       "At least one row has…"
+      ]
+     },
+     "paid": true
+    },
+    "schema": {
+     "type": "object",
+     "properties": {
+      "tool": {
+       "type": "string"
+      },
+      "data": {
+       "type": "object",
+       "properties": {
+        "symbol": {
+         "type": "string"
+        },
+        "hyperliquid_coin": {
+         "type": "string"
+        },
+        "params": {
+         "type": "object"
+        },
+        "period": {
+         "type": "object"
+        },
+        "price_data": {
+         "type": "object"
+        },
+        "tape": {
+         "type": "string"
+        },
+        "events_found": {
+         "type": "number"
+        },
+        "events_listed": {
+         "type": "number"
+        },
+        "events_order": {
+         "type": "string"
+        },
+        "events": {
+         "type": "array"
+        },
+        "horizons": {
+         "type": "object"
+        },
+        "baseline": {
+         "type": "object"
+        },
+        "method": {
+         "type": "object"
+        },
+        "notes": {
+         "type": "array"
+        }
+       }
+      },
+      "paid": {
+       "type": "boolean"
+      }
+     }
+    }
+   },
+   "static": true
+  },
+  "GET /api/claim-check": {
+   "tool": "get_claim_check",
+   "price_usd": 0.15,
+   "input": {
+    "claim": "The Eiffel Tower is 330 metres tall."
+   },
+   "inputSchema": {
+    "properties": {
+     "claim": {
+      "type": "string",
+      "description": "the claim to check: one statement of fact, 10 to 300 characters"
+     },
+     "urls": {
+      "description": "up to 3 https URLs of pages that should settle it, comma separated or repeat the parameter; omit them and the service reads one SEC filing when the claim carries an explicit ticker such as $AAPL, else the Wikipedia articles the claim names",
+      "type": "string"
+     }
+    },
+    "required": [
+     "claim"
+    ]
+   },
+   "output": {
+    "example": {
+     "tool": "get_claim_check",
+     "data": {
+      "claim": "The Harbour Tunnel is 12.4 kilometres long.",
+      "verdict": "SUPPORTED",
+      "confidence_note": "The sources state this: 1 quote from 1 source found word for word in the fetched text. It reports what the sources say, not that they are right.",
+      "quotes": [
+       {
+        "text": "The tunnel is 12.4 kilometres long and carries two rail tracks and one service lane.",
+        "url": "https://www.example.org/transport/harbour-tunnel",
+        "source_kind": "web",
+        "locator": "characters 46 to 130 of 178 in the extracted text (whitespace collapsed)"
+       }
+      ],
+      "sources_read": [
+       {
+        "url": "https://www.example.org/transport/harbour-tunnel",
+        "kind": "web",
+        "format": "html",
+        "title": "Harbour Tunnel facts",
+        "chars_total": 178,
+        "chars_read": 178,
+        "truncated": false
+       }
+      ],
+      "sources_failed": [],
+      "model": "gemini-3.1-flash-lite",
+      "method": "Read 1 source (1 web page). Each source was shown whole. One language model call proposed a verdict and up to 3 quotes. A verdict is kept only if at least one quote is found word for word (whitespace aside) in the fetched text; every other quote is dropped, an…"
+     },
+     "paid": true
+    },
+    "schema": {
+     "type": "object",
+     "properties": {
+      "tool": {
+       "type": "string"
+      },
+      "data": {
+       "type": "object",
+       "properties": {
+        "claim": {
+         "type": "string"
+        },
+        "verdict": {
+         "type": "string"
+        },
+        "confidence_note": {
+         "type": "string"
+        },
+        "quotes": {
+         "type": "array"
+        },
+        "sources_read": {
+         "type": "array"
+        },
+        "sources_failed": {
+         "type": "array"
+        },
+        "model": {
+         "type": "string"
+        },
+        "method": {
+         "type": "string"
+        }
+       }
+      },
+      "paid": {
+       "type": "boolean"
+      }
+     }
+    }
+   },
+   "static": true
+  },
+  "GET /api/site-signals": {
+   "tool": "get_site_signals",
+   "price_usd": 0.02,
+   "input": {
+    "url": "https://en.wikipedia.org/wiki/Stablecoin"
+   },
+   "inputSchema": {
+    "properties": {
+     "url": {
+      "type": "string",
+      "description": "the site: an absolute https URL on the standard port, for example https://www.example.com/ (a host name, not an IP address)"
+     }
+    },
+    "required": [
+     "url"
+    ]
+   },
+   "output": {
+    "example": {
+     "tool": "get_site_signals",
+     "data": {
+      "url": "https://www.example.…",
+      "host": "www.example.com",
+      "page": {
+       "ok": true,
+       "status": 200,
+       "final_url": "https://www.example.…",
+       "redirected": false,
+       "host_changed": false,
+       "content_type": "text/html",
+       "bytes": 553,
+       "html": true,
+       "server": "nginx/1.25.3",
+       "cookie_names": [
+        "sid"
+       ],
+       "scan_truncated": false
+      },
+      "tls": {
+       "ok": true,
+       "protocol": "TLSv1.3",
+       "cipher": "TLS_AES_128_GCM_SHA2…",
+       "authorized": true,
+       "authorization_error": null,
+       "issuer": {
+        "organization": "Example Trust Servic…",
+        "common_name": "Example TLS CA 1",
+        "country": "US"
+       },
+       "subject": {
+        "common_name": "www.example.com"
+       },
+       "sans": {
+        "count": 2,
+        "names": [
+         "example.com",
+         "www.example.com"
+        ],
+        "truncated": false
+       },
+       "valid_from": "2026-10-01T00:00:00.…",
+       "valid_to": "2026-12-30T23:59:59.…",
+       "age_days": 30,
+       "days_left": 60,
+       "expired": false,
+       "chain": {
+        "length": 3,
+        "subjects": [
+         "www.example.com",
+         "Example TLS CA 1",
+         "Example Root CA"
+        ],
+        "ends_in_self_signed_root": true,
+        "self_signed": false
+       },
+       "key": {
+        "type": "EC",
+        "bits": 256,
+        "curve": "P-256"
+       },
+       "serial_number": "0A1B2C3D4E5F60718293…",
+       "fingerprint_sha256": "A3:A3:A3:A3:A3:A3:A3…"
+      },
+      "dns": {
+       "ok": true,
+       "host": "www.example.com",
+       "zone": "example.com",
+       "zone_queried": "example.com",
+       "a": [
+        "203.0.113.10",
+        "203.0.113.11"
+       ],
+       "aaaa": [
+        "2001:db8::10"
+       ],
+       "cname": [],
+       "ns": [
+        "ns1.example.com",
+        "ns2.example.com"
+       ],
+       "mx": [
+        {
+         "exchange": "mail.example.com",
+         "priority": 10
+        }
+       ],
+       "txt": [
+        "v=spf1 include:_spf.…",
+        "example-site-verific…"
+       ],
+       "spf": {
+        "present": true,
+        "record": "v=spf1 include:_spf.…"
+       },
+       "dmarc": {
+        "present": true,
+        "policy": "quarantine"
+       },
+       "caa": [
+        {
+         "critical": false,
+         "tag": "issue",
+         "value": "ca.example.net"
+        }
+       ],
+       "caa_at": "example.com",
+       "counts": {
+        "a": 2,
+        "aaaa": 1,
+        "cname": 0,
+        "ns": 2,
+        "mx": 1,
+        "txt": 2,
+        "caa": 1
+       },
+       "txt_truncated": false,
+       "errors": []
+      },
+      "headers": {
+       "ok": true,
+       "grade": "A",
+       "score": 85,
+       "max": 100,
+       "rubric": "headers-v1",
+       "findings": [
+        {
+         "id": "hsts",
+         "header": "strict-transport-sec…",
+         "level": "full",
+         "points": 30,
+         "max": 30,
+         "value": "max-age=31536000; in…",
+         "detail": "max-age 31536000 s (…"
+        }
+       ]
+      },
+      "stack": [
+       {
+        "name": "Google Analytics",
+        "category": "analytics",
+        "version": null,
+        "evidence": [
+         "script-or-link-url"
+        ]
+       }
+      ],
+      "links": {
+       "ok": true,
+       "emails": [
+        "hello@example.com"
+       ],
+       "phones": [
+        "+15550100"
+       ],
+       "social": {
+        "x": [
+         "https://x.com/exampl…"
+        ],
+        "github": [
+         "https://github.com/e…"
+        ],
+        "linkedin": [
+         "https://www.linkedin…"
+        ],
+        "discord": [],
+        "telegram": [],
+        "youtube": [],
+        "instagram": [],
+        "facebook": []
+       },
+       "truncated": false
+      },
+      "fetched_at": "2026-10-31T12:00:00.…",
+      "method": "TLS: one handshake t…"
+     },
+     "paid": true
+    },
+    "schema": {
+     "type": "object",
+     "properties": {
+      "tool": {
+       "type": "string"
+      },
+      "data": {
+       "type": "object",
+       "properties": {
+        "url": {
+         "type": "string"
+        },
+        "host": {
+         "type": "string"
+        },
+        "page": {
+         "type": "object"
+        },
+        "tls": {
+         "type": "object"
+        },
+        "dns": {
+         "type": "object"
+        },
+        "headers": {
+         "type": "object"
+        },
+        "stack": {
+         "type": "array"
+        },
+        "links": {
+         "type": "object"
+        },
+        "fetched_at": {
+         "type": "string"
+        },
+        "method": {
+         "type": "string"
+        }
+       }
+      },
+      "paid": {
+       "type": "boolean"
+      }
+     }
+    }
+   },
+   "static": true
   }
  },
- "_outputs_recaptured_at": "2026-10-30T08:58:52.100Z",
+ "_outputs_recaptured_at": "2026-10-31T20:42:06.264Z",
  "_pruned_at": "2026-10-30T07:49:09.331Z",
  "_schemas_regenerated_at": "2026-10-29T21:07:44.425Z",
  "_outputs_dropped_at": "2026-10-13T04:50:35.546Z",

@@ -32,7 +32,15 @@ test('the owner\'s buyer wallet is own, in any spelling; a lookalike and an outs
 
 test('the five wallets that were already own still are', () => {
   for (const w of ['EqRNNpKVpu6jm8iRTNa17Rht2TRTzCtNNz37M9m2Di1', 'Gack9UtqfeZxFA1LqeqjLgC3JGuD7rS6CsSHKoXsD4Tu', 'TeStKWyNre9PW8XbLfvuBm9f6EnTBYqS5GXTzciCnHw', '0xFEfF369D5048b2Cf817d87467E48404b3ADfE4Ee', '0x05b38ff795a2d750788157f1119e5d403d8ef47a']) assert.equal(OT.isOwnWallet(w), true, w);
-  assert.equal(OT.OWN_WALLET_LIST.length, 7);
+  assert.equal(OT.OWN_WALLET_LIST.length, 9);
+});
+
+test('the x402-test route\'s dedicated wallet (Base and Solana, 31 Oct 2026) is own in any spelling; one character off is another wallet (negative control)', () => {
+  const BASE = '0x4e64ad598a70D47D33Aa1C6D7FC07d723dd3476e', SOL = '8Do88KPvpoMd65PXiP25VJcMAodHvihhu471HaCxvAs3';
+  assert.equal(OT.isOwnWallet(BASE), true); assert.equal(OT.isOwnWallet(BASE.toLowerCase()), true); assert.equal(OT.isOwnWallet(SOL), true);
+  assert.equal(OT.isOwnWallet(BASE.slice(0, -1) + 'f'), false); assert.equal(OT.isOwnWallet(SOL.slice(0, -1) + '4'), false);
+  assert.equal(DG.isOwn({ payer_wallet: BASE.toLowerCase(), ip: '203.0.113.9' }), true, 'the digest tags it own from a stranger\'s address');
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'tools', 'r23', 'x402', 'test-wallet.json'), 'utf8')), { base: BASE, solana: SOL }, 'the committed file names the same two addresses');
 });
 
 test('the dreamdex-signal-bot payer (Base, 31 Oct 2026) is own in any spelling; one digit off is another wallet (negative control)', () => {

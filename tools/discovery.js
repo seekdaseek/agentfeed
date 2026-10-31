@@ -208,6 +208,10 @@ const GROUPS = [
   ['DeFi and macro', ['defi', 'tvl', 'protocols', 'stablecoins', 'macro']],
   // R19: the non-market routes, which sat under a catch-all "Other" heading. They come last, so a route that already has a market section
   // keeps it; each family keys on the tag that names what it does.
+  // R23 (31 Oct 2026): the two families the batch adds. claim-check carries `sec` and `wikipedia` as well, so its own group comes first.
+  ['Claim and fact checking', ['fact-check']],
+  ['Check another x402 endpoint', ['lint', 'testing']],
+  ['Website and infrastructure checks', ['tls', 'security-headers', 'tech-stack']],
   ['SEC filings and insider trades', ['sec']],
   ['Compliance and verification', ['sanctions', 'prompt-injection', 'email', 'domain']],
   ['Research and reference', ['academic', 'wikipedia']],

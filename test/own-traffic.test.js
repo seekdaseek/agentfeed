@@ -32,7 +32,15 @@ test('the owner\'s buyer wallet is own, in any spelling; a lookalike and an outs
 
 test('the five wallets that were already own still are', () => {
   for (const w of ['EqRNNpKVpu6jm8iRTNa17Rht2TRTzCtNNz37M9m2Di1', 'Gack9UtqfeZxFA1LqeqjLgC3JGuD7rS6CsSHKoXsD4Tu', 'TeStKWyNre9PW8XbLfvuBm9f6EnTBYqS5GXTzciCnHw', '0xFEfF369D5048b2Cf817d87467E48404b3ADfE4Ee', '0x05b38ff795a2d750788157f1119e5d403d8ef47a']) assert.equal(OT.isOwnWallet(w), true, w);
-  assert.equal(OT.OWN_WALLET_LIST.length, 6);
+  assert.equal(OT.OWN_WALLET_LIST.length, 7);
+});
+
+test('the dreamdex-signal-bot payer (Base, 31 Oct 2026) is own in any spelling; one digit off is another wallet (negative control)', () => {
+  const DREAMDEX = '0xB96c536A2b01584c5Dd8967AF0d8Ba97eBC2417F';
+  assert.equal(OT.isOwnWallet(DREAMDEX), true, 'mixed case, as listed');
+  assert.equal(OT.isOwnWallet(DREAMDEX.toLowerCase()), true, 'lower case, as the payments table stores it');
+  assert.equal(OT.isOwnWallet(DREAMDEX.slice(0, -1) + 'E'), false, 'one character off is another wallet');
+  assert.equal(DG.isOwn({ payer_wallet: DREAMDEX.toLowerCase(), ip: '203.0.113.9' }), true, 'the digest tags it own from a stranger\'s address');
 });
 
 test('the local normPayer is lib/audit\'s, on every shape (so the two cannot drift)', () => {

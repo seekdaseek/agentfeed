@@ -189,6 +189,9 @@ function freeHttp(FREE_TOOLS) {
 const GROUPS = [
   // pensio: the briefs lead, so a buyer meets the composed answers before the raw tables
   ['Briefs: what changed and the level to watch', ['brief']],
+  // R24 (1 Nov 2026): placed early because tx-precheck also carries `solana`/`base` and rwa-yields `onchain`/`rwa`, which would file them under the chain and peg sections
+  ['Package and transaction checks', ['supply-chain', 'simulation']],
+  ['Tokenized treasury and credit yields', ['tokenized-treasuries']],
   ['Our own collateral exit-liquidity tape', ['collateral', 'exit-liquidity'], 'exclusive'],
   ['Our own tokenized-equity peg tape', ['rwa', 'peg', 'tokenized-stocks'], 'exclusive'],
   ['Our own liquidation tape', ['liquidations', 'cascade', 'squeeze', 'heatmap'], 'exclusive'],

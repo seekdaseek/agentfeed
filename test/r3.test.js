@@ -129,13 +129,14 @@ test('base-launches: fresh snapshot filters and limits; stale is 503; bad number
 });
 
 // ---- R4: withdrawn routes ----
-test('the five routes withdrawn on 12 Oct answer a neutral 410 on any method, with a pointer to /pricing (the R7 withdrawals are in r7.test.js)', async (t) => {
+test('the four routes withdrawn on 12 Oct and still gone answer a neutral 410 on any method, with a pointer to /pricing (rwa-yields came back in R24; the R7 withdrawals are in r7.test.js)', async (t) => {
   const compat = require('../lib/compat');
   const app = express();
-  const FIVE = ['/api/tvl', '/api/stablecoin-flows', '/api/launch-odds', '/api/rwa-yields', '/api/dex-quote'];
+  const FIVE = ['/api/tvl', '/api/stablecoin-flows', '/api/launch-odds', '/api/dex-quote'];
   for (const p of compat.WITHDRAWN) app.all(p, compat.makeWithdrawn({ ORIGIN: 'https://x' }));
   const srv = app.listen(0); t.after(() => srv.close()); const u = `http://127.0.0.1:${srv.address().port}`;
-  assert.deepStrictEqual(compat.WITHDRAWN.slice(0, 5), FIVE);
+  assert.deepStrictEqual(compat.WITHDRAWN.slice(0, 4), FIVE);
+  assert.ok(!compat.WITHDRAWN.includes('/api/rwa-yields'), 'rwa-yields is served again (R24)');
   for (const p of FIVE) {
     for (const method of ['GET', 'POST']) {
       const r = await fetch(u + p, { method });
@@ -147,7 +148,7 @@ test('the five routes withdrawn on 12 Oct answer a neutral 410 on any method, wi
 
 test('withdrawn routes and sources are gone from the price table and the eth-price venues', () => {
   const { PRICES } = require('../payments');
-  for (const k of ['GET /api/tvl', 'GET /api/stablecoin-flows', 'GET /api/launch-odds', 'GET /api/rwa-yields', 'GET /api/dex-quote']) assert.ok(!(k in PRICES), k);
+  for (const k of ['GET /api/tvl', 'GET /api/stablecoin-flows', 'GET /api/launch-odds', 'GET /api/dex-quote']) assert.ok(!(k in PRICES), k);
   const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'tools', 'prices.js'), 'utf8');
   for (const host of ['api.coingecko.com', 'coins.llama.fi', 'api.coinpaprika.com', 'hermes.pyth.network/v2/updates']) assert.ok(!src.includes(host), host);
 });

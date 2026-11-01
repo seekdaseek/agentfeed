@@ -71,6 +71,11 @@ const QUESTIONS = {
   get_crash_risk: 'How likely is this new Solana pool to lose 80 percent of its price within 24 hours of entry?',
   get_launch_radar: 'Which new Solana pools were just scored, and how do they rank by crash risk?',
   get_crash_risk_record: 'How well have the live crash-risk scores ranked the pools that fell 80 percent within 24 hours?',
+  // R24 (1 Nov 2026)
+  get_pkg_check: 'Does OSV.dev list any advisory for this exact version of an npm or PyPI package, and what do the public registries add?',
+  get_tx_precheck: 'What would this Solana or Base transaction do to the wallet that signs it, before it is signed?',
+  get_company_check: 'Do the latest SEC filings of this company carry going-concern language, a delisting-notice 8-K, or an overdue report?',
+  get_rwa_yields: 'What annualized yield have tokenized treasury and credit products realized over the last 7 and 30 days, computed from their on-chain prices?',
   get_news_brief: 'What did the SEC, the CFTC and the Federal Reserve Board publish in the last 24 hours, and which of it matters?',
   get_macro_calendar: 'When are the next FOMC decision and CPI, NFP and PCE releases?',
   get_tradfi_radar: 'Which stock, index, gold or oil perps have extreme funding right now?',

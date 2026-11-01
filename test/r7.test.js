@@ -221,7 +221,7 @@ test('a malformed symbol is the caller\'s 400, never a server error', async () =
 // ---- the withdrawn routes ---------------------------------------------------------------------
 test('withdrawn routes answer 410 with closest_live; the five of 12 Oct keep their body; nothing else is withdrawn', async () => {
   const compat = require('../lib/compat');
-  assert.deepEqual(compat.WITHDRAWN.slice().sort(), ['/api/dex-quote', '/api/funding-cross', '/api/launch-odds', '/api/long-short', '/api/options-gex', '/api/options-summary', '/api/rwa-yields', '/api/spread-arb', '/api/stablecoin-flows', '/api/tvl', '/api/whale-trades']);
+  assert.deepEqual(compat.WITHDRAWN.slice().sort(), ['/api/dex-quote', '/api/funding-cross', '/api/launch-odds', '/api/long-short', '/api/options-gex', '/api/options-summary', '/api/spread-arb', '/api/stablecoin-flows', '/api/tvl', '/api/whale-trades']);
   const app = express();
   for (const p of compat.WITHDRAWN) app.all(p, compat.makeWithdrawn({ ORIGIN: 'https://x' }));
   const s = await new Promise((r) => { const sv = app.listen(0, () => r(sv)); });

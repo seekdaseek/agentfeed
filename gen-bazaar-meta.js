@@ -96,6 +96,13 @@ const SYMBOL_FOR = {
 // well, so the example call and the example response stay the same call.
 // Values must be inside the range the route's own schema documents.
 const EXTRA_ARGS = {
+  // R24: real requests for the two new routes (the Bazaar refresh pays by calling the published example, so it must be a request the route answers).
+  // pkg-check: a real advisory on a real version; tx-precheck: the benign Base case of the registered gate (an exact-amount USDC approval to the Universal Router).
+  get_pkg_check: { name: 'minimist', ecosystem: 'npm', version: '1.2.5' },
+  // company-check: a large, healthy filer (the Bazaar refresh pays $0.25 for the published example); rwa-yields takes no required input
+  get_company_check: { q: 'AAPL' },
+  get_tx_precheck: { chain: 'base', from: '0xe3478b0bb1a5084567c319096437924948be1964', to: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    data: '0x095ea7b30000000000000000000000006ff5693b99212da76ad316178a184ab56d299b4300000000000000000000000000000000000000000000000000000000000f4240', value: '0' },
   // default window is 90s and the majors were quiet at capture time; 300 is the
   // documented maximum and surfaces the live cascade shape rather than an empty array
   get_cascade_alert: { window: 300 },
@@ -366,7 +373,7 @@ const KEYLIB = require('./lib/keys');
 const BRIEFX = require('./tools/briefs/example');
 // R23: the new tools' examples are constructed too: each entry of tools/r23 carries `example`, built by its own module from its test fixtures (no market reading, no live capture).
 // A full run keeps them constructed; --recapture=<tools> --constructed adds or refreshes them without any network or box data; --recapture alone reads them live on the box.
-const R23X = new Map(require('./tools/r23').entries.map((e) => [e.name, e.example]));
+const R23X = new Map([...require('./tools/r23').entries, ...require('./tools/r24').entries].map((e) => [e.name, e.example]));
 const isR23 = (tool) => R23X.has(tool) && R23X.get(tool) != null;
 const isKeyStatic = (tool) => KEYLIB.exampleBody(tool) !== null;
 const isBrief = (tool) => BRIEFX.TOOLS.includes(tool);

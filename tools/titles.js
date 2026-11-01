@@ -47,6 +47,8 @@ const TOOL_TITLES = {
   get_x402_lint: 'x402 challenge lint', get_x402_test: 'x402 paid test', get_cascade_backtest: 'Cascade backtest', get_claim_check: 'Claim check', get_site_signals: 'Site signals',
   // held (R23_CRASH_ROUTES=off): present so the routes boot if the owner switches them on
   get_crash_risk: 'Crash risk of a new pool', get_launch_radar: 'New launch crash-risk radar', get_crash_risk_record: 'Crash risk track record',
+  // R24 (1 Nov 2026)
+  get_pkg_check: 'Package check', get_tx_precheck: 'Transaction precheck', get_company_check: 'Company check', get_rwa_yields: 'RWA yields',
 };
 
 module.exports = { TOOL_TITLES };

@@ -12,7 +12,7 @@ const { writeFiles } = require(path.join(ROOT, 'test', 'helpers', 'brief-files')
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'r23-bazaar-'));
 try {
   process.env.AGENTFEED_DB = ':memory:';
-  const tools = process.argv.length > 2 ? process.argv.slice(2) : require(path.join(ROOT, 'tools', 'r23')).entries.filter((e) => e.example != null).map((e) => e.name);
+  const tools = process.argv.length > 2 ? process.argv.slice(2) : [...require(path.join(ROOT, 'tools', 'r23')).entries, ...require(path.join(ROOT, 'tools', 'r24')).entries].filter((e) => e.example != null).map((e) => e.name);
   if (!tools.length) throw new Error('no tool to build');
   const env = { ...process.env, ...writeFiles(dir), AF_ROOT: ROOT, AF_NET_LOG: path.join(dir, 'net.log'), NODE_ENV: 'test' };
   execFileSync(process.execPath, ['--require', path.join(ROOT, 'test', 'helpers', 'af-test-preload.js'), path.join(ROOT, 'gen-bazaar-meta.js'), `--recapture=${tools.join(',')}`, '--constructed'], { env, cwd: ROOT, stdio: 'inherit' });

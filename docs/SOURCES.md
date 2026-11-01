@@ -453,95 +453,86 @@ Not shipped, and why:
 
 | Item | Decision |
 |---|---|
-| pkg-check (npm and PyPI package signals) | failed its pre-registered gate (19 of 20 known-good and known-bad packages correct, one low-severity advisory missed). The code stays in the repository, unregistered. |
+| pkg-check (npm and PyPI package signals) | failed its R23 pre-registered gate (19 of 20, one low-severity advisory missed). Re-gated in R24 under a new rule (any advisory flags) on a new held-out list and served: see "pkg-check, re-gated" below. |
 | pm-movers (Polymarket and Kalshi odds moves) | cut. Kalshi Developer Agreement v1.1 s.3 limits API data to the member's own trading and s.3.1 bars caching, aggregating or sharing it with third parties; Polymarket's Terms of Use bar scraping and bar reselling the data to capital-markets clients and market-data distributors. |
-| rwa-yields | cut. The index is DefiLlama's data (see the DefiLlama row above: withdrawn). |
+| rwa-yields | cut in R23 (the index was DefiLlama's data, withdrawn). Rebuilt in R24 from issuer contracts: see "rwa-yields, re-sourced on chain" below. |
 | sol-token-check / flow / holder-clusters pool discovery from GeckoTerminal or DexScreener | not changed. Both sources are banned above; the three routes keep answering 503 Not charged when the free RPC tier cannot serve them. |
 | crash-risk, launch-radar, crash-risk-record | built and tested, switched OFF (`R23_CRASH_ROUTES`, default off). Their input is LaunchLedger, which is GeckoTerminal data (CoinGecko row above). They wait for a data source these rules allow. A scorer reads LaunchLedger read-only inside the box and keeps its own file; nothing serves it. |
 
 Code and data in the batch: no third-party code was copied. The crash model was fitted offline with scikit-learn (BSD-3-Clause); the evaluator, feature builder and service are original. claim-check's passage ranking is the standard BM25-style inverse-document-frequency weighting, written from the formula. site-signals' header rubric and technology table were written from public documentation (MDN Web Docs, RFC 6797) and not derived from any detector's pattern list.
 
-## Payment infrastructure (not data sources)
+## R24 (1 Nov 2026): terms read before building
 
-CDP facilitator (x402 exact on Base, Polygon, Arbitrum, Solana and World Chain; batch-settlement on Base, Polygon,
-Arbitrum, R5), Circle Facilitator Service (Arc), Circle Gateway (nanopayments on Arc; on Base, Polygon,
-Arbitrum too until 18 Oct 2026, R5), GoPlausible (Algorand, R5; switched off since 29 Oct 2026, see below), Ultravioleta (Optimism, Monad, Avalanche in every 402; Celo, HyperEVM,
-Unichain, Scroll, SKALE Base, BNB Chain, Ethereum and Robinhood Chain on request, R10), PayAI (Sei and X Layer on request, R10),
-Tempo RPC (MPP tempo/charge), the Solana RPC named by `MPP_RPC_URL` (MPP solana/charge verification: the public mainnet node api.mainnet-beta.solana.com since 24 Oct 2026, Helius before). Their terms govern
-settlement, not data resale, and are out of scope here.
+Gates were written before scoring and hashed (GATES-r24.md); an item that failed its gate is not served.
 
-### Path parameters are checked before payment (R20e, 29 Oct 2026)
+### pkg-check, re-gated (served: GET /api/pkg-check, $0.02)
+Rule: any advisory that affects the exact version makes the answer `flagged`, with the highest severity shown. 40 of 40 on a held-out list registered before scoring.
 
-Not a source and not a payment protocol: `lib/param-guard.js` answers a 400 to a path-parameter value the route's own validator would reject, before the prepaid-key
-reserve, the refusal recorder, x402 v1 and v2, tempo and MPP, so no 402 is issued for a request that can never be served. It reads no upstream and keeps no
-copy of anyone's data. Rejections are counted per day, route, kind (`placeholder` for a copied `:wallet` or `{wallet}`, `invalid` for any other value), address
-and user agent in the `param_rejected` table, one counter row, never one row per request. The documents print a working example URL for each of the 12
-path-parameter routes (values from `bazaar-examples.json`, wallets and mints are public addresses) and the `{name}` template beside it, labelled as a template.
-The catalogue lists the concrete URL (a directory keyed on the URL may show a route twice: cosmetic, accepted 29 Oct 2026; a listed URL that answers 400 is broken). The DOI example is
-one segment (`10.1038%2Fnature14539`, the URL CDP's index already holds). CDP's `/validate` fails this route on `bazaar.routeTemplate.matches_resource` with either spelling (a DOI contains a slash and the check behaves as if it decodes the path first); the other 90 routes validate.
+| Upstream | Terms read (1 Nov 2026) | Clause relied on | What we take | Verdict |
+|---|---|---|---|---|
+| OSV.dev API (api.osv.dev) | google.github.io/osv.dev/faq/, /data/, /api/ | "Currently there is not a limit on the API."; each source's licence is on the data page (GitHub Advisory Database CC-BY 4.0, PyPI Advisory Database CC-BY 4.0, OpenSSF Malicious Packages Apache 2.0) | advisory ids, aliases, severity labels, fixed versions, summaries cut to 200 characters | clean with attribution |
+| GitHub Advisory Database (reached through OSV) | docs.github.com "Terms for Additional Products and Features", Advisory Database | "licensed under the Creative Commons Attribution 4.0 license"; attribution "may be fulfilled by linking to the GitHub Advisory Database at https://github.com/advisories" | as above | clean with attribution (the link is in every answer's method) |
+| PyPA Advisory Database (PYSEC records via OSV) | LICENSE of github.com/pypa/advisory-database | CC BY 4.0 | as above | clean with attribution |
+| OpenSSF Malicious Packages (MAL records via OSV) | LICENSE of github.com/ossf/malicious-packages | Apache License 2.0 | the MAL id sets `malicious` | clean |
+| npm registry (registry.npmjs.org) | docs.npmjs.com/policies/open-source-terms | "You may replicate data from the Public Registry using the Public APIs per this Agreement."; but "You may not provide others access to, copies of, or use of npm data about the security of Packages" | release dates, maintainer counts, install-script names, repository link | clean for metadata; **security data excluded by design** (the registry's security-holder flag was removed) |
+| npm download counts (api.npmjs.org/downloads) | github.com/npm/registry docs/download-counts.md | no clause on the counts | last-week count, optional | unclear (silent); optional field, null on any failure |
+| PyPI JSON API (pypi.org/pypi/<name>/json) | policies.python.org/pypi.org/Terms-of-Service/ "API Terms"; docs.pypi.org/api | "Abuse or excessively frequent requests ... may result in" suspension; no rate limit stated at the edge | dates, file counts, yanked, owner count (no names), project URLs | clean; answers cached 10 minutes |
+| pypistats.org API | pypistats.org/api/ and /about | "cache your results"; data updated once daily; no licence or commercial clause | last-week count, optional | unclear (no terms); optional field; our 10-minute cache is shorter than their once-a-day request |
+| wooorm/npm-high-impact | repository LICENSE | MIT, Copyright (c) Titus Wormer | the first 4,000 package names, bundled as a typosquat reference | clean |
+| hugovk/top-pypi-packages | no licence found | n/a | read once to pick gate cases; nothing bundled or served | not used in any answer |
 
-### Query parameters are checked before payment (R20f, 29 Oct 2026)
+### tx-precheck (served: GET /api/tx-precheck, $0.05)
+Simulates a Solana transaction or a Base request with our own RPC; it never signs or sends. 12 of 12 on crafted cases registered before scoring (and again on the box with the production RPC configuration).
 
-Same module, same counter table (`kind` = `query`). `lib/query-rules.js` holds 52 rules on 30 routes, each a copy of a check the route's handler already answers with a 400; it reads no upstream and
-stores nothing but the counter. A missing parameter is never refused (the query-less URL is the catalogue entry and stays a 402). `AF_QUERY_GUARD=off` switches the query rules off.
+| Upstream | Terms read (1 Nov 2026) | Clause relied on | What we take | Verdict |
+|---|---|---|---|---|
+| Solana public RPC (api.mainnet-beta.solana.com): simulateTransaction, getMultipleAccounts | solana.com/docs/references/clusters (read from its source repository, the site answered 429) | "The public RPC endpoints are not intended for production applications."; "Maximum number of requests per 10 seconds per IP for a single RPC: 40" | chain state and the result of simulating the caller's transaction (the only provider simulateTransaction is sent to) | clean as transport; shares the existing rate-limit row; 40 requests per 10 s per IP is shared with the collectors on the box, a 429 is a 503 Not charged |
+| Alchemy (keyed Solana provider): getMultipleAccounts and the other reads already served through it | alchemy.com/policies/terms, Terms of Service v2.0, June 27, 2025 | 2.1 "solely for your internal business purposes"; 2.2(v) "frame, mirror, sell, resell, rent or lease use of the Services to any other Third Party, or otherwise allow any Third Party to use the Services for any purpose other than for your benefit" | the same reads the service already makes; **not** simulateTransaction | resolved for simulation: a simulation is a computation a third party asks the node to run, which 2.2(v) can be read to cover, so `simulateTransaction` is in METHOD_RULES of lib/rpc-heavy.js with an allow-list (`RPC_SIMULATE_ONLY`, default the public Solana RPC host) and is never sent to Alchemy or Helius. If the public RPC is rate limited the call answers 503 Not charged. Owner decision of 1 Nov 2026 |
+| Alchemy compute-unit table | alchemy.com/docs/reference/compute-unit-costs | simulateTransaction 20, getMultipleAccounts 20, eth_call 26, eth_simulateV1 40, alchemy_simulateAssetChanges 2,500 | cost figures only | clean; 40 CU per plain Solana call |
+| Base public RPC (mainnet.base.org): eth_simulateV1, eth_call, eth_getBlockByNumber, eth_getCode, eth_getTransactionCount | docs.base.org/terms-of-service, last updated April 08, 2026 | prohibits "using the Services in a manner that constitutes excessive or abusive usage" | chain state and a simulation result; 6 calls per request | clean; falls over to dRPC on a rate limit |
+| dRPC (base.drpc.org), fallback | drpc.org/terms-of-use, last updated 14 January, 2025 | 2.5 "excessive or abusive requests to dRPC Services through the API may lead to the temporary or permanent suspension" | as above | clean |
+| Official program and contract ids (known.js) | each id carries its source URL in known.js (anza-xyz/solana-sdk, solana-program/*, jup-ag/jupiter-cpi, raydium-io/raydium-sdk-V2, orca-so/whirlpools, MeteoraAg/*, pump-fun/pump-public-docs, Uniswap deployments pages, mds1/multicall) | ids and names are facts | the `known` flags | clean |
+| Sourcify (sourcify.dev) | API read | no terms relied on | one yes or no per contract while choosing gate cases | verification only; never served |
 
-### Algorand is switched off (29 Oct 2026)
+### company-check (served: GET /api/company-check, $0.25)
+A verdict line and the facts behind it for a US-listed company, read from SEC EDGAR; the website is read with site-signals. Gate (third attempt, disclosed): 10 fixed companies, flags right on 10 of 10, verdict lines 10 of 10, every cited source a static EDGAR object that answers 200 (155 URLs, 0 failing); the list was registered before scoring (sha256 3ea73a0c976f2cbae12292596da3be50c9a5a3e38240132202ca33ad22aa0c5b). The first two attempts failed only the source-URL clause, because dynamic SEC pages (browse-edgar) answered 403/503 under load; the product now cites static EDGAR objects only, and each attempt used a new held-out list.
 
-`X402_ALGO=off` on the live box: the GoPlausible Algorand network id is not a CAIP-2 identifier and makes CDP's Bazaar validate fail its required `parse` check on every route
-(measured 29 Oct 2026; with the rail off, `valid: true` on 90 of 91 routes, the exception being `/api/paper/{doi}`, see above). No Algorand payment was ever received. GoPlausible is not called while the rail is off.
+| Upstream | Terms read (1 Nov 2026) | Clause relied on | What we take | Verdict |
+|---|---|---|---|---|
+| SEC EDGAR: www.sec.gov/files/company_tickers.json (daily, never cited), data.sec.gov/submissions/CIK##########.json and its older pages (cited as the source of facts read from a filing list), the primary document of the latest 10-K and 10-Q and the Form 4 XML under www.sec.gov/Archives/edgar/data (documents and their filing index pages cited) | sec.gov/about/privacy-information, sec.gov/os/accessing-edgar-data (18:02 UTC) | the lines below | EDGAR filing lists, the latest 10-K and 10-Q text, Form 4 XML; one quoted sentence of at most 600 characters per going-concern finding | clean with citation; every EDGAR fact carries a source that is a static EDGAR object |
+| The company's own website, through site-signals (live TLS, DNS and one page request; registration data off) | n/a, a request to the company's own public site | none | signals about the site, labelled as not an EDGAR fact | clean |
 
-### Solana RPC: which endpoint serves what (R20h, 30 Oct 2026)
+Lines relied on: "no more than 10 requests per second, regardless of the number of machines used" (privacy-information page); "may be copied or further distributed by users of the web site without the SEC's permission. Please consider appropriate citation to the SEC as the source" (same page); "Please declare your user agent in request headers" (accessing-edgar-data page); the trademark line ("SEC", "EDGAR" not in a trade name): the route is `company-check`. Throttling ("further requests ... may be limited for a brief period") is answered by the 503 "Not charged" and by the 8 requests/s bucket.
 
-Measured on the box on 30 Oct 2026 (05:47-05:49Z). Every Helius key on the box (agentfeed, deepwork, nuntius; seeker-rpc fronts the deepwork key) answers HTTP 429 `max usage reached`:
-the free plan's credits are used up until the cycle resets on 9 Nov. The Solana Labs public RPC (`api.mainnet-beta.solana.com`) answers `getSlot` and `getAccountInfo` with 200
-but answers `getTokenLargestAccounts` with HTTP 429 `Too many requests for a specific RPC call` on every attempt, between calls that succeed: a per-method refusal, not a volume
-limit. Public endpoints tried the same minute (`solana-rpc.publicnode.com` 403, `solana.drpc.org` paid plans only, `rpc.ankr.com/solana` needs a key, `solana.api.onfinality.io/public`
-and Alchemy's demo key 429, `solana.leorpc.com` internal error) serve it to no one without a key. So `token-risk`, `token-holders`, `sol-token-check`, `sol-token-flow` and
-`sol-holder-clusters` answered `503 solana rpc http 429. Not charged.` (the refusals also put the public endpoint to rest for ten minutes for every other method).
-`lib/rpc-heavy.js` routes `getTokenLargestAccounts` past the public hosts (`RPC_HEAVY_SKIP`), caches a successful answer 90 seconds per mint and lets concurrent identical calls share
-one upstream call; with no endpoint left that can serve it the answer is an immediate 503, not charged, Retry-After 300. A keyed provider named in `RPC_FALLBACKS` restores the five
-routes. Alchemy documents `getTokenLargestAccounts` at 20 compute units and lists a Free plan of 30M CU per month at 300 CU/s (alchemy.com/docs/reference/compute-unit-costs and
-alchemy.com/pricing, read 30 Oct 2026); at this service's 3,500 or so Solana calls a day that is far inside the allowance. Nothing is configured yet: adding a key is the owner's step
-(`ops/add-rpc-fallback.sh`), and the provider's terms apply to that account, not to this repository.
+Verification only, never in an answer: EDGAR full-text search (efts.sec.gov) for choosing the case lists, the browse-edgar 8-K Atom feed for the Item 3.01 cross-check, the filing text of the thirty case companies. Not used: GeckoTerminal, DexScreener, DefiLlama, CoinGecko, RDAP (forced off, tested), Kalshi, Polymarket.
 
-### Alchemy as the keyed provider: what it serves and how fast (R20j, 30 Oct 2026)
+Caveats the answer states or the buyer should know: EDGAR's `website` field is empty for almost every company, so a website given as `q` is matched by its domain to the company name and the answer says how; a 10-K or 10-Q larger than the read limit answers 404 "not covered, not charged" with the reason; a company that changed its registrant number is covered only from its first periodic report; Item 3.01 is not always a delisting (transfers, regained compliance), and the verdict line says "delisting notice 8-K (Item 3.01)". Memory: 55.9 MB of resident growth over ten companies in one fresh process (the peak during the run was 62.8 MB; the figure plateaus rather than growing per call); the route allows two calls in flight and one EDGAR request lane.
 
-Installed by the owner at 06:37Z. Measured on the box: `getSlot` and `getTokenLargestAccounts` answer 200 (a 20-account ranking); **`getProgramAccounts` is answered HTTP 429 "Your app has
-exceeded its compute units per second capacity" even as the only call on an otherwise idle app**, with a trivial filter and with the Raydium filter alike, while the calls next to it return 200.
-sol-token-check, sol-token-flow and sol-holder-clusters therefore cannot be served through Alchemy's Free plan and still need Helius (credits return on 9 Nov) or a plan that serves it; their
-discovery calls go to Helius only (`RPC_PROGRAM_SKIP`). Throughput: the documentation pages read on 30 Oct 2026 (alchemy.com/pricing, its Spanish version, and the support article "What is
-included in the Free Tier") say Free = 30M CU a month and **300 CU/s, measured over a rolling 10 seconds** (3,000 CU in any 10 s), shown as "15 requests/s" (300 / 20 CU). The owner's page shows
-25 requests/s (500 CU/s at 20 CU) and a search snippet quoted 500 CU/s: two published figures that this repository could not reconcile, so the code holds to the lower one. Alchemy's
-weights are in `lib/rpc-throttle.js` (alchemy.com/docs/reference/compute-unit-costs, read 30 Oct 2026). With 25 requests/s at 10 CU (`getAccountInfo`) the budget of 240 CU/s is 24 requests/s.
+### rwa-yields, re-sourced on chain (served: GET /api/rwa-yields, $0.02)
+Realized 7-day and 30-day yield of tokenized treasury and credit products, computed from the price each issuer's own documentation names, read with our own Ethereum RPC calls; no figure is read from an issuer, an aggregator or a data vendor, and the old DefiLlama source is gone. Served products: usdy, ousg, ustb, usyc and syrupusdc. Their 30-day figures against the issuer's own published figure (read for verification only, never served), scored once on 1 Nov 2026 against a list registered before scoring (sha256 e6d23e6d...): usdy 3.72 / 3.75, ousg 3.66 / 3.73, ustb 3.60 / 3.64, usyc 3.18 / 3.41, syrupusdc 5.04 / 5.1. Not served: tbill (OpenEden) and mtbill (Midas), whose issuer figures sit behind investor-eligibility click-throughs that were not accepted; they join when the owner reads the two figures and both land within the 0.75 point band. Caveats: for USYC the issuer names the oracle address but no page names the read function (lenient tier); Maple's syrupUSDC is crypto-collateralised lending, labelled "onchain institutional credit" in the answer, not an RWA in the strict sense, and the registered URL for its figure was the wrong page (the figure is "up to 5.1%" from the Maple homepage); stepwise oracles that post once a business day can read low after a weekend, and the answer states the real window in days.
 
-### Prepaid keys (R9, 14 Oct 2026)
+**RPC providers (transport)**
 
-Not a data source and not a new payment protocol: a key is a balance stored in agentfeed.db (`api_keys`, only the sha256 of the key), bought with one ordinary x402 payment on the exact rails and spent per call at the route's high-frequency price (half the x402 price, minimum $0.0005). The purchase routes (`/api/keys/buy-trial`, `buy-1`, `buy-5`, `buy-20`, `topup-5`, `topup-20`) carry no batch-settlement and no Gateway accept, so credit cannot be bought at half price. Revenue is the settled purchase (status `paid`); the calls it funds are rows of status `key` and are never added to revenue. Credit is non-refundable and has no expiry (terms at /terms).
+| upstream | routes | terms (date read) | clauses relied on | data | verdict |
+|---|---|---|---|---|---|
+| dRPC (eth.drpc.org), first choice for every read including old state | get_rwa_yields, bin/r24-rwa-snapshot.js | drpc.org/terms-of-use (1 Nov 2026) | §2.5 "excessive or abusive requests to dRPC Services through the API may lead to the temporary or permanent suspension of the user's access"; no commercial-use or redistribution clause found. Measured 1 Nov 2026: answers eth_call at blocks 7, 30, 60 and 180 days old without a key | chain state | clean (existing verdict above; a free key is recommended, set it first in `R24_RWA_RPC_ETH`) |
+| PublicNode (ethereum-rpc.publicnode.com), second choice for the head block and recent state only | get_rwa_yields, bin/r24-rwa-snapshot.js | publicnode.com/terms (1 Nov 2026) | "you agree not to modify, copy, frame, scrape, rent, lease, loan, sell, re-use, display, distribute, transmit, publish, re-publish ... the Service or the Service Content commercially and non-commercially" (undefined Service Content). Measured 1 Nov 2026: answers "Archive requests require a personal token" for any block more than a few blocks old, so it serves the latest block and the latest price only | chain state | unclear (existing verdict above; fallback only, as for base-gas) |
+| 1RPC (1rpc.io), llamarpc, Ankr, Cloudflare | not used | 1rpc.io/terms answers HTTP 400 and www.1rpc.io/terms 404 (terms unreadable); eth.llamarpc.com answered TLS error 525; rpc.ankr.com/eth answers "Unauthorized: You must authenticate your request with an API key"; cloudflare-eth.com answered -32046 | | | not used |
+| Tenderly public gateway, Nodies (probed once, public, no key; both answered old-state eth_call) | not used | Tenderly: see the existing row (§1.4(iv) no use for the benefit of anyone but yourself); Nodies: terms not read | | | not used |
+| an operator's keyed endpoint listed in `R24_RWA_RPC_ETH` | optional, first in the list | not set; a provider put there needs its own row first | | chain state | not in use |
 
-### Batch-settlement in operation (R8, 13 Oct 2026; measured on Base, planning chat decision the same day)
+**Issuer documentation (evidence of where the price lives; nothing here is fetched at run time)**
 
-- **Two CDP steps, claim then settle.** `ops/batch-claim.js` claims the vouchers (channel balance to the receiver's claimed bucket) and then
-  settles the bucket to the treasury; it waits for the claim to show on-chain before settling, because CDP answers a claim before it is
-  mined and a settle sent in between is refused as `amount_too_low`. CDP's error table names `amount_too_low` and publishes no number.
-- **CDP's claim minimum lies in (0.0005, 0.0010] USDC.** Measured on 13 Oct: a claim of 0.0005 was refused three times, a claim of 0.0010
-  went through twice, and both settles of 0.0010 were accepted (tx hashes in AF-R8-report-20261013.md). Vouchers come in multiples of
-  0.0005, so a claim needs 0.001 owed.
-- **Exposure, accepted.** The batch price is half the list price with a floor of $0.0005 (`lib/hf.js`). Only the **four routes listed at
-  $0.001 (sol-price, btc-price, eth-price, spot)** have a batch price below the minimum; on every other route each voucher is claimable on
-  its own (fx-rates, at $0.002, is exactly 0.001). On those four a channel can be left holding **at most one 0.0005 voucher** that
-  cannot be claimed until another is added; a payer who then starts the timed withdrawal (24 h delay, `withdrawDelay` 86400 s) can take
-  that 0.0005 back. Claimed value is the receiver's and cannot be withdrawn; unclaimed vouchers are at risk only through
-  `initiateWithdraw`, the delay and `finalizeWithdraw`. **Decision (planning chat, 13 Oct 2026): no $0.001 floor on the batch tier**, and a
-  higher minimum deposit would not change this (it bounds a channel's total, not what is left under CDP's threshold). The claim job
-  records what CDP refused per channel and the watchdog stays quiet at or below it (state file `networks.<net>.claim_refused_atomic`).
-  What would reopen the decision: dust channels (each opens with a deposit transaction that counts against the CDP free tier).
-- **A client that lost its channel context meets one corrective 402, never a failure.** The server checks a voucher against one number,
-  the channel's `chargedCumulativeAmount`; a claim changes `totalClaimed` and never that number, and the channel store updates inside
-  `BEGIN IMMEDIATE`, so the claim cron and the server cannot desync a channel (proved by `test/batch-resync.test.js`: one client context
-  paying through claim runs from a second process, zero corrective 402s; a positive control that rewinds the charged total fails it). A
-  client with no stored context (a fresh process per call) rebuilds its base from the chain's claimed total, which is behind the
-  server's charged total whenever vouchers are outstanding; the server answers `invalid_batch_settlement_evm_cumulative_amount_mismatch`
-  with its state and its signed voucher, the standard client resyncs and retries inside the same `fetch()`, and the buyer gets a 200.
-  Those 402s are logged as `payment_refused` rows (13 Oct 06:41 UTC: ids 11994 and 11997, calls 2 and 4 of the top-up, the two calls that
-  began with a 0.0005 voucher that CDP would not claim); `ops/af-digest.js` counts them on their own line and neither lists the buyer as
-  failed nor alerts on them. A buyer who keeps its channel context in a long-lived process never sees one.
+| issuer | page(s) read | clauses relied on (short quotes) | terms of the issuer's services | verdict |
+|---|---|---|---|---|
+| Ondo Finance (USDY, OUSG) | docs.ondo.finance/addresses; docs.ondo.finance/general-access-products/usdy/usdy-price-oracle; docs.ondo.finance/qualified-access-products/ousg/overview; github.com/ondoprotocol/rwa-contracts (BUSL-1.1: read for function names and decimals only, no code copied) | "USDYOracleWrapper 0x87b126e5518b6a1Bb8465779b4607C45C643DF90 ... A stable entry point for reading the USDY price"; "Read the USDY price from the USDYOracleWrapper"; "The new oracle supports getPrice() and getPriceData()"; "OndoOracle 0x9Cad45a8BF0Ed41Ff33074449B357C7a1fAb4094 ... Unified interface for retrieving token price data" | docs.ondo.finance/legal/terms-of-service §5.5 bars "any robot, spider, crawler, scraper, or other automated means or interface not provided by us, to access the Services or to extract data": we read no Ondo service or site, only a public contract the documentation tells integrators to read | clean (chain state) |
+| Superstate (USTB) | docs.superstate.com/investors/smart-contracts; docs.superstate.com/investors/tokenized-funds/nav-income-and-yield | "Superstate USTB Continuous Price Oracle" at 0xE4fA682f94610cCd170680cc3B045d77D9E528a8; "Any smart contract can request a continuous price on-chain"; "The Oracle contract uses the Chainlink `AggregatorV3Interface`" | superstate.com/terms §2.5 bars "scraping, indexing or otherwise" that reproduces "Superstate Services": chain state only, no Superstate service read | clean (chain state) |
+| Circle (USYC) | developers.circle.com/tokenized/usyc/smart-contracts; /overview; /web2-apis | "Ethereum | Oracle | 0x74f2199AEb743f68f05943e5715A33EaF2b61f53"; "The token price and fund holdings are published through an onchain Oracle."; the public price endpoint is "an alternative to smart contract calls" | circle.com/legal lists no terms for USYC data reads that I could find; the overview limits who may hold USYC ("not U.S. Persons"), not who may read the oracle | unclear (chain state; no governing terms located) |
+| OpenEden (TBILL) | docs.openeden.com/tbill/smart-contract-addresses; /tbill/token-price; github.com/OpenEdenHQ/openeden.vault.audit (`TBillPriceOracle.sol`, MIT: names only, no code copied) | "TBILL Price Oracle 0xCe9a6626Eb99eaeA829D7fA613d5D0A2eaE45F40" (Ethereum v2); "transmit price data onto the on-chain price oracle" | the TBILL user agreement is a PDF attachment (not read) | unclear (chain state; agreement unread) |
+| Midas (mTBILL) | docs.midas.app answers HTTP 403 to page fetches (only /llms.txt serves, so the oracle and registry pages were unreadable); github.com/midas-apps/contracts README and `config/constants/addresses.ts` | "CustomAggregatorV3CompatibleFeed ... Used to publish mToken prices on-chain"; "`latestRoundData()` - View function, returns latest submitted price"; mTBILL `customFeed: 0x056339C044055819E8Db84E71f5f2E1F536b2E5b` | midas.app terms answered 403 (unread) | unclear (chain state; terms unreadable) |
+| Maple (syrupUSDC) | docs.maple.finance/integrate/ethereum-mainnet/asset-integration | "You can query the token price directly from the contract using two functions: convertToAssets(uint256 shares_)"; "All three tokens use 6 decimals" | Interface Terms of Use [syrupUSDC...] bar a "robot, spider, crawler or other automatic device ... that ... scrapes, or otherwise accesses the Services to ... extract, copy, or collect information or data from or through the Services": we read the contract, not the interface | clean (chain state) |
+
+### Not served in R24, and why
+| Item | Decision |
+|---|---|
+| Solana token routes without getProgramAccounts (sol-token-check, sol-token-flow, sol-holder-clusters) | built, tested and archived; their registered gate failed on the box (answered within 8 s: 7, 3 and 9 of 10 mints; the failures were 429s and the time budget on the free RPC lane). The routes keep answering 503 Not charged. A retry needs a keyed provider with history capacity and a new held-out list. Owner decision of 1 Nov 2026: the registered gate (case list sha256 c1ef10ec...) is run again after 9 Nov, when the Helius credits reset, with no code change before then; a second scoring of the same list, on mints that will be more than 72 hours old. |

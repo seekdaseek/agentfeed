@@ -591,6 +591,8 @@ if (BRC.newsOn()) {
 
 // R23 (31 Oct 2026): the tools batch, ONE list (tools/r23/index.js). x402-lint, x402-test, cascade-backtest and claim-check; the held crash-risk routes join only while R23_CRASH_ROUTES=on.
 EXP.push(...require('./tools/r23').entries);
+// R24 (1 Nov 2026): pkg-check, tx-precheck (tools/r24/index.js lists the routes that passed their registered gates).
+EXP.push(...require('./tools/r24').entries);
 
 // ---- derived exports ----
 const PRICES_ADD = {};

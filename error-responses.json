@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-31T20:43:35.040Z",
+  "generatedAt": "2026-11-01T19:36:56.356Z",
   "limits": {
     "get": 240,
     "other": 2400,
@@ -1109,6 +1109,50 @@
           "error": "missing required parameter: url (an absolute https URL)"
         }
       }
+    },
+    "GET /api/pkg-check": {
+      "requiredInputs": [
+        "name",
+        "ecosystem"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param name omitted",
+        "body": {
+          "tool": "get_pkg_check",
+          "error": "name is required: an npm package name (or @scope/name) or a PyPI project name"
+        }
+      }
+    },
+    "GET /api/tx-precheck": {
+      "requiredInputs": [
+        "chain"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param chain omitted",
+        "body": {
+          "tool": "get_tx_precheck",
+          "error": "missing required parameter: chain, solana or base"
+        }
+      }
+    },
+    "GET /api/company-check": {
+      "requiredInputs": [
+        "q"
+      ],
+      "callerError": {
+        "status": 400,
+        "violated": "required query param q omitted",
+        "body": {
+          "tool": "get_company_check",
+          "error": "missing required parameter: q (a company name, a ticker or a website)"
+        }
+      }
+    },
+    "GET /api/rwa-yields": {
+      "requiredInputs": [],
+      "callerError": null
     }
   }
 }

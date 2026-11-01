@@ -167,4 +167,4 @@ async function getSec8k(p = {}) {
   return { window_hours: hours, count: rows.length, window_complete: !capped, ...(capped ? { covers_since: new Date(oldest).toISOString() } : {}), item_counts: counts, filings: rows, source: CITE };
 }
 
-module.exports = { getSecFilings, getInsiderTrades, getSec8k };
+module.exports = { getSecFilings, getInsiderTrades, getSec8k, take };  // `take` is the one 8/s EDGAR bucket; tools/r24/company-check shares it so the SEC's 10/s ceiling holds across routes

@@ -38,6 +38,7 @@ async function startAll() {
 }
 
 /** the environment that points a server under test at a pair of these servers */
-const envFor = (sol, base) => ({ SOLANA_RPC_URL: sol.url, RPC_FALLBACKS: '', TXPRECHECK_BASE_RPCS: base.url, BASE_SIM_RPC: base.url });
+// RPC_SIMULATE_ONLY '' lifts the production rule that simulateTransaction goes to the public Solana Labs RPC only (lib/rpc-heavy.js), because the only Solana endpoint of a test server is this loopback stub
+const envFor = (sol, base) => ({ SOLANA_RPC_URL: sol.url, RPC_SIMULATE_ONLY: '', RPC_FALLBACKS: '', TXPRECHECK_BASE_RPCS: base.url, BASE_SIM_RPC: base.url });
 
 module.exports = { startAll, envFor };

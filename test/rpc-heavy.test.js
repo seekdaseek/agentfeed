@@ -129,3 +129,48 @@ test('an endpoint passed in by a test or a cron is used as given: no routing, no
     assert.equal(stub.count('getTokenLargestAccounts'), 2);
   } finally { stub.close(); }
 });
+
+// R24 (1 Nov 2026, owner decision): simulateTransaction, which tx-precheck uses to run a CALLER's transaction, is asked of the public Solana Labs RPC only (an allow-list rule).
+test('simulateTransaction: a heavy method with an allow-list: only the public Solana Labs hosts are kept, whatever keyed provider is configured; every other read is unchanged', () => {
+  const urls = ['https://mainnet.helius-rpc.com/?api-key=x', 'https://solana-mainnet.g.alchemy.com/v2/KEY', 'https://some-future-provider.example/key', 'https://api.mainnet-beta.solana.com', 'https://api.mainnet.solana.com/'];
+  assert.ok(RH.HEAVY_METHODS.has('simulateTransaction'));
+  assert.deepEqual(RH.heavyUrls(urls, {}, 'simulateTransaction'), urls.slice(3), 'default: only the public hosts, order kept; a provider added later is excluded without being named');
+  assert.deepEqual(RH.heavyUrls(urls, { RPC_SIMULATE_ONLY: '' }, 'simulateTransaction'), urls, 'an empty RPC_SIMULATE_ONLY lifts the restriction');
+  assert.deepEqual(RH.heavyUrls(urls, { RPC_SIMULATE_ONLY: 'api.mainnet.solana.com' }, 'simulateTransaction'), [urls[4]], 'an explicit list replaces the default');
+  assert.deepEqual(RH.heavyUrls(['not a url', urls[3]], {}, 'simulateTransaction'), [urls[3]], 'a URL that does not parse is never an endpoint');
+  assert.equal(RH.METHOD_RULES.simulateTransaction.cache, false, 'a simulation of a caller\'s transaction is never cached');
+  for (const m of ['getMultipleAccounts', 'getAccountInfo', 'getSlot']) assert.ok(!RH.HEAVY_METHODS.has(m), `${m} still uses the full list`);
+  assert.deepEqual(RH.heavyUrls(urls, {}, 'getTokenLargestAccounts'), urls.slice(0, 3), 'the other rules are untouched');
+});
+
+test('simulateTransaction routing: the keyed provider is never asked, the public host answers, state reads still use the keyed provider first', async () => {
+  const keyed = await startRpcStub({ mode: 'ok' });
+  const pub = await startRpcStub({ mode: 'public' });
+  try {
+    await quiet(() => withEnv({ SOLANA_RPC_URL: keyed.url, HELIUS_API_KEY: undefined, RPC_FALLBACKS: pub.url, RPC_SIMULATE_ONLY: pub.host }, async () => {
+      await SR.rpc('simulateTransaction', ['AQID', { encoding: 'base64', sigVerify: false }]);
+      assert.equal(keyed.count('simulateTransaction'), 0, 'the keyed provider was not asked to run the caller\'s transaction');
+      assert.equal(pub.count('simulateTransaction'), 1, 'the public RPC was');
+      await SR.rpc('getMultipleAccounts', [['Acc1']]);
+      assert.equal(keyed.count('getMultipleAccounts'), 1, 'a state read still goes to the keyed provider first');
+      assert.equal(pub.count('getMultipleAccounts'), 0);
+      await SR.rpc('simulateTransaction', ['AQID', { encoding: 'base64', sigVerify: false }]);
+      assert.equal(pub.count('simulateTransaction'), 2, 'and it is not cached: the second identical simulation is a second call');
+    }));
+    // negative control: with the restriction lifted the SAME call goes to the keyed provider, so the assertions above can fail
+    await quiet(() => withEnv({ SOLANA_RPC_URL: keyed.url, HELIUS_API_KEY: undefined, RPC_FALLBACKS: pub.url, RPC_SIMULATE_ONLY: '' }, async () => {
+      await SR.rpc('simulateTransaction', ['AQID', { encoding: 'base64', sigVerify: false }]);
+      assert.equal(keyed.count('simulateTransaction'), 1, 'control: without the rule the keyed provider IS asked');
+    }));
+  } finally { keyed.close(); pub.close(); }
+});
+
+test('simulateTransaction routing: with no public host configured the call is a 503 "Not charged" and nothing reaches the keyed provider', async () => {
+  const keyed = await startRpcStub({ mode: 'ok' });
+  try {
+    await quiet(() => withEnv({ SOLANA_RPC_URL: keyed.url, HELIUS_API_KEY: undefined, RPC_FALLBACKS: '', RPC_SIMULATE_ONLY: undefined }, async () => {   // '' = no fallbacks (unset would add the real public RPC)
+      await assert.rejects(SR.rpc('simulateTransaction', ['AQID', {}]), (e) => e.status === 503 && /Not charged/.test(e.message) && e.transport === true);
+      assert.equal(keyed.count('simulateTransaction'), 0);
+    }));
+  } finally { keyed.close(); }
+});

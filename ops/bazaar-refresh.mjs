@@ -93,7 +93,10 @@ function payUrl(m) {
   if (/:[A-Za-z_]/.test(path)) throw new Error(`path parameter without an example value: ${path}`);
   const req = new Set((e.inputSchema && e.inputSchema.required) || []);
   const q = new URLSearchParams();
-  for (const [k, v] of Object.entries(e.input || {})) if (req.has(k)) q.set(k, String(v));
+  // R24: tx-precheck needs a whole request (chain plus the from, to and data of a Base call; or a Solana tx) that no single field of its schema can require, and pkg-check is indexed with the exact version
+  // its example shows: for these two every key of the example input is part of the paid call
+  const wholeExample = m.path === '/api/tx-precheck' || m.path === '/api/pkg-check';
+  for (const [k, v] of Object.entries(e.input || {})) if (req.has(k) || wholeExample) q.set(k, String(v));
   if (m.path === '/api/squeeze-score') q.set('symbol', 'BTC'); // a default-symbol call would also work; BTC is the one the brief names
   const qs = q.toString();
   return ORIGIN + path + (qs ? '?' + qs : '');

@@ -83,9 +83,9 @@ Notional uses `filled_qty × avg_fill_price` — what actually executed — not 
 
 Every paid route, cheapest question last. Generated from
 [`/.well-known/x402.json`](https://x402.ochinimus.app/.well-known/x402.json),
-read 2026-10-31 — names, prices and routes are the manifest's, not a copy kept
+read 2026-11-01 — names, prices and routes are the manifest's, not a copy kept
 in sync by hand. What each one returns is under
-[98 tools](#98-tools-91-paid-data-routes--7-free--pricing), word for word as
+[102 tools](#102-tools-95-paid-data-routes--7-free--pricing), word for word as
 the service publishes it.
 
 | Tool | Price | Route |
@@ -102,11 +102,13 @@ the service publishes it.
 | `get_x402_test` | $1 | `/api/x402-test` |
 | `get_cascade_backtest` | $0.5 | `/api/cascade-backtest` |
 | `buy_key_trial` | $0.25 | `/api/keys/buy-trial` |
+| `get_company_check` | $0.25 | `/api/company-check` |
 | `get_claim_check` | $0.15 | `/api/claim-check` |
 | `get_squeeze_score` | $0.1 | `/api/squeeze-score` |
 | `get_cascade_scan` | $0.05 | `/api/cascade-scan` |
 | `get_liq_history` | $0.05 | `/api/liq-history` |
 | `get_peg_universe` | $0.05 | `/api/peg-universe` |
+| `get_tx_precheck` | $0.05 | `/api/tx-precheck` |
 | `get_x402_lint` | $0.05 | `/api/x402-lint` |
 | `get_ocr` | $0.04 | `/api/ocr` |
 | `get_translate` | $0.04 | `/api/translate` |
@@ -128,6 +130,8 @@ the service publishes it.
 | `get_move_alert` | $0.02 | `/api/move-alert` |
 | `get_oi_spike_scan` | $0.02 | `/api/oi-spike-scan` |
 | `get_peg_deviation` | $0.02 | `/api/peg-deviation` |
+| `get_pkg_check` | $0.02 | `/api/pkg-check` |
+| `get_rwa_yields` | $0.02 | `/api/rwa-yields` |
 | `get_site_signals` | $0.02 | `/api/site-signals` |
 | `get_summarize` | $0.02 | `/api/summarize` |
 | `get_token_holders` | $0.02 | `/api/token-holders/{mint}` |
@@ -495,11 +499,11 @@ Without the `spendControls` line the same client throws "All payment requirement
 
 All of them were paid from our own test wallets.
 
-## 98 tools (91 paid data routes + 7 free) & pricing
+## 102 tools (95 paid data routes + 7 free) & pricing
 
-**91 paid + 7 free**, 98 total on the MCP rail (the eight prepaid-key routes below are HTTP only). Every call is metered individually in USDC over
-x402 — no bundles, no minimums. Calling all 91 paid data tools once costs **$2.927**. Counts and prices are summed from
-[the live manifest](https://x402.ochinimus.app/.well-known/x402.json), read 2026-10-31.
+**95 paid + 7 free**, 102 total on the MCP rail (the eight prepaid-key routes below are HTTP only). Every call is metered individually in USDC over
+x402 — no bundles, no minimums. Calling all 95 paid data tools once costs **$3.267**. Counts and prices are summed from
+[the live manifest](https://x402.ochinimus.app/.well-known/x402.json), read 2026-11-01.
 
 The flagship is [`get_squeeze_score`](#the-moat--our-own-liquidation-tape) — a 0-100 short-squeeze / long-flush composite built from funding, crowding, OI build and the liq-skew of our exclusive tape. One number, one dime, answers "is this trade crowded and about to hurt someone."
 
@@ -659,6 +663,17 @@ Sampled every 5 minutes. Deviation is measured against the underlying's last rea
 Sources and their terms: the OFAC SDN list (a US federal government work), the CC0 disposable-email-domains list, DNS and a live
 TLS handshake, OpenAlex (CC0 data), Wikipedia (CC BY-SA 4.0, attribution in every answer); details in
 [docs/SOURCES.md](docs/SOURCES.md).
+
+### Package, transaction and company checks, and tokenized-treasury yields
+
+Four routes that check something before an agent acts on it. A package version with a published advisory, a transaction before it is signed (simulated with our own RPC; nothing is ever signed or sent), a US-listed company from its SEC filings, and the yield tokenized treasury and credit products have actually realized, computed from the price each issuer's contract publishes. Each one says which source it read; every failure that is not the caller's is a 503 or 404 that is not charged. Sources and terms in [docs/SOURCES.md](docs/SOURCES.md).
+
+| Tool | Price | Route | What you get |
+|---|---|---|---|
+| `get_pkg_check` | $0.02 | `/api/pkg-check` | Use when an agent needs to know if an npm or PyPI version has a published advisory. Returns flagged (any OSV advisory for that exact version), highest severity, advisories, release, scripts, downloads, name-squat flags. 404 or 503: not charged. |
+| `get_tx_precheck` | $0.05 | `/api/tx-precheck` | Use when an agent needs to see what a Solana or Base transaction does before signing it. Returns simulated balance changes, programs or contracts, approvals, new accounts, token-risk reads and warnings. 503 if it cannot simulate: not charged. |
+| `get_company_check` | $0.25 | `/api/company-check` | Use when an agent needs to check a US-listed company. Returns a verdict line and the SEC facts behind it: going-concern language, delisting-notice 8-Ks, overdue reports, insider Form 4 direction. EDGAR down (503) or a foreign filer (404) is not charged. |
+| `get_rwa_yields` | $0.02 | `/api/rwa-yields` | Use when an agent needs the realized 7-day and 30-day yield of tokenized treasury and credit products, computed from issuer on-chain prices. Returns NAV, yields, contract and method. A failed read answers 503, not charged. |
 
 ### Checks on other services, sites and claims
 

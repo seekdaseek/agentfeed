@@ -205,3 +205,88 @@ test('the real script: a record keyed by the route template is judged by its des
     } finally { srv.close(); }
   }
 });
+
+// ---- --only (R24, 1 Nov 2026): a pass pays exactly the routes listed ----------------------------------------------------------------------------------------------
+test('--only parsing, through the real script: = form, /api/ prefix or not, a pattern route; unknown names, a bare --only and a flag in the value slot all stop with exit 2 and pay nothing', async () => {
+  const { srv, url } = await startOrigin();
+  const dir = workDir();
+  try {
+    for (const args of [['--only=time,/api/perp,token-risk/:mint'], ['--only', 'time,/api/perp,/api/token-risk/:mint']]) {
+      const r = await runScript(dir, url, args);
+      assert.equal(r.code, 0, r.out.slice(-400));
+      assert.match(r.out, /--only: 3 of 3 named route\(s\) are in the plan/);
+    }
+    for (const args of [['--pay', '--only'], ['--pay', '--only', '--run', 'x'], ['--pay', '--only', ' , '], ['--pay', '--only', 'time,nope']]) {
+      const r = await runScript(dir, url, args);
+      assert.equal(r.code, 2, args.join(' ') + '\n' + r.out.slice(-300));
+    }
+    assert.deepEqual(calls(dir), []);
+  } finally { srv.close(); }
+});
+
+/** like workDir, but the fake client logs the payer file it was given next to the URL */
+function workDirWithPayers() {
+  const dir = workDir();
+  fs.writeFileSync(path.join(dir, 'test-client.mjs'), `
+import fs from 'node:fs';
+const url = process.argv[2], payer = process.argv[3];
+fs.appendFileSync('calls.log', url + '\\n'); fs.appendFileSync('payers.log', payer + ' ' + new URL(url).pathname + '\\n');
+const n = fs.readFileSync('calls.log', 'utf8').split('\\n').filter(Boolean).length;
+console.log('status: 200'); console.log(JSON.stringify({ transaction: 'SIG' + n }, null, 2));
+`);
+  return dir;
+}
+const payers = (dir) => { try { return fs.readFileSync(path.join(dir, 'payers.log'), 'utf8').split('\n').filter(Boolean); } catch { return []; } };
+
+test('the real script: --only pays exactly the listed routes with the payer given, a second pass under the same run id pays the rest and never a route twice', async () => {
+  const { srv, url } = await startOrigin();
+  const dir = workDirWithPayers();
+  try {
+    const dry = await runScript(dir, url, ['--only', 'time,perp']);
+    assert.equal(dry.code, 0, dry.out.slice(-600));
+    assert.match(dry.out, /--only: 2 of 2 named route\(s\) are in the plan/);
+    assert.match(dry.out, /planned total \$0\.010 for 2 routes/);
+    assert.doesNotMatch(dry.out, /would pay.*token-risk|would pay.*funding-rate/);
+    assert.deepEqual(calls(dir), [], 'a dry run pays nothing');
+
+    const p1 = await runScript(dir, url, ['--pay', '--run', 'rr', '--only', 'time,/api/perp'], { PAYER: './payer.json', MAX_TOTAL: '0.02' });
+    assert.equal(p1.code, 0, p1.out.slice(-800));
+    assert.deepEqual(payers(dir), ['./payer.json /api/time', './payer.json /api/perp'], 'exactly the two named routes, in manifest order, with the given payer');
+    assert.deepEqual(R.loadPaidLog(path.join(dir, '.bazaar-refresh-paid.jsonl')).map((e) => e.path), ['/api/time', '/api/perp']);
+
+    const p2 = await runScript(dir, url, ['--pay', '--run', 'rr', '--only', 'time,token-risk/:mint,funding-rate'], { PAYER: './second.json' });
+    assert.equal(p2.code, 0, p2.out.slice(-800));
+    assert.match(p2.out, /skip \/api\/time: already paid in run rr/);
+    assert.deepEqual(payers(dir).slice(2), [`./second.json /api/token-risk/${MINT}`, './second.json /api/funding-rate'], 'the second payer pays only what the first did not; /api/time is not paid again');
+    assert.equal(calls(dir).length, 4);
+  } finally { srv.close(); }
+});
+
+test('the real script: --only with a name that matches no route stops before the guard and pays nothing, even when other names are valid', async () => {
+  const { srv, url } = await startOrigin();
+  const dir = workDirWithPayers();
+  try {
+    for (const only of ['time,not-a-route', '/api/keys/starter', '']) {
+      const r = await runScript(dir, url, ['--pay', '--run', 'rr', '--only', only]);
+      assert.equal(r.code, 2, `--only "${only}": ${r.out.slice(-400)}`);
+      assert.match(r.out, /nothing was paid/);
+    }
+    assert.deepEqual(calls(dir), []);
+  } finally { srv.close(); }
+});
+
+test('the real script: --only names a route whose record is already fresh: it is reported, not paid; the cap applies to the listed routes only', async () => {
+  const { srv, url } = await startOrigin({ records: [{ path: '/api/time', description: 'live /api/time' }] });
+  const dir = workDirWithPayers();
+  try {
+    const r = await runScript(dir, url, ['--pay', '--only', 'time,perp'], { MAX_TOTAL: '0.005' });
+    assert.equal(r.code, 0, r.out.slice(-600));
+    assert.match(r.out, /--only \/api\/time: not in the plan/);
+    assert.match(r.out, /planned total \$0\.005 for 1 routes/);
+    assert.deepEqual(payers(dir), ['./payer.json /api/perp']);
+    const d2 = workDirWithPayers();
+    const over = await runScript(d2, url, ['--pay', '--only', 'time,perp,funding-rate'], { MAX_TOTAL: '0.008' });
+    assert.equal(over.code, 4, 'perp and funding-rate ($0.010; time is fresh) over a $0.008 cap: ' + over.out.slice(-300));
+    assert.deepEqual(payers(d2), [], 'over the cap: nothing paid');
+  } finally { srv.close(); }
+});

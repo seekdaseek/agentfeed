@@ -13,6 +13,9 @@
 //                   run with the SAME id and it can never pay a route twice. Without --run the 6-hour state-file skip below is the only protection.
 //   --defer-503     a route that answers 503 (its source is down: never billed) is deferred instead of stopping the run; the run goes on with the other routes, lists the deferred
 //                   ones and exits 5. Run the same command again later and only they are paid. Any other failure still stops the run.
+//   --only <route,...>  (R24, 1 Nov 2026) pay exactly these routes and no other: names are manifest paths or the same without "/api/" (pkg-check,/api/tx-precheck,paper/:doi). A name that matches no
+//                   manifest route stops the script before anything is paid (exit 2); a named route the index already shows fresh is reported and left alone. Use it when one payer's balance covers
+//                   only part of the list, so a pass can never reach a route that payer cannot afford; combine with the same --run id and the passes share one tx log.
 //   One run pays at a time (lock file next to STATE). Every payment prints its Solscan link.
 //
 // Environment: PAYER (keypair file, default ./payer-wallet.json; run it from /opt/agentfeed), MAX_TOTAL (default 0.80 USD),
@@ -58,6 +61,22 @@ const patternPath = (r) => decodeURIComponent(new URL(r.resource_template || r.r
 const manifest = wk.resources
   .map((r) => ({ path: patternPath(r), price: Number(r.price_usd) }))
   .filter((r) => !r.path.startsWith('/api/keys/'));
+// --only <route,...>: the routes this invocation may pay. A name is a manifest path or the same without "/api/" ("pkg-check" = "/api/pkg-check"; a path-parameter route by its :name pattern).
+// Returns { only: Set of manifest paths | null (no --only), unknown: [names that match no route] }. A bare --only, a flag in its value slot or an empty list is an error, never "everything".
+function parseOnly(argv, manifestPaths) {
+  const i = argv.findIndex((a) => a === '--only' || a.startsWith('--only='));
+  if (i < 0) return { only: null, unknown: [] };
+  const raw = argv[i].startsWith('--only=') ? argv[i].slice(7) : (argv[i + 1] || '');
+  const names = raw.split(',').map((x) => x.trim()).filter(Boolean);
+  if (!names.length || raw.startsWith('--')) return { only: new Set(), unknown: ['(empty --only list)'] };
+  const known = new Set(manifestPaths);
+  const only = new Set(), unknown = [];
+  for (const n of names) {
+    const path = known.has(n) ? n : (known.has('/api/' + n) ? '/api/' + n : null);
+    if (path) only.add(path); else unknown.push(n);
+  }
+  return { only, unknown };
+}
 const rx = (p) => new RegExp('^' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/:[A-Za-z_]+/g, '[^/]+') + '$');
 for (const m of manifest) m.re = rx(m.path);
 const routeOf = (pathname) => manifest.find((m) => m.re.test(pathname)) || null;
@@ -140,7 +159,7 @@ for (const r of recs.values()) {
 console.log(`validated ${n} records (CDP /validate simulates, never settles); ${orphans.length} index records are for routes no longer in the manifest (left to age out)`);
 if (templateKeyed.length) console.log(`  ${templateKeyed.length} index records are keyed by the route template (CDP's way of indexing a dynamic route), judged against the live challenge of the route's example URL: ${templateKeyed.map((t) => t.replace('/api/', '')).join(', ')}`);
 
-const plan = []; // {m, why}
+let plan = []; // {m, why}
 let match = 0, known = 0, unknown = 0;
 for (const m of manifest) {
   const rows = byRoute.get(m.path);
@@ -158,6 +177,13 @@ if (CHECK) { console.log(`N of M match: ${match} of ${known}; absent ${plan.filt
 let state = {};
 try { state = JSON.parse(fs.readFileSync(STATE, 'utf8')); } catch { /* none yet */ }
 const now = Date.now();
+const { only, unknown: onlyUnknown } = parseOnly(ARGV, manifest.map((m) => m.path));
+if (onlyUnknown.length) { console.error(`--only names no manifest route: ${onlyUnknown.join(', ')}: nothing was paid`); process.exit(2); }
+if (only) {
+  for (const p of only) if (!plan.some((x) => x.m.path === p)) console.log(`  --only ${p}: not in the plan (its index record already matches the live challenge)`);
+  plan = plan.filter((p) => only.has(p.m.path));
+  console.log(`--only: ${plan.length} of ${only.size} named route(s) are in the plan`);
+}
 const { todo: toPay, skipped } = decide({ plan, state, paidLog: loadPaidLog(PAID_LOG), run: RUN, now, sixH: SIX_H, again: !!process.env.AGAIN });
 for (const k of skipped) {
   if (k.why === 'run') console.log(`  skip ${k.path}: already paid in run ${RUN} (${k.minutes} min ago) ${solscan(k.tx)}`);

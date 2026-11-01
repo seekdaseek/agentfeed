@@ -1,6 +1,8 @@
 // get_pkg_check on the REAL server.js (test/helpers/real-server.js: stub facilitator, every outbound connection refused and logged, scratch databases).
-// The route is not in expansion.js yet (a test may not edit it), so test/fixtures/r23/pkgcheck/inject.cjs puts the entry in the four places expansion.js's own loop does before
-// payments.js / server.js / mcp.js read them; the upstream is the fake world of world.js. What is proved here and not by the unit tests:
+// The route is the repo's own (expansion.js -> tools/r24/index.js -> tools/r23/pkg-check.js); this test registers nothing. test/fixtures/r23/pkgcheck/server-preload.cjs only puts the fake
+// upstream of world.js behind a stubbed https.request for the five hosts the tool calls (registry.npmjs.org, api.npmjs.org, pypi.org, pypistats.org, api.osv.dev); every other host is still
+// refused by the harness. What is proved here and not by the unit tests:
+//   - the route is mounted by the repo (a server with no preload answers the 402 challenge), and the real hosts stay refused without the stub
 //   - unpaid GET and HEAD, on 24 spellings of the path and on query variants, answer 402 (or are refused) and never the tool's answer: no handler run, no upstream call, no row, no settlement
 //   - the MCP tool goes through the x402 gate
 //   - a paid x402 call is served and settled once at 20000 atomic units (USD 0.02); a key caller pays half
@@ -13,12 +15,15 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const http = require('http');
+const { spawnSync } = require('child_process');
 const H = require('./helpers/real-server');
 const { PRICES } = require('../payments');
 const { hfUsd } = require('../lib/hf');
 const { newKey, hashKey } = require('../lib/keys');
 
 const QUERY = '/api/pkg-check?name=example-widget-kit&ecosystem=npm';
+const PRELOAD = path.join(__dirname, 'fixtures', 'r23', 'pkgcheck', 'server-preload.cjs');
+const HARNESS = path.join(__dirname, 'helpers', 'af-test-preload.js');
 let s, logDir, pkgLog;
 let ipN = 0;
 const ip = () => { ipN++; return { 'cf-connecting-ip': `198.19.${(ipN >> 8) & 255}.${ipN & 255}` }; };
@@ -32,7 +37,7 @@ const settles = (srv) => srv.fac.log.filter((x) => x.op === 'settle');
 before(async () => {
   logDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pkgcheck-rs-'));
   pkgLog = path.join(logDir, 'upstream.log');
-  s = await H.boot({ NODE_OPTIONS: `--require ${path.join(__dirname, 'fixtures', 'r23', 'pkgcheck', 'inject.cjs')}`, AF_PKG_LOG: pkgLog });
+  s = await H.boot({ NODE_OPTIONS: `--require ${PRELOAD}`, AF_PKG_LOG: pkgLog });
 });
 after(() => { if (s) s.close(); fs.rmSync(logDir, { recursive: true, force: true }); });
 
@@ -53,8 +58,20 @@ const mcpList = () => new Promise((resolve, reject) => {
   req.on('error', reject); req.write(body); req.end();
 });
 
-test('control: the injected route is on the real server, priced at USD 0.02 in PRICES, and an unpaid call is the 402 challenge for 20000 atomic units', async () => {
-  assert.equal(s.env.NODE_OPTIONS.includes('inject.cjs'), true);
+test('control: the route is the repo\'s own (the preload mounts and registers nothing), priced at USD 0.02, and an unpaid call is the 402 challenge for 20000 atomic units', async () => {
+  // the preload source touches none of the places a route is registered in (shown first to find them in a sample that does)
+  const registering = /\b(EXP\.push|PRICES_ADD|TAGS_ADD|MCP_DEFS_ADD|TOOL_TITLES|QUESTIONS)\b|require\([^)]*expansion/;
+  const code = (text) => text.split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');                // comments may name what the file does not do
+  assert.ok(registering.test(code("// a comment\nexpansion.EXP.push(e); expansion.PRICES_ADD[e.route] = {}")), 'the scan finds a registering sample');
+  assert.ok(!registering.test(code("// expansion.EXP.push(e) in a comment\nconst x = 1;")), 'and ignores a comment');
+  assert.ok(!registering.test(code(fs.readFileSync(PRELOAD, 'utf8'))), 'the preload registers nothing');
+  // a server with NO preload still has the route: it answers the paywall challenge (the entry comes from expansion.js)
+  const bare = await H.boot({});
+  try {
+    const c0 = await H.raw(bare.port, 'GET', QUERY, ip());
+    assert.equal(c0.status, 402, c0.body.slice(0, 200));
+    assert.equal(H.unb64(c0.headers['payment-required']).accepts.find((a) => a.network === H.BASE).amount, '20000');
+  } finally { bare.close(); }
   const c = await get(s, QUERY);
   assert.equal(c.status, 402, c.body.slice(0, 200));
   assert.ok(c.headers['payment-required']);
@@ -63,7 +80,35 @@ test('control: the injected route is on the real server, priced at USD 0.02 in P
   assert.ok(spec.paths['/api/pkg-check'] && spec.paths['/api/pkg-check'].get['x-payment-info'], 'priced path in openapi.json');
   assert.ok(JSON.parse((await get(s, '/.well-known/x402.json')).body).resources.some((r) => r.name === 'get_pkg_check' && r.price_usd === 0.02));
   assert.ok(JSON.parse((await get(s, '/pricing')).body).paid.some((r) => r.tool === 'get_pkg_check'));
-  void PRICES;
+  assert.equal(PRICES['GET /api/pkg-check'].usd, 0.02); assert.equal(PRICES['GET /api/pkg-check'].tool, 'get_pkg_check');
+});
+
+test('real hosts stay refused: without the stub a paid call is a 503 "Not charged" that settles nothing and the registry host is in the harness\'s refused-connection log; the stub answers only its five hosts', async () => {
+  const bare = await H.boot({});
+  try {
+    const ch = await H.raw(bare.port, 'GET', QUERY, ip());
+    assert.equal(ch.status, 402);
+    bare.fac.log.length = 0;
+    const res = await H.raw(bare.port, 'GET', QUERY, { ...ip(), 'payment-signature': H.b64(H.payBase(ch.headers['payment-required'])) });
+    assert.equal(res.status, 503, res.body.slice(0, 300));
+    assert.match(JSON.parse(res.body).error, /Not charged\.$/);
+    assert.deepEqual(bare.fac.log.filter((x) => x.op === 'settle'), [], 'a refused upstream settles nothing');
+    assert.ok(bare.netAttempts().some((h) => /registry\.npmjs\.org|api\.osv\.dev|pypi\.org/.test(h)), `the refused hosts are logged: ${bare.netAttempts().join(',')}`);
+  } finally { bare.close(); }
+  // with the preload chain in a bare process: a stubbed host answers from the fake world and makes no connection; any other host is refused and logged
+  const netLog = path.join(logDir, 'probe-net.log'); const pLog = path.join(logDir, 'probe-pkg.log');
+  const code = `const https = require('https');
+    const get = (u) => new Promise((resolve) => { const r = https.request(new URL(u), { method: 'GET' }, (res) => { let b = ''; res.on('data', (c) => { b += c; }); res.on('end', () => resolve({ status: res.statusCode, body: b.slice(0, 40) })); }); r.on('error', (e) => resolve({ error: e.message })); r.end(); });
+    (async () => { console.log(JSON.stringify({ stubbed: await get('https://registry.npmjs.org/example-widget-kit'), other: await get('https://example.com/'), lookalike: await get('https://registry.npmjs.org.evil.test/x'), npmOther: await get('https://www.npmjs.com/package/x') })); })();`;
+  const r = spawnSync(process.execPath, ['--require', HARNESS, '--require', PRELOAD, '-e', code], { env: { PATH: process.env.PATH, AF_ROOT: path.join(__dirname, '..'), AF_NET_LOG: netLog, AF_PKG_LOG: pLog }, encoding: 'utf8', timeout: 30000 });
+  assert.equal(r.status, 0, r.stderr);
+  const out = JSON.parse(r.stdout.trim().split('\n').pop());
+  assert.equal(out.stubbed.status, 200); assert.match(out.stubbed.body, /example-widget-kit/);
+  for (const k of ['other', 'lookalike', 'npmOther']) assert.match(out[k].error || '', /refused/, `${k} must be refused: ${JSON.stringify(out[k])}`);
+  const refused = fs.readFileSync(netLog, 'utf8').split('\n').filter(Boolean);
+  assert.ok(refused.includes('example.com') && refused.includes('registry.npmjs.org.evil.test') && refused.includes('www.npmjs.com'), refused.join(','));
+  assert.ok(!refused.includes('registry.npmjs.org'), 'the stubbed host made no connection attempt');
+  assert.deepEqual(fs.readFileSync(pLog, 'utf8').split('\n').filter(Boolean), ['GET https://registry.npmjs.org/example-widget-kit']);
 });
 
 test('unpaid GET and HEAD on the route, on 24 spellings of its path and on query variants: never served, no handler run, no upstream call, no row, no settlement', async () => {
@@ -103,7 +148,7 @@ test('the MCP tool is listed and goes through the x402 gate: unpaid it answers w
   const text = JSON.stringify(out.json);
   assert.ok(out.json && out.json.result, out.raw.slice(0, 200));
   assert.match(text, /payment|x402|402/i);
-  assert.ok(!/GHSA-aaaa|"advisories"/.test(text), 'no package content without payment');
+  assert.ok(!/GHSA-aaaa|"advisories"|"flagged"|"highest_severity"/.test(text), 'no package content without payment');
   assert.equal(s.handlerRuns().length, before); assert.deepEqual(s.fac.log.filter((x) => x.op === 'settle'), []); assert.deepEqual(upstream(), []);
 });
 
@@ -115,7 +160,8 @@ test('paid x402 v2: the tool is served once, settled once at 20000 atomic units,
   const j = JSON.parse(res.body);
   assert.equal(j.tool, 'get_pkg_check'); assert.equal(j.paid, true);
   assert.equal(j.data.name, 'example-widget-kit'); assert.equal(j.data.version, '2.0.0'); assert.equal(j.data.advisories[0].id, 'GHSA-aaaa-bbbb-cccc');
-  for (const k of ['advisories', 'malicious', 'release', 'maintainers', 'install_scripts', 'downloads', 'typosquat', 'repository', 'flags', 'sources', 'method']) assert.ok(k in j.data, k);
+  assert.equal(j.data.flagged, true); assert.equal(j.data.highest_severity, 'high');      // R24 rule: the paid answer carries the verdict fields
+  for (const k of ['flagged', 'highest_severity', 'advisory_summary', 'advisories', 'malicious', 'release', 'maintainers', 'install_scripts', 'downloads', 'typosquat', 'repository', 'flags', 'sources', 'method']) assert.ok(k in j.data, k);
   assert.equal(s.handlerRuns().length, before + 1);
   const st = settles(s);
   assert.equal(st.length, 1, 'settled once'); assert.equal(st[0].amount, '20000', 'at the price in PRICES');
@@ -194,7 +240,7 @@ test('a key caller pays half the price on success (USD 0.01) and the answer is t
 });
 
 test('negative control: with the paywall off (X402_MODE=off) the same unpaid GET IS served, so the 402 sweep above detects a route that is not behind the paywall', async () => {
-  const free = await H.boot({ NODE_OPTIONS: `--require ${path.join(__dirname, 'fixtures', 'r23', 'pkgcheck', 'inject.cjs')}`, AF_PKG_LOG: pkgLog, X402_MODE: 'off' });
+  const free = await H.boot({ NODE_OPTIONS: `--require ${PRELOAD}`, AF_PKG_LOG: pkgLog, X402_MODE: 'off' });
   try {
     const res = await H.raw(free.port, 'GET', QUERY, ip());
     assert.equal(res.status, 200, res.body.slice(0, 200));

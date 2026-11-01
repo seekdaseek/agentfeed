@@ -3,12 +3,16 @@
 // For one npm or PyPI package version: the OSV.dev advisories that affect it, a malicious-package marker, release age, maintainer counts and changes where the registry exposes them,
 // install scripts, weekly downloads, how close the NAME is to a very commonly installed package, the repository link, and a list of factual flags. Public APIs, no key.
 // The flags are signals from public records; they are not a verdict on a package and say nothing about who is behind it.
+// R24 rule (GATES-r24 section 1): ANY OSV advisory affecting the exact version sets `flagged: true`, with `highest_severity` the highest among them ("unknown" when the records carry none);
+// severity never hides a flag, a malicious-package advisory also flags. A typosquat or install-script finding alone does not set `flagged`; it stays a separate flag.
 //
 // Upstream calls (hosts fixed in pkg-check-names.js, the name validated and encoded before any request, GET through lib/safe-fetch.js, OSV POST through pkg-check-http.js):
 //   npm   registry.npmjs.org/<name> (full document: release times, maintainers, scripts), or when that is over the 5 MB read cap / unavailable, registry.npmjs.org/<name>/<version|latest>
 //   PyPI  pypi.org/pypi/<name>/json, or when that is over the cap and a version was given, pypi.org/pypi/<name>/<version>/json
 //   OSV   api.osv.dev/v1/query            (CORE: if it cannot answer, the call is a 503 and nothing is charged)
 //   downloads  api.npmjs.org/downloads/point/last-week/<name>, pypistats.org/api/packages/<name>/recent  (optional: failure gives downloads null with a reason)
+// Not served, by the npm Open Source Terms (read 2026-11-01): npm's own security data. The R23 `registry_security_holding_package` flag read npm's security-holder placeholder marker
+// from the registry document and is gone; advisories come from OSV.dev only.
 // Refusals (common.js): a bad name, ecosystem or version is a 400 before any request; a package or version the registry does not know is a 404 "not covered, not charged";
 // a registry or OSV that cannot answer, or the tool being busy, is a 503 "Not charged." with Retry-After.
 // Memory: one bounded TTL cache of finished answers (CACHE_MAX), a cap on calls in flight (MAX_INFLIGHT), the two bundled lists read once; no other state.
@@ -160,19 +164,19 @@ function pypiOwners(doc) {
 // ---- answer assembly (pure: no I/O, so the published example is built by the same code) ----
 const SEV_ORDER = { error: 0, warn: 1, info: 2 };
 
-function buildFlags({ ecosystem, name, version, advisories, malicious, release, view, typo, scripts, repository }) {
+function buildFlags({ ecosystem, name, version, advisories, advisoryTotal, highest, malicious, release, view, typo, scripts, repository }) {
   const flags = [];
   const flag = (id, severity, detail) => flags.push({ id, severity, detail });
   const mal = advisories.filter((a) => a.malicious);
   if (malicious) flag('malicious_package', 'error', `OSV lists ${mal.slice(0, 3).map((a) => a.id).join(', ')} (a malicious-package advisory) for ${name}@${version}`);
   const known = advisories.filter((a) => !a.malicious);
-  if (known.length) {
+  const knownCount = Math.max(known.length, advisoryTotal - mal.length);       // the total covers records beyond the listed 50 and records that could not be read into an advisory object
+  if (knownCount > 0) {
     const top = known[0];
-    const hi = top.severity.label;
-    const fixed = top.fixed_versions.length ? `; ${top.id} lists a fix in ${top.fixed_versions.slice(0, 3).join(', ')}` : '';
-    flag('known_vulnerability', hi === 'critical' || hi === 'high' ? 'error' : 'warn', `${known.length} OSV ${plural(known.length, 'advisory affects', 'advisories affect')} ${name}@${version}; highest severity ${hi}${fixed}`);
+    const fixed = top && top.fixed_versions.length ? `; ${top.id} lists a fix in ${top.fixed_versions.slice(0, 3).join(', ')}` : '';
+    // R24: error whatever the severity. The severity is in the detail and in `highest_severity`; it decides nothing about whether the advisory is reported
+    flag('known_vulnerability', 'error', `${knownCount} OSV ${plural(knownCount, 'advisory affects', 'advisories affect')} ${name}@${version}; highest severity ${highest}${fixed}`);
   }
-  if (view.holding) flag('registry_security_holding_package', 'warn', 'the registry marks this version as a security holding package, a placeholder that replaced removed content');
   if (release.yanked) flag('yanked_release', 'warn', 'this release is yanked on PyPI');
   if (typo.nearest && typo.nearest.length) {
     const t = typo.nearest[0];
@@ -192,12 +196,16 @@ function buildFlags({ ecosystem, name, version, advisories, malicious, release, 
 }
 
 /**
- * view: { version, latest, isLatest, versionCount, manifest|null, publishedAt, firstPublishedAt, maint, gaps, holding, scripts, deprecated, yanked, distributions, repository, downloads, downloadsNote }
+ * view: { version, latest, isLatest, versionCount, manifest|null, publishedAt, firstPublishedAt, maint, gaps, scripts, deprecated, yanked, distributions, repository, downloads, downloadsNote }
  * -> the `data` object. `sources` are the fetches that were made.
  */
 function assemble({ ecosystem, name, view, osv, list, sources, nowMs }) {
   const advisories = osv.advisories;
   const malicious = advisories.some((a) => a.malicious);
+  const advisoryTotal = Number.isInteger(osv.total) ? osv.total : advisories.length;
+  // the rule of the gate: any advisory for the exact version flags the answer; the severity only says how bad the worst one is
+  const flagged = advisoryTotal > 0 || malicious;
+  const highest = flagged ? (osv.highest_severity || O.highestOf(advisories)) : null;
   const typo = T.typosquat(name, ecosystem, list);
   const release = {
     version: view.version,
@@ -211,12 +219,17 @@ function assemble({ ecosystem, name, view, osv, list, sources, nowMs }) {
     deprecated: view.deprecated,
     ...(ecosystem === 'pypi' ? { yanked: view.yanked, distributions: view.distributions } : {}),
   };
-  const flags = buildFlags({ ecosystem, name, version: view.version, advisories, malicious, release: { ...release, yanked: view.yanked }, view, typo, scripts: view.scripts, repository: view.repository });
+  const flags = buildFlags({ ecosystem, name, version: view.version, advisories, advisoryTotal, highest, malicious, release: { ...release, yanked: view.yanked }, view, typo, scripts: view.scripts, repository: view.repository });
   const listNote = list ? `a bundled ${list.ranked ? 'list of the most-downloaded' : 'curated list of widely used'} ${ecosystem === 'npm' ? 'npm packages' : 'PyPI projects'}` : 'no bundled list (not checked)';
   return {
     name, ecosystem, version: view.version, found: true,
+    flagged,
+    highest_severity: highest,
+    advisory_summary: flagged
+      ? `${advisoryTotal} OSV ${plural(advisoryTotal, 'advisory affects', 'advisories affect')} this exact version; highest severity ${highest}${malicious ? '; one is a malicious-package advisory' : ''}`
+      : 'no advisory found for this exact version in OSV.dev (an advisory is a published record; its absence says nothing about code no one has reported)',
     advisories,
-    advisory_count: osv.total,
+    advisory_count: advisoryTotal,
     ...(osv.truncated ? { advisories_truncated: true } : {}),
     malicious,
     release,
@@ -230,7 +243,7 @@ function assemble({ ecosystem, name, view, osv, list, sources, nowMs }) {
     flags,
     ...(view.gaps.length ? { data_gaps: view.gaps } : {}),
     sources,
-    method: `Advisories: OSV.dev, queried for this exact version, a MAL- id marking a malicious-package advisory. Release, maintainer and script facts: the ${ecosystem === 'npm' ? 'npm registry' : 'PyPI'} document. Typosquat: Damerau-Levenshtein distance 1 or 2, separator and word-order variants, and unscoped copies, against ${listNote}. Flags are factual signals from public records, not a verdict.`,
+    method: `Flagged is true when OSV.dev lists any advisory for this exact version, whatever its severity; highest_severity is the highest among them ("unknown" when the records carry none), a MAL- id marks a malicious-package advisory. A typosquat or install-script finding alone does not set flagged. Advisory text is from OSV.dev and the databases it republishes, among them the GitHub Advisory Database (CC BY 4.0, https://github.com/advisories) and the PyPA advisory database (CC BY 4.0, https://github.com/pypa/advisory-database); summaries are shortened. Release, maintainer and script facts: the ${ecosystem === 'npm' ? 'npm registry' : 'PyPI'} document. Typosquat: Damerau-Levenshtein distance 1 or 2, separator and word-order variants, and unscoped copies, against ${listNote}. Flags are factual signals from public records, not a verdict.`,
   };
 }
 
@@ -295,14 +308,12 @@ function makeCheck(deps = {}) {
         maint: { available: true, count: maintainerNames(m.maintainers).size, added_since_previous_version: null, removed_since_previous_version: null, published_by_new_account: null, source: 'version document' } };
     }
     const m = v.manifest;
-    const desc = typeof m.description === 'string' ? m.description.trim().toLowerCase() : '';
     const repo = repoInfo(m.repository || (isObj(doc) ? doc.repository : null));
     return {
       ...v,
       scripts: installScripts(m),
       deprecated: typeof m.deprecated === 'string' && m.deprecated.length > 0,
       yanked: false,
-      holding: /-security$/.test(v.version) && (desc === 'security holding package' || /npm\/security-holder/.test(repo.url || '')),
       repository: repo,
     };
   }
@@ -362,7 +373,7 @@ function makeCheck(deps = {}) {
     const rel = pypiRelease(files);
     return {
       version, latest, isLatest: latest ? version === latest : null, versionCount, manifest: null, publishedAt: rel.publishedAt, firstPublishedAt, maint, gaps,
-      scripts: null, deprecated: false, yanked: rel.yanked, distributions: rel.distributions, holding: false, repository: pypiRepo(info),
+      scripts: null, deprecated: false, yanked: rel.yanked, distributions: rel.distributions, repository: pypiRepo(info),
     };
   }
 
@@ -411,7 +422,7 @@ function makeCheck(deps = {}) {
 }
 
 // ---- the route entry the lead wires into expansion.js ----
-const DESC = 'Use when an agent needs facts about an npm or PyPI package version. Returns OSV advisories, a malicious-package marker, release age, maintainers, install scripts, downloads, name-squat distance, flags. Unknown package 404, upstream down 503: not charged.';
+const DESC = 'Use when an agent needs to know if an npm or PyPI version has a published advisory. Returns flagged (any OSV advisory for that exact version), highest severity, advisories, release, scripts, downloads, name-squat flags. 404 or 503: not charged.';
 const EXAMPLE_FILE = path.join(__dirname, 'data', 'pkgcheck-example.json');
 let exampleCache = null;
 
@@ -427,7 +438,7 @@ function makeEntries(deps) {
       version: z.string().optional().describe('version to check, for example 4.17.21 (default: the latest published version)'),
     },
     title: 'Package check',
-    question: 'What do the public registries and OSV.dev report about this version of an npm or PyPI package?',
+    question: 'Does OSV.dev list any advisory for this exact version of an npm or PyPI package, and what do the public registries add?',
     // the published (constructed) example: tools/r23/data/pkgcheck-example.json is written by ops/r23-pkgcheck-example.js from the test fixtures and pinned by a test
     get example() {
       if (!exampleCache) exampleCache = JSON.parse(fs.readFileSync(EXAMPLE_FILE, 'utf8'));

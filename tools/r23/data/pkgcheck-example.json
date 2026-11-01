@@ -3,6 +3,9 @@
   "ecosystem": "npm",
   "version": "2.0.0",
   "found": true,
+  "flagged": true,
+  "highest_severity": "high",
+  "advisory_summary": "1 OSV advisory affects this exact version; highest severity high",
   "advisories": [
     {
       "id": "GHSA-aaaa-bbbb-cccc",
@@ -127,5 +130,5 @@
       "ok": true
     }
   ],
-  "method": "Advisories: OSV.dev, queried for this exact version, a MAL- id marking a malicious-package advisory. Release, maintainer and script facts: the npm registry document. Typosquat: Damerau-Levenshtein distance 1 or 2, separator and word-order variants, and unscoped copies, against a bundled list of the most-downloaded npm packages. Flags are factual signals from public records, not a verdict."
+  "method": "Flagged is true when OSV.dev lists any advisory for this exact version, whatever its severity; highest_severity is the highest among them (\"unknown\" when the records carry none), a MAL- id marks a malicious-package advisory. A typosquat or install-script finding alone does not set flagged. Advisory text is from OSV.dev and the databases it republishes, among them the GitHub Advisory Database (CC BY 4.0, https://github.com/advisories) and the PyPA advisory database (CC BY 4.0, https://github.com/pypa/advisory-database); summaries are shortened. Release, maintainer and script facts: the npm registry document. Typosquat: Damerau-Levenshtein distance 1 or 2, separator and word-order variants, and unscoped copies, against a bundled list of the most-downloaded npm packages. Flags are factual signals from public records, not a verdict."
 }

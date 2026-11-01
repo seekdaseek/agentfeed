@@ -3,6 +3,8 @@
 //   - severity: the database's own label when it gives one (GitHub advisories: CRITICAL / HIGH / MODERATE / LOW), else the base score computed from a CVSS v3 vector
 //     (CVSS v4 vectors are not scored here: with no label they read "unknown")
 //   - every string taken from the upstream record is length-capped; the list is capped at MAX_ADVISORIES, the total is still reported
+//   - R24 rule: ANY advisory for the exact version flags the answer; highestSeverity is taken over EVERY record read (not the capped list) so a cap can never hide a worse one,
+//     and a record that cannot be read into an advisory object still counts (as severity "unknown") instead of silently making the answer look clean
 'use strict';
 const { urls, pep503 } = require('./pkg-check-names');
 
@@ -73,14 +75,22 @@ function rankAdvisories(list) {
   return { advisories: sorted.slice(0, MAX_ADVISORIES), total: sorted.length };
 }
 
+/** the highest severity label among advisory objects (or bare labels); "unknown" when there is none or none carries a severity */
+function highestOf(list) {
+  let best = 'unknown';
+  for (const a of list) { const l = typeof a === 'string' ? a : a && a.severity && a.severity.label; if ((SEVERITY_RANK[l] || 0) > SEVERITY_RANK[best]) best = l; }
+  return best;
+}
+
 /**
  * Ask OSV which advisories affect `name`@`version`. `post(url, bodyObject) -> { status, body: Buffer }` is supplied by the caller (it is the guarded POST).
  * Throws a plain Error (message says what failed) for anything but a clean 200 with JSON, so the caller turns it into the 503 "Not charged" refusal.
- * -> { advisories, total, pages, truncated }
+ * -> { advisories, total, highest_severity, pages, truncated }   (total and highest_severity cover every record read, listed or not; highest_severity is null when total is 0)
  */
 async function queryOsv(post, { ecosystem, name, version }) {
   const pkg = { name, ecosystem: ecosystem === 'npm' ? 'npm' : 'PyPI' };
   const all = [];
+  let unreadable = 0;
   let token;
   let pages = 0;
   for (; pages < MAX_PAGES;) {
@@ -91,12 +101,13 @@ async function queryOsv(post, { ecosystem, name, version }) {
     try { j = JSON.parse(res.body.toString('utf8')); } catch { throw new Error('OSV answered with a document that is not JSON'); }
     if (!j || typeof j !== 'object' || Array.isArray(j)) throw new Error('OSV answered with an unexpected document');
     if (j.vulns != null && !Array.isArray(j.vulns)) throw new Error('OSV answered with an unexpected vulns field');
-    for (const v of j.vulns || []) { const n = normalizeVuln(v, ecosystem, name); if (n) all.push(n); }
+    for (const v of j.vulns || []) { const n = normalizeVuln(v, ecosystem, name); if (n) all.push(n); else if (v && typeof v === 'object' && !Array.isArray(v)) unreadable++; }
     token = typeof j.next_page_token === 'string' && j.next_page_token.length <= 512 ? j.next_page_token : null;
     if (!token) break;
   }
   const ranked = rankAdvisories(all);
-  return { ...ranked, pages, truncated: Boolean(token) || ranked.total > ranked.advisories.length };
+  const total = ranked.total + unreadable;                              // an unreadable record is still an advisory OSV lists for this version
+  return { advisories: ranked.advisories, total, highest_severity: total ? highestOf(all) : null, pages, truncated: Boolean(token) || total > ranked.advisories.length };
 }
 
-module.exports = { queryOsv, normalizeVuln, cvss3, severityOf, rankAdvisories, MAX_ADVISORIES, MAX_PAGES, SEVERITY_RANK };
+module.exports = { queryOsv, normalizeVuln, cvss3, severityOf, rankAdvisories, highestOf, MAX_ADVISORIES, MAX_PAGES, SEVERITY_RANK };

@@ -9,7 +9,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const REPO = path.resolve(__dirname, '..');
-const ROOT = '/Volumes/D/r23/cache/pkgcheck/mut';
+const ROOT = '/Volumes/D/r24/cache/pkgcheck/mut';
 const UNIT = 'test/r23-pkgcheck.test.js';
 const GUARD = 'test/r23-pkgcheck-guard.test.js';
 
@@ -35,7 +35,19 @@ const MUTATIONS = [
   ['time cap: the POST has no timer', 'tools/r23/pkg-check-http.js', 'const timer = setTimeout(() => { finish(reject, upstream(\'timed out\')); req.destroy(); }, limit);', 'const timer = setTimeout(() => {}, 0);', GUARD],
   ['https only: the outer lock lets http through', 'tools/r23/pkg-check-names.js', "u.protocol !== 'https:' ||", '', UNIT],
   ['field reader: strings are not skipped as strings (braces inside them count)', 'tools/r23/pkg-check-pick.js', "if (b === QUOTE) { j = skipString(buf, j) - 1; continue; }", '', UNIT],
-  ['description: the length rule (the house style) is broken', 'tools/r23/pkg-check.js', "const DESC = 'Use when an agent needs facts about", "const DESC = 'Facts about", UNIT],
+  ['description: the length rule (the house style) is broken', 'tools/r23/pkg-check.js', "const DESC = 'Use when an agent needs to know if", "const DESC = 'Facts about", UNIT],
+  // R24: the flag rule of GATES-r24 section 1
+  ['R24 rule: back to the R23 reading (only a high or critical advisory, or a malicious one, flags the answer)', 'tools/r23/pkg-check.js', 'const flagged = advisoryTotal > 0 || malicious;', "const flagged = malicious || osv.highest_severity === 'high' || osv.highest_severity === 'critical';", UNIT],
+  ['R24 rule: nothing ever flags the answer', 'tools/r23/pkg-check.js', 'const flagged = advisoryTotal > 0 || malicious;', 'const flagged = false;', UNIT],
+  ['R24 rule: every answer is flagged, even a clean one', 'tools/r23/pkg-check.js', 'const flagged = advisoryTotal > 0 || malicious;', 'const flagged = true;', UNIT],
+  ['R24 rule: an install script alone flags the answer', 'tools/r23/pkg-check.js', 'const flagged = advisoryTotal > 0 || malicious;', 'const flagged = advisoryTotal > 0 || malicious || Boolean(view.scripts && view.scripts.length);', UNIT],
+  ['R24 rule: a typosquat match alone flags the answer', 'tools/r23/pkg-check.js', 'const flagged = advisoryTotal > 0 || malicious;', 'const flagged = advisoryTotal > 0 || malicious || T.typosquat(name, ecosystem, list).nearest.length > 0;', UNIT],
+  ['R24 rule: a low or moderate advisory is a warning flag again (severity buries it)', 'tools/r23/pkg-check.js', "flag('known_vulnerability', 'error',", "flag('known_vulnerability', highest === 'critical' || highest === 'high' ? 'error' : 'warn',", UNIT],
+  ['R24 rule: highest_severity is read from the listed 50 advisories only', 'tools/r23/pkg-check.js', 'osv.highest_severity || O.highestOf(advisories)', 'O.highestOf(advisories)', UNIT],
+  ['R24 rule: a record OSV lists that cannot be read is not counted', 'tools/r23/pkg-check-osv.js', "else if (v && typeof v === 'object' && !Array.isArray(v)) unreadable++;", '', UNIT],
+  ['terms: npm\'s security-holder marker is served again as a flag (npm Open Source Terms bar passing on its security data)', 'tools/r23/pkg-check.js', "if (release.yanked) flag('yanked_release'", "if (/-security$/.test(version)) flag('registry_security_holding_package', 'warn', 'x'); if (release.yanked) flag('yanked_release'", UNIT],
+  ['terms: the CC BY attribution is left out of the method text', 'tools/r23/pkg-check.js', 'Advisory text is from OSV.dev and the databases it republishes, among them the GitHub Advisory Database (CC BY 4.0, https://github.com/advisories) and the PyPA advisory database (CC BY 4.0, https://github.com/pypa/advisory-database); summaries are shortened. ', '', UNIT],
+  ['R24 rule: "unknown" outranks a real severity label', 'tools/r23/pkg-check-osv.js', "if ((SEVERITY_RANK[l] || 0) > SEVERITY_RANK[best]) best = l;", "if (l === 'unknown' || (SEVERITY_RANK[l] || 0) > SEVERITY_RANK[best]) best = l;", UNIT],
 ];
 
 function copyTree(dest) {
@@ -51,7 +63,7 @@ function copyTree(dest) {
   fs.symlinkSync(fs.realpathSync(path.join(REPO, 'node_modules')), path.join(dest, 'node_modules'));
 }
 function runTests(dest, file) {
-  const r = spawnSync(process.execPath, ['--test', '--test-reporter=spec', file], { cwd: dest, encoding: 'utf8', env: { ...process.env, OVERHANG_DB_PATH: '/Volumes/D/pensio/scratch/overhang.db', AGENTFEED_DB: ':memory:' }, timeout: 170000 });
+  const r = spawnSync(process.execPath, ['--test', '--test-reporter=spec', file], { cwd: dest, encoding: 'utf8', env: { ...process.env, OVERHANG_DB_PATH: '/Volumes/D/r24/scratch/pkgcheck/overhang.db', AGENTFEED_DB: ':memory:' }, timeout: 170000 });
   const out = (r.stdout || '') + (r.stderr || '');
   const failed = [...new Set([...out.matchAll(/^✖ (.+?) \(\d/gm)].map((m) => m[1]))];
   return { code: r.status, failed, tests: (/ℹ tests (\d+)/.exec(out) || [])[1], pass: (/ℹ pass (\d+)/.exec(out) || [])[1] };

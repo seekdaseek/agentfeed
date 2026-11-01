@@ -1,0 +1,11 @@
+{
+  "name": "es5-ext",
+  "dist-tags": { "latest": "0.10.54" },
+  "maintainers": [ { "name": "maint-one" } ],
+  "repository": { "type": "git", "url": "git+https://github.com/example-org/es5-ext-shape.git" },
+  "time": { "created": "2014-01-01T00:00:00.000Z", "modified": "2022-03-01T00:00:00.000Z", "0.10.53": "2021-02-01T00:00:00.000Z", "0.10.54": "2022-03-01T00:00:00.000Z" },
+  "versions": {
+    "0.10.53": { "name": "es5-ext", "version": "0.10.53", "description": "synthetic registry document in the shape of the R23 gate miss", "maintainers": [ { "name": "maint-one" } ], "_npmUser": { "name": "maint-one" } },
+    "0.10.54": { "name": "es5-ext", "version": "0.10.54", "description": "synthetic registry document in the shape of the R23 gate miss", "scripts": { "postinstall": "node ./_postinstall" }, "maintainers": [ { "name": "maint-one" } ], "_npmUser": { "name": "maint-one" }, "repository": { "type": "git", "url": "git+https://github.com/example-org/es5-ext-shape.git" } }
+  }
+}

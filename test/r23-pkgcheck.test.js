@@ -4,6 +4,8 @@
 //   typosquat            the popular package itself is not flagged; the same query against a list without it IS flagged
 //   OSV / CVSS           scorer pinned to published base scores; fixed versions come from the queried package only
 //   failure semantics    404 / 503 / 400 each tested with the upstream calls counted (a 400 makes none; nothing failing is cached)
+//   R24 flag rule        any advisory for the exact version flags the answer whatever its severity (the es5-ext@0.10.54 LOW case of the R23 gate); the same package with no advisory is not flagged;
+//                        a typosquat or an install script alone does not flag
 // The real safe-fetch refusals are in r23-pkgcheck-guard.test.js; the paywall and settlement in r23-pkgcheck-real-server.test.js.
 'use strict';
 const test = require('node:test');
@@ -256,22 +258,103 @@ test('npm: a MAL- advisory marks the exact version malicious and is an error fla
   assert.equal(quiet.malicious, false); assert.ok(!ids(quiet).includes('malicious_package'));
 });
 
-test('npm: severity decides the vulnerability flag level (high and critical are errors; medium, low and unknown are warnings)', async () => {
-  for (const [label, sev] of [['HIGH', 'error'], ['CRITICAL', 'error'], ['MODERATE', 'warn'], ['LOW', 'warn'], [null, 'warn']]) {
-    const w = W.makeWorld({ osvOverride: () => bodyOf({ vulns: [{ id: 'GHSA-sevt-test-0000', database_specific: label ? { severity: label } : {} }] }) });
-    const r = await run(npm('example-widget-kit'), w);
-    assert.equal(flagOf(r, 'known_vulnerability').severity, sev, String(label));
+// ---- R24 rule (GATES-r24 section 1): ANY advisory for the exact version flags the answer; severity only says how bad the worst one is ----
+const osvOf = (...vulns) => ({ osvOverride: () => bodyOf({ vulns }) });
+const rec = (id, label) => ({ id, ...(label ? { database_specific: { severity: label } } : {}) });
+
+test('R24 rule: every severity (and none) flags the answer, highest_severity names the worst, and the known_vulnerability flag is an error whatever the severity', async () => {
+  for (const [label, highest] of [['CRITICAL', 'critical'], ['HIGH', 'high'], ['MODERATE', 'medium'], ['MEDIUM', 'medium'], ['LOW', 'low'], [null, 'unknown']]) {
+    const r = await run(npm('example-widget-kit'), W.makeWorld(osvOf(rec('GHSA-sevt-test-0000', label))));
+    assert.equal(r.flagged, true, String(label)); assert.equal(r.highest_severity, highest, String(label));
+    assert.equal(flagOf(r, 'known_vulnerability').severity, 'error', String(label));
+    assert.match(flagOf(r, 'known_vulnerability').detail, new RegExp(`highest severity ${highest}`));
+    assert.equal(r.flags[0].id, 'known_vulnerability', `${label}: the advisory flag leads the list, nothing buries it`);
+    assert.match(r.advisory_summary, new RegExp(`^1 OSV advisory affects this exact version; highest severity ${highest}$`));
   }
 });
 
-test('npm: the registry security holding package is flagged; the same package without the markers is not (negative control)', async () => {
+test('R24 rule: with several advisories the highest severity wins; "unknown" never outranks a real label', async () => {
+  const hi = async (...labels) => (await run(npm('example-widget-kit'), W.makeWorld(osvOf(...labels.map((l, i) => rec(`GHSA-mix-${i}`, l)))))).highest_severity;
+  assert.equal(await hi('LOW', 'MODERATE'), 'medium'); assert.equal(await hi('LOW', 'HIGH', 'MODERATE'), 'high'); assert.equal(await hi('LOW', 'CRITICAL', 'HIGH'), 'critical');
+  assert.equal(await hi(null, 'LOW'), 'low'); assert.equal(await hi('LOW', null, null), 'low'); assert.equal(await hi(null, null), 'unknown');
+  assert.equal(O.highestOf([]), 'unknown'); assert.equal(O.highestOf(['low', 'critical', 'medium']), 'critical');
+});
+
+test('R24 rule: the R23 gate miss, es5-ext@0.10.54 (its only OSV advisory is rated LOW), is now flagged with highest_severity low', async () => {
+  const w = W.makeWorld({ getOverrides: { 'https://registry.npmjs.org/es5-ext': { body: W.read('npm-es5-ext-registry.json') } }, osvOverride: () => ({ body: W.read('osv-es5-ext-0.10.54.json') }) });
+  const r = await run(npm('es5-ext', '0.10.54'), w);
+  assert.equal(r.version, '0.10.54'); assert.deepEqual(r.advisories.map((a) => [a.id, a.severity.label]), [['GHSA-4gmj-3p3h-gm8h', 'low']]);
+  assert.equal(r.flagged, true); assert.equal(r.highest_severity, 'low'); assert.equal(r.malicious, false);
+  assert.equal(flagOf(r, 'known_vulnerability').severity, 'error'); assert.ok(ids(r).includes('install_script'), 'the install script stays its own flag');
+  assert.deepEqual(w.calls.find((c) => c.method === 'POST').body, { version: '0.10.54', package: { name: 'es5-ext', ecosystem: 'npm' } });
+  // negative control: the same package and version, OSV listing nothing, is not flagged although the install script and the rest are the same
+  const quiet = await run(npm('es5-ext', '0.10.54'), W.makeWorld({ getOverrides: { 'https://registry.npmjs.org/es5-ext': { body: W.read('npm-es5-ext-registry.json') } }, osvOverride: () => bodyOf({}) }));
+  assert.equal(quiet.flagged, false); assert.equal(quiet.highest_severity, null); assert.ok(ids(quiet).includes('install_script'));
+});
+
+test('R24 rule: a clean answer says no advisory was found for this exact version; it is not flagged, has no highest severity and no advisory flag', async () => {
+  const r = await run(npm('example-widget-kit', '1.1.0'));
+  assert.equal(r.flagged, false); assert.equal(r.highest_severity, null); assert.equal(r.advisory_count, 0); assert.deepEqual(r.advisories, []);
+  assert.match(r.advisory_summary, /^no advisory found for this exact version/);
+  assert.ok(!ids(r).includes('known_vulnerability') && !ids(r).includes('malicious_package'));
+  assert.ok(!/no risk/i.test(JSON.stringify(r)));
+  // the same fields are in the PyPI answer
+  const p = await run(pypi('example-pylib', '1.1.0'));
+  assert.equal(p.flagged, false); assert.equal(p.highest_severity, null); assert.match(p.advisory_summary, /^no advisory found for this exact version/);
+});
+
+test('R24 rule: a typosquat or an install-script finding alone does not set flagged; each stays its own flag', async () => {
+  const typo = await run(npm('example-widget-kit', '1.1.0'));
+  assert.ok(ids(typo).includes('typosquat_candidate'), 'control: the name is near a bundled package'); assert.equal(typo.flagged, false);
+  const bad = W.makeWorld(osvOf());
+  const script = await run(npm('example-bad-widget'), bad);
+  assert.ok(ids(script).includes('install_script'), 'control: the install hooks are reported'); assert.equal(script.flagged, false); assert.equal(script.malicious, false);
+  // and with an advisory on the same install-script package it is flagged by the advisory, not by the script
+  const adv = await run(npm('example-bad-widget'), W.makeWorld(osvOf(rec('GHSA-aaaa-test-0001', 'LOW'))));
+  assert.equal(adv.flagged, true); assert.equal(adv.highest_severity, 'low');
+});
+
+test('R24 rule: a malicious-package advisory flags the answer; its severity is the record\'s own ("unknown" when it carries none)', async () => {
+  const r = await run(npm('example-bad-widget'));
+  assert.equal(r.malicious, true); assert.equal(r.flagged, true); assert.equal(r.highest_severity, 'unknown');
+  assert.match(r.advisory_summary, /^1 OSV advisory affects this exact version; highest severity unknown; one is a malicious-package advisory$/);
+  const high = await run(npm('example-bad-widget'), W.makeWorld(osvOf({ id: 'MAL-2099-0002', database_specific: { severity: 'HIGH' } })));
+  assert.equal(high.flagged, true); assert.equal(high.highest_severity, 'high'); assert.ok(!ids(high).includes('known_vulnerability'));
+});
+
+test('R24 rule: the cap on the listed advisories cannot hide the worst one, and a record that cannot be read still counts as an advisory', async () => {
+  // 60 malicious records (listed first, no severity) and one critical advisory that falls outside the 50 listed
+  const w = W.makeWorld(osvOf(...Array.from({ length: 60 }, (_, i) => ({ id: `MAL-2099-${String(i).padStart(4, '0')}` })), rec('GHSA-late-0001', 'CRITICAL')));
+  const r = await run(npm('example-widget-kit'), w);
+  assert.equal(r.advisories.length, 50); assert.equal(r.advisory_count, 61); assert.ok(!r.advisories.some((a) => a.id === 'GHSA-late-0001'), 'control: the critical record is not in the listed 50');
+  assert.equal(r.highest_severity, 'critical'); assert.equal(r.flagged, true);
+  // OSV lists a record whose id the reader cannot use: the answer is still flagged
+  const odd = await run(npm('example-widget-kit'), W.makeWorld(osvOf({ id: 'has a space', database_specific: { severity: 'HIGH' } })));
+  assert.equal(odd.flagged, true); assert.equal(odd.advisory_count, 1); assert.deepEqual(odd.advisories, []); assert.equal(odd.highest_severity, 'unknown'); assert.equal(odd.advisories_truncated, true);
+  assert.equal(flagOf(odd, 'known_vulnerability').severity, 'error');
+  // a null entry is not a record
+  const nul = await run(npm('example-widget-kit'), W.makeWorld(osvOf(null, 5)));
+  assert.equal(nul.flagged, false); assert.equal(nul.advisory_count, 0);
+});
+
+test('terms (npm Open Source Terms, security data): the registry\'s security-holder marker is NOT served as a flag; the version is judged on OSV and the public metadata only', async () => {
   const r = await run(npm('example-holder'));
-  assert.equal(flagOf(r, 'registry_security_holding_package').severity, 'warn');
-  const doc = W.json('npm-holding.json');
-  const v = doc.versions['0.0.1-security'];
-  v.description = 'a real description'; v.repository = { url: 'git+https://github.com/example-org/other.git' }; doc.repository = v.repository;
-  const r2 = await run(npm('example-holder'), W.makeWorld({ getOverrides: { 'https://registry.npmjs.org/example-holder': bodyOf(doc) } }));
-  assert.ok(!ids(r2).includes('registry_security_holding_package'));
+  assert.ok(!ids(r).includes('registry_security_holding_package'), 'npm security data is not passed on');
+  assert.ok(!JSON.stringify(r).includes('holding'), 'and the answer does not mention the marker anywhere');
+  assert.equal(r.version, '0.0.1-security'); assert.equal(r.flagged, false);
+  // control: the fixture does carry the marker the R23 build read, so the absence above is the tool's choice, not the fixture's
+  assert.equal(W.json('npm-holding.json').versions['0.0.1-security'].description, 'security holding package');
+  // an OSV advisory on the same version still flags it, through OSV
+  const adv = await run(npm('example-holder'), W.makeWorld({ osvOverride: () => bodyOf({ vulns: [{ id: 'GHSA-hldr-test-0001', database_specific: { severity: 'HIGH' } }] }) }));
+  assert.equal(adv.flagged, true); assert.equal(adv.highest_severity, 'high'); assert.ok(!ids(adv).includes('registry_security_holding_package'));
+});
+
+test('terms (CC BY 4.0 of the GitHub and PyPA advisory databases): every answer carries the attribution with the links the licence allows, and says the summaries are shortened', async () => {
+  for (const r of [await run(npm('example-widget-kit')), await run(pypi('example-pylib'))]) {
+    assert.match(r.method, /GitHub Advisory Database \(CC BY 4\.0, https:\/\/github\.com\/advisories\)/);
+    assert.match(r.method, /PyPA advisory database \(CC BY 4\.0, https:\/\/github\.com\/pypa\/advisory-database\)/);
+    assert.match(r.method, /summaries are shortened/);
+  }
 });
 
 test('npm: each remaining flag fires on its own condition and not otherwise', async () => {
@@ -514,7 +597,7 @@ test('public text: the entry has the documented shape, a 180-255 character descr
 test('public text: the published example is built by the real code from the fixtures, equals the data file, and has the full output shape', async () => {
   const fresh = await buildExample();
   assert.deepEqual(P.entries[0].example, fresh, 'tools/r23/data/pkgcheck-example.json is stale: run node ops/r23-pkgcheck-example.js');
-  for (const k of ['name', 'ecosystem', 'version', 'found', 'advisories', 'malicious', 'release', 'maintainers', 'install_scripts', 'downloads', 'typosquat', 'repository', 'flags', 'sources', 'method']) assert.ok(k in fresh, k);
+  for (const k of ['name', 'ecosystem', 'version', 'found', 'flagged', 'highest_severity', 'advisory_summary', 'advisories', 'malicious', 'release', 'maintainers', 'install_scripts', 'downloads', 'typosquat', 'repository', 'flags', 'sources', 'method']) assert.ok(k in fresh, k);
   assert.ok(fresh.name.startsWith('example-'), 'a constructed example names no real package');
 });
 

@@ -24,6 +24,8 @@ const { CircleArcFacilitator, ARC } = require('../lib/circle-arc');
 const digest = require('../ops/af-digest');
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'af-car-'));
+// the --alert CLI also reads the pensio-tg pass file (ops/af-digest.js pensioPassAlert); a well-formed key and no api_keys table in these fixture databases keep it silent, whatever machine this runs on
+const PENSIO_KEY_FILE = path.join(tmp, 'pensio-key'); fs.writeFileSync(PENSIO_KEY_FILE, 'afk_' + 'a'.repeat(40) + '\n');
 const keyFile = path.join(tmp, 'arc-payto.key');
 fs.writeFileSync(keyFile, generatePrivateKey());
 const PAYER = '0x000000000000000000000000000000000000dEaD';
@@ -251,7 +253,7 @@ test('--alert end to end (child process, --dry): a Circle refusal in the table i
   d.exec(SCHEMA);
   d.prepare("INSERT INTO calls (ts, tool, payer_wallet, ip, status, error_msg, user_agent) VALUES (?, 'get_sol_price', '0x05b38ff795a2d750788157f1119e5d403d8ef47a', '167.233.69.154', 'payment_refused', ?, 'pay-arc')").run(Date.now() - 2 * MIN, SETTLE_403);
   d.close();
-  const env = { PATH: process.env.PATH, AGENTFEED_DB: dbFile, AF_DIGEST_STATE: path.join(tmp, 'state.json'), AF_OWN_IPS: path.join(tmp, 'no-such-file') };
+  const env = { PATH: process.env.PATH, AF_PENSIO_KEY_FILE: PENSIO_KEY_FILE, AGENTFEED_DB: dbFile, AF_DIGEST_STATE: path.join(tmp, 'state.json'), AF_OWN_IPS: path.join(tmp, 'no-such-file') };
   const run = () => spawnSync(process.execPath, [path.join(__dirname, '..', 'ops', 'af-digest.js'), '--alert', '--dry'], { env, encoding: 'utf8' });
   const hit = run();
   assert.equal(hit.status, 0, hit.stdout + hit.stderr);

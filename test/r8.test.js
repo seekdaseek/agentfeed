@@ -12,6 +12,8 @@ const express = require('express');
 const { spawnSync } = require('child_process');
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'af-r8-'));
+// the --alert CLI also reads the pensio-tg pass file (ops/af-digest.js pensioPassAlert); a well-formed key and no api_keys table in these fixture databases keep it silent, whatever machine this runs on
+const PENSIO_KEY_FILE = path.join(tmp, 'pensio-key'); fs.writeFileSync(PENSIO_KEY_FILE, 'afk_' + 'a'.repeat(40) + '\n');
 process.env.AGENTFEED_DB = path.join(tmp, 'calls.db');
 const { normPayer, acceptedOf, settledUsd } = require('../lib/audit');
 const { makeTool } = require('../lib/tool');
@@ -140,7 +142,7 @@ const RESYNC_MSG = 'verification refused: invalid_batch_settlement_evm_cumulativ
 function runDigest(dbFile, args) {
   return spawnSync(process.execPath, [path.join(__dirname, '..', 'ops', 'af-digest.js'), ...args], {
     encoding: 'utf8', timeout: 30000,
-    env: { ...process.env, AGENTFEED_DB: dbFile, AF_DIGEST_STATE: path.join(tmp, `state-${path.basename(dbFile)}.json`), AF_OWN_IPS: path.join(tmp, 'no-such-own-ips.txt') },
+    env: { ...process.env, AGENTFEED_DB: dbFile, AF_DIGEST_STATE: path.join(tmp, `state-${path.basename(dbFile)}.json`), AF_PENSIO_KEY_FILE: PENSIO_KEY_FILE, AF_OWN_IPS: path.join(tmp, 'no-such-own-ips.txt') },
   });
 }
 

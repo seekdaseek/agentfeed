@@ -15,6 +15,7 @@
 //                                           then quiet for an hour (a dead Circle key is seen on the first payment, not after a burst)
 //                                           and, from day 30 of the move-alert calibration table (tools/briefs/config.js), one line a day about its age
 //                                           and (R22) one line when the USDC account of a Solana payTo in the manifest does not exist, then quiet for an hour
+//                                           and one line when the pensio-tg comp pass (/opt/pensio-tg/agentfeed.key) is missing, revoked, expired or has under 3 days left, then quiet for 12 hours
 //   --dry                                   print what would be sent; send nothing, write no state
 //
 // crons (root), under flock, no PM2 process:
@@ -23,6 +24,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const Database = require('better-sqlite3');
 const { normPayer } = require('../lib/audit');
 
@@ -369,6 +371,45 @@ async function calibrationAlert(state, now, io = {}) {
   return 1;
 }
 
+// ---- The pensio-tg comp pass (2 Nov 2026). The Telegram bot reads its signals pass from /opt/pensio-tg/agentfeed.key on every call; a daily cron (deploy/renew-pass.sh, 03:50 UTC) mints
+// a new one only when that file is older than 25 days and logs to /opt/pensio-tg/renew.log, which nothing reads and which is empty on every quiet day. A renewal that fails stays invisible
+// until the bot's calls start answering 401. So every --alert run reads the key file and looks the key up by its sha256 in api_keys (the same hash lib/keys.js stores): ONE Telegram line when
+// the pass is missing (no file, an unreadable one, one that does not hold an afk_ key, a key the server does not know), revoked, expired, or has under 3 days left, then quiet for 12 hours.
+// A healthy pass clears the state, so the next problem alerts at once. A failed send leaves the state alone, so the next run (5 min later) tries again. An api_keys table that cannot be
+// read is logged and is NOT a missing pass: no alert, no state change. The key itself is never printed or sent, only its 8-character prefix (what `key-admin list` shows).
+// AF_PENSIO_KEY_FILE and AF_PENSIO_WARN_DAYS exist for a dry test on the box.
+const PENSIO_KEY_FILE = () => process.env.AF_PENSIO_KEY_FILE || '/opt/pensio-tg/agentfeed.key';
+const PENSIO_WARN_DAYS = () => (Number(process.env.AF_PENSIO_WARN_DAYS) > 0 ? Number(process.env.AF_PENSIO_WARN_DAYS) : 3);
+const PENSIO_QUIET = 12 * 3600e3;
+const PENSIO_KEY_RE = /^afk_[A-Za-z0-9]{20,80}$/;   // the bot's own test for its key file (/opt/pensio-tg/src/agentfeed.js)
+async function pensioPassAlert(db, state, now, io = {}) {
+  const sendFn = io.send || send, log = io.log || console.log;
+  const file = io.keyFile || PENSIO_KEY_FILE();
+  const warnMs = (io.warnDays || PENSIO_WARN_DAYS()) * 86400e3;
+  let problem = null, key = null;
+  try { key = fs.readFileSync(file, 'utf8').split('\n')[0].trim(); }
+  catch (e) { problem = e && e.code === 'ENOENT' ? `is missing: ${file} does not exist` : `cannot be read: ${file} (${(e && e.code) || 'error'})`; }
+  if (!problem && !PENSIO_KEY_RE.test(key)) problem = `is unusable: ${file} does not hold an afk_ key`;
+  if (!problem) {
+    let row;
+    try { row = db.prepare('SELECT prefix, status, expires_at FROM api_keys WHERE key_hash = ?').get(crypto.createHash('sha256').update(key, 'utf8').digest('hex')); }
+    catch (e) { log(`${new Date(now).toISOString()} pensio pass check: api_keys unreadable (${String(e && e.message).slice(0, 80)}); nothing checked`); return 0; }
+    const left = row && row.expires_at != null ? row.expires_at - now : null;
+    if (!row) problem = 'is unknown to the server: the key in its file matches no api_keys row';
+    else if (row.status !== 'active') problem = `(${row.prefix}) is ${row.status}`;
+    else if (left != null && left <= 0) problem = `(${row.prefix}) expired ${stamp(row.expires_at)} UTC`;
+    else if (left != null && left < warnMs) problem = `(${row.prefix}) has ${(Math.floor(left / 864e4) / 10).toFixed(1)} days left (expires ${stamp(row.expires_at)} UTC)`;
+  }
+  if (!problem) { delete state.pensioPass; return 0; }
+  const seen = state.pensioPass || (state.pensioPass = {});
+  if (seen.alertedAt && now - seen.alertedAt < PENSIO_QUIET) return 0;
+  const text = `AgentFeed: the pensio-tg comp pass ${problem}. The daily renewal (cron 03:50 UTC, /opt/pensio-tg/deploy/renew-pass.sh) writes /opt/pensio-tg/agentfeed.key; read /opt/pensio-tg/renew.log. The bot's signal briefs stop when the pass does; next reminder in 12 hours.`;
+  if (!(await sendFn(text))) return 0;
+  seen.alertedAt = now;
+  log(`${new Date(now).toISOString()} pensio pass alert sent`);
+  return 1;
+}
+
 // ---- The USDC account of every Solana payTo (R22, 30 Oct 2026). A Solana x402 payment pays the payTo's associated USDC account. A wallet cleanup closed the treasury's at 08:10:41Z and it was
 // recreated at 10:35:14Z; meanwhile every Solana payment would have been refused at verification ("simulation failed: transaction would fail"), and nothing here said so (the one refusal in
 // those 2 h 25 min was our own QA wallet, at 10:30). So every --alert run (5 min) reads the live manifest, takes each distinct Solana (payTo, USDC mint), derives the associated token
@@ -463,6 +504,7 @@ async function alert(db) {
   await lateTempo(db, state, now);
   try { await keyLowAlert(db, state, now); } catch (e) { console.log(`${new Date().toISOString()} apify key low alert failed: ${String(e && e.message).slice(0, 160)}`); }
   try { await calibrationAlert(state, now); } catch (e) { console.log(`${new Date().toISOString()} calibration age alert failed: ${String(e && e.message).slice(0, 160)}`); }
+  try { await pensioPassAlert(db, state, now); } catch (e) { console.log(`${new Date().toISOString()} pensio pass alert failed: ${String(e && e.message).slice(0, 160)}`); }
   try { await treasuryAlert(state, now); } catch (e) { console.log(`${new Date().toISOString()} treasury usdc check failed: ${String(e && e.message).slice(0, 160)}`); }
   saveState(state);
 }
@@ -474,4 +516,4 @@ if (require.main === module) (async () => {
   else { console.error('usage: node ops/af-digest.js --digest [--force] [--test] | --alert [--dry]'); process.exit(1); }
 })().catch((e) => { console.log(`${new Date().toISOString()} af-digest failed: ${String(e.message).slice(0, 200)}`); process.exit(1); });
 
-module.exports = { OWN_WALLETS, treasuryAlert, solanaPayTos, usdcAccountOf, calibrationAlert, shapeOf, isOwn, yesterday, offsetMin, digestText, keysLines, circleAuthAlert, keyLowAlert, circleAuthRowsBetween, CIRCLE_AUTH_RE };
+module.exports = { OWN_WALLETS, treasuryAlert, solanaPayTos, usdcAccountOf, calibrationAlert, pensioPassAlert, PENSIO_KEY_FILE, shapeOf, isOwn, yesterday, offsetMin, digestText, keysLines, circleAuthAlert, keyLowAlert, circleAuthRowsBetween, CIRCLE_AUTH_RE };

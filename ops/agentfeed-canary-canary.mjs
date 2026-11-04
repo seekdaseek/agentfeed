@@ -6,7 +6,7 @@
 // CDP drops a route from Bazaar discovery after 30 days with no settlement
 // (docs.cdp.coinbase.com/x402/bazaar). A route that falls out stops being
 // findable, which is the opposite of what Phase 1 and 2 paid for. This pays
-// ONLY the routes that are about to lapse, from Sergiu's own wallet, and only
+// ONLY the routes that are about to lapse, from the owner's own wallet, and only
 // when no real buyer has kept them alive.
 //
 // THIS IS THE ONLY SELF-PAYMENT ALLOWED. It is not demand and must never be
@@ -25,6 +25,8 @@
 //   - "own" is lib/own-traffic.js, the list /opt/afwatch/afwatch.js builds its OWN_WALLETS from.
 //   - an ABORT, an ERROR or a FAILED sends one Telegram message through the bot and chat af-digest.js alerts with (/opt/liqbot/.env;
 //     neither value is ever printed). Dry runs never send.
+//   - the FIRST monthly-cap stop of a calendar month (UTC) sends one line: how many lapsing routes are left unpaid, their total and the earliest
+//     lapse (last settlement + 30 days, UTC). Later cap stops that month stay silent; the month is kept in cap-alert.json next to the ledger.
 //
 // usage: node canary.mjs --dry-run     (prints what it would pay, spends nothing, sends nothing)
 //        node canary.mjs               (pays)
@@ -40,6 +42,7 @@ const TEST_ALERT = process.argv.includes('--test-alert');
 const AF = '/opt/agentfeed';
 const LOG = '/opt/agentfeed-canary/canary.log';
 const LEDGER = '/opt/agentfeed-canary/payments.jsonl';
+const CAP_STATE = '/opt/agentfeed-canary/cap-alert.json';
 const OWN_TRAFFIC = '/opt/agentfeed/lib/own-traffic.js';
 const TG_ENV = '/opt/liqbot/.env';
 const TG_API = 'https://api.telegram.org';
@@ -49,6 +52,7 @@ const USDC = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 // Overridable ONLY so the selection can be exercised in a dry run; the cron
 // never sets it, so production always uses 25.
 const LAPSE_DAYS = Number(process.env.CANARY_LAPSE_DAYS || 25);  // 5 days before CDP's 30-day cutoff
+const CDP_DROP_DAYS = 30;       // CDP drops a route this many days after its last settlement
 const MONTHLY_CAP_USD = 1.00;   // hard ceiling per calendar month
 const MIN_BALANCE_USD = 0.05;   // never drain the wallet
 const PRICE_CEILING_USD = 0.10; // a lapsing route priced above this is not worth keeping alive from this wallet
@@ -103,9 +107,27 @@ async function sendTelegram(text) {
 // One message per ABORT, ERROR or FAILED line (each happens at most once in a run), never in a dry run; a failed send is logged and changes nothing else
 // (the exit code and the payments stay as they were).
 async function sendAlert(kind, detail) {
-  if (DRY) { log(`  dry run: no alert sent (${kind})`); return; }
+  if (DRY) { log(`  dry run: no alert sent (${kind})`); return false; }
   const r = await sendTelegram(`AgentFeed canary ${kind}: ${redact(detail).replace(/\s+/g, ' ').slice(0, 400)} (log ${LOG})`);
   log(r.ok ? `  alert sent (${kind})` : `  alert NOT sent (${kind}): ${r.why}`);
+  return r.ok;
+}
+
+// The first cap stop of a calendar month (UTC) sends one line: routes left unpaid, their total, the earliest lapse (last settlement + 30 days). Later stops that month stay
+// silent. The month is kept in CAP_STATE next to the ledger and written only after the line was really sent (a failed send is tried again at the next stop); a state file
+// that is missing or unreadable counts as "not alerted yet", so the failure mode is one extra line, never silence.
+async function capStopAlert(left, paidNow, monthSpend) {
+  const month = new Date().toISOString().slice(0, 7);
+  let last = null;
+  try { last = JSON.parse(fs.readFileSync(CAP_STATE, 'utf8')).month; } catch {}
+  if (last === month) { log('  cap alert already sent this month; staying silent'); return; }
+  const first = left.reduce((a, d) => (d.lastAny < a.lastAny ? d : a));
+  const lapse = new Date(first.lastAny + CDP_DROP_DAYS * 86400000).toISOString().slice(0, 16).replace('T', ' ');
+  const total = left.reduce((n, d) => n + d.usd, 0);
+  const sent = await sendAlert('CAP', `monthly cap reached: ${left.length} lapsing route(s) left unpaid, $${total.toFixed(3)} in total; earliest lapse ${lapse} UTC (${first.tool}); paid this run $${paidNow.toFixed(3)}, month-to-date $${monthSpend.toFixed(3)} of $${MONTHLY_CAP_USD.toFixed(2)}; later cap stops this month stay silent`);
+  if (!sent) return;
+  try { fs.writeFileSync(`${CAP_STATE}.tmp`, JSON.stringify({ month, at: new Date().toISOString() }) + '\n'); fs.renameSync(`${CAP_STATE}.tmp`, CAP_STATE); }
+  catch (e) { log(`  cap alert state not saved (${e.code || 'error'}); the next cap stop will alert again`); try { fs.unlinkSync(`${CAP_STATE}.tmp`); } catch {} }
 }
 
 async function rpcCall(url, method, params) {
@@ -211,7 +233,7 @@ function routeUrl(pattern, meta) {
     if (s.last_any >= cutoff) continue;
     // A lapsing route whose price is above the ceiling (or missing: a NaN price would slip past the cap check) is left alone and named in the log.
     if (!(m.price_usd > 0) || m.price_usd > PRICE_CEILING_USD) { skipped.push(`${m.tool} ${m.price_usd > 0 ? '$' + m.price_usd : 'no price'} (${ageOf(s.last_any)}d)`); continue; }
-    due.push({ tool: m.tool, pattern, usd: m.price_usd, url: routeUrl(pattern, m), ageDays: ageOf(s.last_any), outsideDays: ageOf(s.last_outside), lastOutside: s.last_outside });
+    due.push({ tool: m.tool, pattern, usd: m.price_usd, url: routeUrl(pattern, m), ageDays: ageOf(s.last_any), outsideDays: ageOf(s.last_outside), lastOutside: s.last_outside, lastAny: s.last_any });
   }
   // Pay order: routes a non-own wallet has ever paid first (newest outside payment first), then the routes only our own wallets have paid, cheapest first.
   due.sort((a, b) => (b.lastOutside > 0) - (a.lastOutside > 0) || b.lastOutside - a.lastOutside || a.usd - b.usd || (a.tool < b.tool ? -1 : 1));
@@ -234,8 +256,13 @@ function routeUrl(pattern, meta) {
   }
 
   let running = spent;
-  for (const d of payable) {
-    if (running + d.usd > MONTHLY_CAP_USD) { log(`  stop: monthly cap reached at ${d.tool}`); break; }
+  for (let i = 0; i < payable.length; i++) {
+    const d = payable[i];
+    if (running + d.usd > MONTHLY_CAP_USD) {
+      log(`  stop: monthly cap reached at ${d.tool}`);
+      await capStopAlert(payable.slice(i), running - spent, running);
+      break;
+    }
     if (bal - (running - spent) - d.usd < MIN_BALANCE_USD - 1e-9) {
       const why = `paying ${d.tool} $${d.usd} would leave Gack9 below the $${MIN_BALANCE_USD} floor (balance $${bal.toFixed(3)}, paid this run $${(running - spent).toFixed(3)})`;
       log(`  ABORT: ${why}`); await sendAlert('ABORT', why); break;

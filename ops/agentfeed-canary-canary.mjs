@@ -1,6 +1,6 @@
-// DEPLOYED AT: /opt/agentfeed-canary/canary.mjs — this copy is here so the script is versioned with
-// the service it watches; it is not run from the repo.
 #!/usr/bin/env node
+// DEPLOYED AT: /opt/agentfeed-canary/canary.mjs, byte-identical to ops/agentfeed-canary-canary.mjs in the repo (versioned with the service it watches; cron runs the
+// deployed file, never the repo).
 // canary.mjs — keep-alive for listings nobody has bought lately.
 //
 // CDP drops a route from Bazaar discovery after 30 days with no settlement
@@ -15,17 +15,34 @@
 // the window, so it cannot inflate a payer count that a curation reviewer would
 // trace on-chain.
 //
-// usage: node canary.mjs --dry-run     (prints what it would pay, spends nothing)
+// Which routes, in what order (4 Nov 2026):
+//   - a route that has NEVER settled is skipped and listed on one "not indexed" line: CDP lists a route only after a settled payment
+//     (docs.cdp.coinbase.com/x402/seller/get-discovered), so there is no listing to keep alive; a first payment is the Bazaar refresh's job.
+//   - a lapsing route priced above $0.10 is skipped (and named in the log).
+//   - what is left is paid in this order: routes a non-own wallet has ever paid first, newest outside payment first; then the routes only
+//     our own wallets have paid, cheapest first. There is no up-front total-cost ABORT: the per-route $1 monthly cap check stops the run,
+//     and the $0.05 balance floor holds before and during the run.
+//   - "own" is lib/own-traffic.js, the list /opt/afwatch/afwatch.js builds its OWN_WALLETS from.
+//   - an ABORT, an ERROR or a FAILED sends one Telegram message through the bot and chat af-digest.js alerts with (/opt/liqbot/.env;
+//     neither value is ever printed). Dry runs never send.
+//
+// usage: node canary.mjs --dry-run     (prints what it would pay, spends nothing, sends nothing)
 //        node canary.mjs               (pays)
+//        node canary.mjs --test-alert  (sends one Telegram line marked TEST and exits; touches nothing else)
 'use strict';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import { DatabaseSync } from 'node:sqlite';
 
 const DRY = process.argv.includes('--dry-run');
+const TEST_ALERT = process.argv.includes('--test-alert');
 const AF = '/opt/agentfeed';
 const LOG = '/opt/agentfeed-canary/canary.log';
 const LEDGER = '/opt/agentfeed-canary/payments.jsonl';
+const OWN_TRAFFIC = '/opt/agentfeed/lib/own-traffic.js';
+const TG_ENV = '/opt/liqbot/.env';
+const TG_API = 'https://api.telegram.org';
 const PAYER = 'Gack9UtqfeZxFA1LqeqjLgC3JGuD7rS6CsSHKoXsD4Tu';
 const USDC = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 
@@ -34,6 +51,7 @@ const USDC = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const LAPSE_DAYS = Number(process.env.CANARY_LAPSE_DAYS || 25);  // 5 days before CDP's 30-day cutoff
 const MONTHLY_CAP_USD = 1.00;   // hard ceiling per calendar month
 const MIN_BALANCE_USD = 0.05;   // never drain the wallet
+const PRICE_CEILING_USD = 0.10; // a lapsing route priced above this is not worth keeping alive from this wallet
 const GAP_MS = 2500;
 
 const log = (m) => { const l = `${new Date().toISOString()} ${m}`; console.log(l); try { fs.appendFileSync(LOG, l + '\n'); } catch {} };
@@ -49,28 +67,114 @@ function spentThisMonth() {
   return sum;
 }
 
-async function usdcBalance() {
-  const key = (fs.readFileSync(`${AF}/.env`, 'utf8').match(/^HELIUS_API_KEY=(.*)$/m) || [])[1];
-  if (!key) throw new Error('HELIUS_API_KEY not readable');
-  const res = await fetch(`https://mainnet.helius-rpc.com/?api-key=${key.trim()}`, {
-    method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTokenAccountsByOwner', params: [PAYER, { mint: USDC }, { encoding: 'jsonParsed' }] }),
-  });
-  const j = await res.json();
-  return (j.result?.value || []).reduce((n, a) => n + Number(a.account.data.parsed.info.tokenAmount.uiAmount || 0), 0);
+// A failed balance read must never look like $0: an unreadable endpoint is a failure and the next endpoint is tried; when every endpoint fails
+// usdcBalance throws and the log says ERROR. Only an answer that carries a result is a balance (an empty account list is a real $0).
+const HELIUS_RPC = 'https://mainnet.helius-rpc.com/';
+const PUBLIC_RPC = 'https://api.mainnet-beta.solana.com';
+// Gack9's USDC associated token account (derived from owner + token program + mint; getTokenAccountsByOwner on the public RPC returns this same address).
+const PAYER_USDC_ATA = '6Lp9vL8uNzu7FZ1YFWDW3d39dPKActtHBXU6eYdWu6pW';
+const RPC_TIMEOUT_MS = 15000;
+
+// No API key in any log line: errors name the host and the cause, never the URL, and anything shaped like api-key=... is masked on the way out.
+// The same mask covers a Telegram bot URL (.../bot<id>:<token>/...), so neither secret can reach the log or an alert.
+const redact = (s) => String(s).replace(/(api-key=)[^&\s"')]+/gi, '$1<redacted>').replace(/(bot)\d{4,}:[A-Za-z0-9_-]{10,}/g, '$1<redacted>');
+const hostOf = (url) => new URL(url).host;
+
+// Telegram, through the bot and chat af-digest.js uses (TG_BOT_TOKEN and TG_ALERT_CHAT in /opt/liqbot/.env). Returns { ok } or { ok: false, why }; why is
+// the HTTP status and Telegram's own description, never the URL, which holds the token.
+async function sendTelegram(text) {
+  const env = {};
+  try {
+    for (const line of fs.readFileSync(TG_ENV, 'utf8').split('\n')) { const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/); if (m) env[m[1]] = m[2].replace(/^["']|["']$/g, ''); }
+  } catch (e) { return { ok: false, why: `${TG_ENV} unreadable (${e.code || 'error'})` }; }
+  if (!env.TG_BOT_TOKEN || !env.TG_ALERT_CHAT) return { ok: false, why: `TG_BOT_TOKEN or TG_ALERT_CHAT missing in ${TG_ENV}` };
+  let ok = false, status = 0, desc = '';
+  try {
+    const r = await fetch(`${TG_API}/bot${env.TG_BOT_TOKEN}/sendMessage`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ chat_id: env.TG_ALERT_CHAT, text: String(text).slice(0, 3900), disable_web_page_preview: true }),
+      signal: AbortSignal.timeout(20000),
+    });
+    status = r.status; const j = await r.json().catch(() => ({})); ok = j.ok === true; desc = j.description || '';
+  } catch { desc = 'network error'; }
+  return ok ? { ok: true } : { ok: false, why: `HTTP ${status} ${redact(String(desc).slice(0, 120))}` };
 }
 
-/** Last settlement per tool from ANY payer, and separately from anyone but us. */
-function lastSettlements() {
+// One message per ABORT, ERROR or FAILED line (each happens at most once in a run), never in a dry run; a failed send is logged and changes nothing else
+// (the exit code and the payments stay as they were).
+async function sendAlert(kind, detail) {
+  if (DRY) { log(`  dry run: no alert sent (${kind})`); return; }
+  const r = await sendTelegram(`AgentFeed canary ${kind}: ${redact(detail).replace(/\s+/g, ' ').slice(0, 400)} (log ${LOG})`);
+  log(r.ok ? `  alert sent (${kind})` : `  alert NOT sent (${kind}): ${r.why}`);
+}
+
+async function rpcCall(url, method, params) {
+  const host = hostOf(url);
+  let res;
+  try {
+    res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(RPC_TIMEOUT_MS),
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) });
+  } catch (e) { throw new Error(`${host} ${method}: ${e.name === 'TimeoutError' ? 'timeout' : (e.cause && (e.cause.code || e.cause.message)) || e.name}`); }
+  const text = await res.text();
+  let j = null;
+  try { j = JSON.parse(text); } catch {}
+  if (j && j.error) throw new Error(`${host} ${method}: HTTP ${res.status}, rpc error ${j.error.code}${j.error.message ? ' ' + String(j.error.message).slice(0, 80) : ''}`);
+  if (!res.ok) throw new Error(`${host} ${method}: HTTP ${res.status}${j ? '' : ' ' + text.slice(0, 40).replace(/\s+/g, ' ')}`);
+  if (!j || j.result === undefined || j.result === null) throw new Error(`${host} ${method}: HTTP ${res.status}, no result`);
+  return j.result;
+}
+
+const sumByOwner = (r) => {
+  if (!r || !Array.isArray(r.value)) throw new Error('getTokenAccountsByOwner: result has no value list');
+  return r.value.reduce((n, a) => n + Number(a.account.data.parsed.info.tokenAmount.uiAmount || 0), 0);
+};
+const fromBalance = (r) => {
+  const v = r && r.value;
+  if (!v || v.uiAmountString === undefined || v.uiAmountString === null) throw new Error('getTokenAccountBalance: result has no uiAmountString');
+  return Number(v.uiAmountString);
+};
+
+async function usdcBalance() {
+  const key = ((fs.readFileSync(`${AF}/.env`, 'utf8').match(/^HELIUS_API_KEY=(.*)$/m) || [])[1] || '').trim();
+  const owner = [PAYER, { mint: USDC }, { encoding: 'jsonParsed' }];
+  const attempts = [];
+  if (key) attempts.push([`${HELIUS_RPC}?api-key=${key}`, 'getTokenAccountsByOwner', owner, sumByOwner]);
+  else log('  balance: HELIUS_API_KEY not readable; skipping Helius');
+  attempts.push([PUBLIC_RPC, 'getTokenAccountsByOwner', owner, sumByOwner]);
+  attempts.push([PUBLIC_RPC, 'getTokenAccountBalance', [PAYER_USDC_ATA], fromBalance]);
+  const failures = [];
+  for (const [url, method, params, parse] of attempts) {
+    try {
+      const bal = parse(await rpcCall(url, method, params));
+      if (!Number.isFinite(bal) || bal < 0) throw new Error(`${hostOf(url)} ${method}: unusable amount`);
+      if (failures.length) log(`  balance read from ${hostOf(url)} ${method} after: ${failures.join('; ')}`);
+      return bal;
+    } catch (e) { failures.push(redact(e.message)); }
+  }
+  throw new Error(`Gack9 USDC balance unreadable on every endpoint: ${failures.join('; ')}`);
+}
+
+// The own-wallet test is the repository's list (lib/own-traffic.js), the one /opt/afwatch/afwatch.js builds its OWN_WALLETS from. If it does not load, or does
+// not hold Gack9 itself, "outside buyer" would be meaningless, so the run stops with an ERROR instead of guessing.
+function ownWalletTest() {
+  const own = createRequire(import.meta.url)(OWN_TRAFFIC);
+  if (typeof own.isOwnWallet !== 'function' || !own.isOwnWallet(PAYER)) throw new Error(`own-wallet list ${OWN_TRAFFIC} did not load or does not hold ${PAYER}`);
+  return own.isOwnWallet;
+}
+
+/** Last settlement per tool from ANY payer, and separately from anyone who is not one of our own wallets. */
+function lastSettlements(isOwn) {
   const db = new DatabaseSync(`${AF}/agentfeed.db`, { readOnly: true });
-  const rows = db.prepare(`
-    SELECT tool,
-           MAX(ts) AS last_any,
-           MAX(CASE WHEN payer_wallet IS NOT NULL AND payer_wallet <> ? THEN ts END) AS last_outside
-    FROM calls WHERE status = 'paid' GROUP BY tool`).all(PAYER);
+  const rows = db.prepare(`SELECT tool, payer_wallet, MAX(ts) AS ts FROM calls WHERE status = 'paid' GROUP BY tool, payer_wallet`).all();
   db.close();
   const m = new Map();
-  for (const r of rows) m.set(r.tool, { last_any: Number(r.last_any) || 0, last_outside: Number(r.last_outside) || 0 });
+  for (const r of rows) {
+    const ts = Number(r.ts) || 0;
+    const e = m.get(r.tool) || { last_any: 0, last_outside: 0 };
+    if (ts > e.last_any) e.last_any = ts;
+    if (r.payer_wallet && !isOwn(r.payer_wallet) && ts > e.last_outside) e.last_outside = ts;
+    m.set(r.tool, e);
+  }
   return m;
 }
 
@@ -82,41 +186,60 @@ function routeUrl(pattern, meta) {
 }
 
 (async () => {
+  if (TEST_ALERT) {
+    const r = await sendTelegram('AgentFeed canary TEST: alert path check from canary.mjs --test-alert. Nothing is wrong; ignore this message.');
+    log(r.ok ? '  test alert sent' : `  test alert NOT sent: ${r.why}`);
+    process.exit(r.ok ? 0 : 1);
+  }
   const META = JSON.parse(fs.readFileSync(`${AF}/bazaar-examples.json`, 'utf8')).routes;
-  const seen = lastSettlements();
-  const cutoff = Date.now() - LAPSE_DAYS * 86400000;
+  const seen = lastSettlements(ownWalletTest());
+  const now = Date.now();
+  const cutoff = now - LAPSE_DAYS * 86400000;
+  const ageOf = (ts) => (ts ? Math.floor((now - ts) / 86400000) : null);
 
-  const due = [];
+  const notIndexed = [], skipped = [], due = [];
   for (const [pattern, m] of Object.entries(META)) {
     const s = seen.get(m.tool) || { last_any: 0, last_outside: 0 };
-    const ageDays = s.last_any ? Math.floor((Date.now() - s.last_any) / 86400000) : null;
-    // THE GATE, and the whole of it: last_any is the newest settlement from ANY
+    // Never settled: CDP lists a route only after a settled payment, so there is no listing to keep alive.
+    if (!s.last_any) { notIndexed.push(m.tool); continue; }
+    // THE GATE: last_any is the newest settlement from ANY
     // payer, real buyers included. If it falls inside the window the route is
     // already alive and we skip it. That is what makes "never pay a route real
     // buyers paid in the window" structural rather than a second filter -- a
     // separate outside-payer check could never fire, because last_any is by
     // definition >= the last outside settlement.
     if (s.last_any >= cutoff) continue;
-    const outsideDays = s.last_outside ? Math.floor((Date.now() - s.last_outside) / 86400000) : null;
-    due.push({ tool: m.tool, pattern, usd: m.price_usd, url: routeUrl(pattern, m), ageDays, outsideDays });
+    // A lapsing route whose price is above the ceiling (or missing: a NaN price would slip past the cap check) is left alone and named in the log.
+    if (!(m.price_usd > 0) || m.price_usd > PRICE_CEILING_USD) { skipped.push(`${m.tool} ${m.price_usd > 0 ? '$' + m.price_usd : 'no price'} (${ageOf(s.last_any)}d)`); continue; }
+    due.push({ tool: m.tool, pattern, usd: m.price_usd, url: routeUrl(pattern, m), ageDays: ageOf(s.last_any), outsideDays: ageOf(s.last_outside), lastOutside: s.last_outside });
   }
+  // Pay order: routes a non-own wallet has ever paid first (newest outside payment first), then the routes only our own wallets have paid, cheapest first.
+  due.sort((a, b) => (b.lastOutside > 0) - (a.lastOutside > 0) || b.lastOutside - a.lastOutside || a.usd - b.usd || (a.tool < b.tool ? -1 : 1));
   const payable = due;
   const cost = payable.reduce((n, d) => n + d.usd, 0);
   const spent = spentThisMonth();
   const bal = await usdcBalance();
 
   log(`${DRY ? 'DRY RUN' : 'RUN'}: ${Object.keys(META).length} routes, ${payable.length} with no settlement in ${LAPSE_DAYS}d, cost $${cost.toFixed(3)}`);
+  if (notIndexed.length) log(`  not indexed (never settled; CDP lists a route only after a settled payment, nothing to keep alive): ${notIndexed.length} routes: ${notIndexed.join(', ')}`);
+  if (skipped.length) log(`  skipped (lapsing but priced above $${PRICE_CEILING_USD.toFixed(2)} or unpriced): ${skipped.join(', ')}`);
   log(`  month-to-date canary spend $${spent.toFixed(3)} of $${MONTHLY_CAP_USD.toFixed(2)} cap | Gack9 balance $${bal.toFixed(3)} (floor $${MIN_BALANCE_USD.toFixed(2)})`);
   if (!payable.length) { log('  nothing is close to lapsing; no payment needed'); return; }
   for (const d of payable) log(`  would pay ${d.tool} $${d.usd} — last settlement ${d.ageDays === null ? 'never' : d.ageDays + 'd ago'}, last outside buyer ${d.outsideDays === null ? 'never' : d.outsideDays + 'd ago'}`);
 
   if (DRY) return;
-  if (bal < MIN_BALANCE_USD) { log(`  ABORT: balance $${bal.toFixed(3)} is below the $${MIN_BALANCE_USD} floor`); return; }
-  if (spent + cost > MONTHLY_CAP_USD) { log(`  ABORT: $${spent.toFixed(3)} + $${cost.toFixed(3)} would exceed the $${MONTHLY_CAP_USD} monthly cap`); return; }
+  if (bal < MIN_BALANCE_USD) {
+    const why = `balance $${bal.toFixed(3)} is below the $${MIN_BALANCE_USD} floor; ${payable.length} lapsing route(s) not paid`;
+    log(`  ABORT: ${why}`); await sendAlert('ABORT', why); return;
+  }
 
   let running = spent;
   for (const d of payable) {
     if (running + d.usd > MONTHLY_CAP_USD) { log(`  stop: monthly cap reached at ${d.tool}`); break; }
+    if (bal - (running - spent) - d.usd < MIN_BALANCE_USD - 1e-9) {
+      const why = `paying ${d.tool} $${d.usd} would leave Gack9 below the $${MIN_BALANCE_USD} floor (balance $${bal.toFixed(3)}, paid this run $${(running - spent).toFixed(3)})`;
+      log(`  ABORT: ${why}`); await sendAlert('ABORT', why); break;
+    }
     let out = '';
     try { out = execFileSync('node', ['test-client.mjs', d.url, './payer-wallet.json'], { cwd: AF, encoding: 'utf8', timeout: 90000 }); }
     catch (e) { out = String((e.stdout || '') + (e.stderr || '') + e.message); }
@@ -125,8 +248,8 @@ function routeUrl(pattern, meta) {
     if (ok) running += d.usd;
     fs.appendFileSync(LEDGER, JSON.stringify({ utc: new Date().toISOString(), tool: d.tool, usd: d.usd, url: d.url, settled: ok, tx }) + '\n');
     log(`  ${ok ? 'SETTLED' : 'FAILED '} ${d.tool} $${d.usd}${tx ? ' ' + tx.slice(0, 20) + '…' : ''}`);
-    if (!ok) { log('  stopping on the first route that did not settle'); break; }
+    if (!ok) { await sendAlert('FAILED', `${d.tool} $${d.usd} did not settle; the run stopped on it`); log('  stopping on the first route that did not settle'); break; }
     await new Promise((r) => setTimeout(r, GAP_MS));
   }
   log(`  done; canary spend this month now $${running.toFixed(3)}`);
-})().catch((e) => { log(`ERROR ${e.message}`); process.exit(1); });
+})().catch(async (e) => { const m = redact(e.message); log(`ERROR ${m}`); await sendAlert('ERROR', m); process.exit(1); });

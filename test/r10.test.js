@@ -124,7 +124,7 @@ test('F2: llms.txt and SKILL.md count data routes and key packs apart and never 
   const all = Object.values(PRICES).reduce((n, p) => n + p.usd, 0);
   const ctx = { PRICES, TAGS, META: BAZAAR_META, FREE_TOOLS, mpp: { active: true, routes: ['GET /api/sol-price', 'GET /api/btc-price'] }, tempo: { active: true }, network: 'mainnet' };
   const free = discovery.freeHttp(FREE_TOOLS).length;
-  assert.equal(free, 7);
+  assert.equal(free, 8);   // R25: + /api/status
   const llms = discovery.buildLlmsTxt(ctx);
   const skill = discovery.buildSkillMd(ctx);
   for (const doc of [llms, skill]) {

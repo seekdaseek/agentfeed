@@ -59,14 +59,14 @@ test('the four resource-list aliases are the /.well-known/x402 document, /swagge
   assert.deepEqual(await (await s.get('/swagger.json')).json(), DOCS.openapi);
 });
 
-test('/api and /api/: name, scope, the seven links, the ten trading-loop routes with the price table\'s prices', async (t) => {
+test('/api and /api/: name, scope, the eight links (R25 added status), the ten trading-loop routes with the price table\'s prices', async (t) => {
   const s = await boot(); t.after(s.close);
   const a = await (await s.get('/api')).json();
   assert.deepEqual(await (await s.get('/api/')).json(), a, 'the trailing slash is the same document');
   assert.deepEqual(Object.keys(a), ['name', 'scope', 'links', 'trading_loop']);
   assert.equal(a.name, 'AgentFeed');
   assert.ok(a.scope.length > 40 && !a.scope.includes('\n'), 'one line of scope');
-  assert.deepEqual(Object.keys(a.links), ['manifest', 'resources', 'openapi', 'llms_txt', 'skill_md', 'mcp', 'keys']);
+  assert.deepEqual(Object.keys(a.links), ['manifest', 'resources', 'openapi', 'llms_txt', 'skill_md', 'mcp', 'keys', 'status']);
   for (const u of Object.values(a.links)) assert.ok(u.startsWith(ORIGIN + '/'), u);
   assert.equal(a.trading_loop.length, 10);
   assert.equal(A.TRADING_LOOP.length, 10);

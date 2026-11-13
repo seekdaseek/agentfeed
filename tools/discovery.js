@@ -173,6 +173,7 @@ function freeHttp(FREE_TOOLS) {
     { path: '/api/sample', what: 'Which paid routes have a stored sample response' },
     { path: '/api/sample/token-risk', what: 'One paid route\'s real captured response, with its price and input schema (token-risk is an example: any route name from GET /api/sample works in its place)' },
     { path: '/api/keys/balance', what: 'A prepaid key\'s balance, calls and spend; send the key as X-AgentFeed-Key' },
+    { path: '/api/status', what: 'Live health, also at /status: per liquidation venue and per collector the last write, its age and its limit, plus version and uptime' },
   ];
 }
 
@@ -421,6 +422,18 @@ function buildOpenApi({ PRICES, META, FREE_TOOLS, mpp, tempo }) {
     };
   }
 
+  // R25: the free health document (server.js, lib/status.js), also served at /status.
+  paths['/api/status'] = {
+    get: {
+      description: 'Free. Live health of the data behind the paid routes: for each liquidation venue (binance, bybit, okx) the last event, its age in seconds and the events of the last hour, and for each collector the last completed write, its age and its limit; also the service version and uptime. ok is false when any venue or collector is older than its own limit, and problems names each one. Cached for up to 30 seconds. Also served at /status.',
+      operationId: 'get_status',
+      responses: { 200: { content: { 'application/json': { schema: { type: 'object', properties: { ok: { type: 'boolean' }, as_of: { type: 'string' }, service: { type: 'object' }, venues: { type: 'array', items: { type: 'object' } }, collectors: { type: 'array', items: { type: 'object' } }, problems: { type: 'array', items: { type: 'string' } } } } } }, description: 'Free response. This endpoint is not payment-gated.' } },
+      security: [],
+      summary: 'Read live collector and venue freshness',
+      tags: ['agentfeed', 'free'],
+    },
+  };
+
   // R10 F5: the free prepaid-key balance (server.js, lib/keys.js balance): no payment, the key in a header.
   paths['/api/keys/balance'] = {
     get: {
@@ -580,6 +593,7 @@ function buildLlmsTxt({ PRICES, TAGS, META, FREE_TOOLS, mpp, tempo }) {
     `- ${ORIGIN}/mcp — the same tools over MCP (POST, streamable HTTP)`,
     `- ${ORIGIN}/api/sample/liq-pulse — a real captured response for any paid route, free (liq-pulse is an example: any route name from ${ORIGIN}/api/sample works in its place)`,
     `- ${ORIGIN}/api/forecast-record — the settled cascade-forecast track record, free`,
+    `- ${ORIGIN}/api/status — live age of every venue and collector against its limit, free`,
     `- ${ORIGIN}/SKILL.md — the agent skill: when to use each route, what it answers, what it costs`,
     '',
     '## Free routes',

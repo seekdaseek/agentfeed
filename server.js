@@ -381,6 +381,11 @@ app.get('/api/forecast-record', async (req, res) => {
   }
 });
 
+// ---- free health (R25): per venue of the liquidation tape and per collector, the last write and its age against its own limit, plus version and
+// uptime (lib/status.js). Cached 30 s, no payer, wallet, key, revenue, address or path in it; counted in the 'docs' rate bucket (lib/ratelimit.js).
+const statusDoc = require('./lib/status').makeStatus({ version: require('./server.json').version });
+app.get(['/api/status', '/status'], statusDoc.handler);
+
 // ---- prepaid keys: the balance check is free, and /keys is a static buy page (tools/keys-page.js: no library, no CDN,
 // a strict CSP). Both are mounted above the payment layer; neither is in PRICES.
 app.get('/api/keys/balance', keys.balance);

@@ -190,3 +190,15 @@ test('negative control: the checker flags the page as it was before (bare "$1", 
   const dup = labelProblems([{ value: 'a', text: '$1 prepaid balance (x)' }, { value: 'b', text: '$1 prepaid balance (y)' }]);
   assert.ok(dup.some((p) => /^b and a share the leading label "\$1"$/.test(p)), `two options with the same leading label are reported: ${dup.join(' | ')}`);
 });
+
+test('keys page (R26 E): "See the free briefs: t.me/ochinimus_signals" appears once, as plain text directly under the two signals options and above the bot pass option', () => {
+  const line = '<p class="dim">See the free briefs: t.me/ochinimus_signals</p>';
+  assert.equal(HTML.split(line).length - 1, 1, 'exactly once');
+  assert.equal((HTML.match(/t\.me\//g) || []).length, 1, 'no other Telegram link on the page');
+  const iSignals = HTML.indexOf('value="signals-pass"'), iDay = HTML.indexOf('value="signals-day-pass"'), iLine = HTML.indexOf(line), iBot = HTML.indexOf('value="pass"');
+  assert.ok(iSignals > 0 && iSignals < iDay && iDay < iLine && iLine < iBot, 'order: signals pass, signals day pass, the line, bot pass');
+  assert.ok(!/<a [^>]*t\.me/.test(HTML), 'plain text, not a link: the CSP and the "loads nothing from anywhere" rule stay as they are');
+  const style = /<style>([\s\S]*?)<\/style>/.exec(HTML)[1];
+  assert.ok(style.includes('.packs p{grid-column:1/-1;margin:0}'), 'the line spans the whole option grid instead of becoming a card');
+  assert.equal(optionsOf(HTML).length, 8, 'still eight options: the line is not one');
+});

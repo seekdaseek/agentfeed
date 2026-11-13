@@ -22,7 +22,7 @@ h1{font-size:24px;color:var(--gold);margin:0 0 8px}
 p{margin:8px 0}.dim{color:var(--dim);font-size:13px}
 .packs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:20px 0}
 .packs label{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px;cursor:pointer;display:block}
-.packs input{margin-right:8px}.packs label:has(input:checked){border-color:var(--gold)}
+.packs input{margin-right:8px}.packs label:has(input:checked){border-color:var(--gold)}.packs p{grid-column:1/-1;margin:0}
 button{background:var(--gold);color:#111;border:0;border-radius:6px;padding:10px 18px;font:inherit;font-weight:bold;cursor:pointer}
 button:disabled{opacity:.5;cursor:wait}
 #status{margin:16px 0;min-height:24px}.err{color:var(--bad)}.ok{color:var(--ok)}
@@ -105,6 +105,7 @@ const HTML = `<!doctype html>
 <div class="packs">
 <label><input type="radio" name="pack" value="signals-pass">signals pass $${KEYLIB.SIGNALS_PASS.usd}: ${KEYLIB.SIGNALS_PASS.days} days, one flat key for the briefs and the perp signal routes (${KEYLIB.SIGNALS_PASS.allow.map(KEYLIB.showRoute).join(", ")}), one call a minute each, no per-call charge</label>
 <label><input type="radio" name="pack" value="signals-day-pass">signals day pass $${KEYLIB.SIGNALS_DAY_PASS.usd}: 24 hours, the same routes, no per-call charge</label>
+<p class="dim">See the free briefs: t.me/ochinimus_signals</p>
 <label><input type="radio" name="pack" value="pass">bot pass $25: 30 days, /api/liq-feed only, no per-call charge</label>
 <label><input type="radio" name="pack" value="day-pass">day pass $1: 24 hours, /api/liq-feed and /api/liquidations, one call every 10 s each, no per-call charge</label>
 ${PREPAID_LABELS}

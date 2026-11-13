@@ -130,6 +130,12 @@ news.json.tmp
 news-labels.json
 news-labels.json.tmp
 
+# ---- 2026-11-04: the x402-test wallet (R23 T3) ----
+# base.key is covered by *.key above, solana.json was not. The whole directory
+# is ignored wherever it sits, and ops/r23-x402-wallet-gen.mjs refuses to write
+# a key inside a work tree that does not ignore it.
+x402-test-wallet/
+
 # pensio: the weekly move-alert calibration table (bin/brief-calibrate.js writes it; a deploy never touches it)
 brief-calibration.json
 brief-calibration.json.*.tmp

@@ -14,6 +14,49 @@ Two rails, same data:
 | **MCP** (Streamable HTTP) | `https://x402.ochinimus.app/mcp` | Claude, Cursor, MCP-native frameworks |
 | **HTTP** (x402) | `https://x402.ochinimus.app/api/*` | Anything that speaks HTTP |
 
+## Quickstart (60 seconds)
+
+Every command below ran against the live service on 13 Nov 2026; the outputs are trimmed.
+
+**1. See what a paid route returns, free.** Any paid route name from `/api/sample` works in place of `sol-price`.
+
+```bash
+curl -s https://x402.ochinimus.app/api/sample/sol-price
+```
+
+```
+{"route":"/api/sol-price","tool":"get_sol_price","price_usd":0.001,"paid_url":"https://x402.ochinimus.app/api/sol-price","how_to_pay":"GET the paid_url; the 402 carries the challenge in the PAYMENT-REQUIRED response header (x402 v2).", ...
+```
+
+**2. Call the paid route without paying and read the 402.** The whole challenge (amount, payee, networks) is the base64 `payment-required` header.
+
+```bash
+curl -si https://x402.ochinimus.app/api/sol-price
+```
+
+```
+HTTP/2 402
+content-type: application/json; charset=utf-8
+cache-control: no-store
+payment-required: eyJ4NDAyVmVyc2lvbiI6MiwiZXJyb3IiOiJQYXltZW50IHJlcXVpcmVkIiwicmVzb3VyY2UiOnsi...
+```
+
+**3. Pay with one named client, get the answer.** `test-client.mjs` is this repo's Solana x402 client (`@x402/svm`); it reads a standard `solana-keygen` keypair that holds USDC. This call cost $0.001.
+
+```bash
+node test-client.mjs https://x402.ochinimus.app/api/sol-price ./payer-wallet.json
+```
+
+```
+status: 200 (2525ms)
+SETTLED: { "success": true, "payer": "<your address>", "transaction": "5i6um8xJKLW76M3ArrBsNXNY4oeHoM9ZT9DhEiLqHyTy9YjyjKXtjBT5X4MRqvL5UYvHLzuhQHxJ9aGcT1RxWkJr", "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp" }
+data: { "tool": "get_sol_price", "data": { "symbol": "SOL", "price": 80.6689, "source": "on-chain DEX mid, median of orca-whirlpool SOL/USDC on solana; raydium-clmm SOL/USDC on solana" }, "paid": true }
+```
+
+**Rate limits.** Limits are per caller address per minute: 240 requests to the data routes (free and paid) and to `/mcp`, 1,200 unpaid 402 challenges, 120 discovery documents (`/openapi.json`, `/llms.txt`, `/api/status` and the other `/.well-known` files) and 2,400 for every other verb. A 429 carries `Retry-After`. A prepaid key has its own per-minute bucket (`rate_per_min` in its balance).
+
+**Is the data fresh right now?** `curl -s https://x402.ochinimus.app/api/status` is free and answers, for each liquidation venue and each collector, the last write, its age and its limit, with `ok` false and `problems` naming anything late.
+
 ---
 
 ## What makes this different: the liquidation tape
@@ -768,6 +811,7 @@ Set `AGENTFEED_PRIVATE_KEY` to a funded Solana wallet and the agent pays per cal
 curl https://x402.ochinimus.app/api/fear-greed       # "paid": false — it really is free
 curl https://x402.ochinimus.app/api/last-liquidation
 curl https://x402.ochinimus.app/api/exit-method
+curl https://x402.ochinimus.app/api/status          # live age of every venue and collector, free
 curl https://x402.ochinimus.app/                    # full pricing index + live coverage
 curl https://x402.ochinimus.app/api/cascade-scan    # returns 402 + payment terms
 ```

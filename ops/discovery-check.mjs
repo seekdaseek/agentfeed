@@ -42,7 +42,7 @@ const wk = await get(BASE, '/.well-known/x402'); const oa = await get(BASE, '/op
 for (const p of ['/x402-resources', '/.well-known/x402-resources', '/.well-known/x402-services.json', '/x402']) ok(JSON.stringify(bodies[p]) === JSON.stringify(json(wk.body)) && bodies[p] && bodies[p].resources, `${p} equals /.well-known/x402 (${(bodies[p] && bodies[p].resources || []).length} resources)`);
 ok(JSON.stringify(bodies['/swagger.json']) === JSON.stringify(json(oa.body)), '/swagger.json equals /openapi.json');
 const api = bodies['/api'];
-ok(api && api.name === 'AgentFeed' && api.trading_loop && api.trading_loop.length === 10 && Object.keys(api.links).length === 7, '/api: name, 7 links, 10 trading-loop routes');
+ok(api && api.name === 'AgentFeed' && api.trading_loop && api.trading_loop.length === 10 && Object.keys(api.links).length === 8, '/api: name, 8 links (R25: + status), 10 trading-loop routes');
 ok(JSON.stringify(bodies['/api']) === JSON.stringify(bodies['/api/']), '/api/ is the same document');
 // R15c: /api/market-state heads the trading loop in place of /api/price; security.txt Expires is process start + 364 days, so it lies between 300 and 364 days ahead of now
 ok(api && api.trading_loop[0].path === '/api/market-state' && !api.trading_loop.some((r) => r.path === '/api/price'), '/api: the trading loop starts with /api/market-state and no longer lists /api/price');

@@ -1,6 +1,6 @@
 {
   "name": "agentfeed",
-  "version": "0.1.0",
+  "version": "2.12.0",
   "description": "Paid data API for AI agents - x402 + MCP on Solana. Session 1: free mode.",
   "main": "server.js",
   "scripts": {

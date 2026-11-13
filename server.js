@@ -57,6 +57,7 @@ if (!process.env.HELIUS_API_KEY) {
 const { makeRateLimiter } = require('./lib/ratelimit');
 const rateLimiter = makeRateLimiter({ logCall, isPricedPath: (p) => isPricedPath(p), presentsPayment: require('./lib/keys').presentsPayment });
 app.use(rateLimiter.middleware);
+app.use(require('./lib/ref-log').makeRefLog({ db }));   // R29: counts ?ref=<slug> per caller per day; observes only
 setInterval(rateLimiter.sweep, 120_000).unref();
 
 // ---- HEAD guard (must sit BEFORE the x402 layer)

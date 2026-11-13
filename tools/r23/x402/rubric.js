@@ -56,11 +56,11 @@ const SCHEMES = ['exact', 'upto', 'batch-settlement', 'deferred', 'aggr_deferred
 // ---- networks. v1 names are the closed list of @x402/evm v1 plus Solana (drift-checked in test/r23-x402-lint.test.js against the installed packages)
 const V1_SOLANA = ['solana', 'solana-devnet', 'solana-testnet'];
 const V1_CHAIN_IDS = { ethereum: 1, sepolia: 11155111, abstract: 2741, 'abstract-testnet': 11124, 'base-sepolia': 84532, base: 8453, 'avalanche-fuji': 43113, avalanche: 43114, iotex: 4689, sei: 1329, 'sei-testnet': 1328,
-  polygon: 137, 'polygon-amoy': 80002, peaq: 3338, story: 1514, educhain: 41923, 'skale-base-sepolia': 324705682, megaeth: 4326, monad: 143, 'monad-testnet': 10143, stable: 988, 'stable-testnet': 2201, celo: 42220, flare: 14 };
+  polygon: 137, 'polygon-amoy': 80002, peaq: 3338, story: 1514, educhain: 41923, 'skale-base-sepolia': 324705682, megaeth: 4326, monad: 143, 'monad-testnet': 10143, stable: 988, 'stable-testnet': 2201, celo: 42220, hemi: 43111, 'hemi-testnet': 743111, flare: 14 };
 const V1_EVM = Object.keys(V1_CHAIN_IDS);
-const V1_TESTNETS = new Set(['sepolia', 'abstract-testnet', 'base-sepolia', 'avalanche-fuji', 'sei-testnet', 'polygon-amoy', 'skale-base-sepolia', 'monad-testnet', 'stable-testnet', 'solana-devnet', 'solana-testnet']);
+const V1_TESTNETS = new Set(['sepolia', 'abstract-testnet', 'base-sepolia', 'avalanche-fuji', 'sei-testnet', 'polygon-amoy', 'skale-base-sepolia', 'monad-testnet', 'stable-testnet', 'hemi-testnet', 'solana-devnet', 'solana-testnet']);
 const SOLANA_REFS = { mainnet: '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp', devnet: 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1', testnet: '4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z' };
-const EVM_TESTNET_IDS = new Set([11155111, 84532, 43113, 80002, 1328, 11124, 10143, 2201, 324705682, 421614, 11155420, 5042002]);
+const EVM_TESTNET_IDS = new Set([11155111, 84532, 43113, 80002, 1328, 11124, 10143, 2201, 743111, 324705682, 421614, 11155420, 5042002]);
 const OTHER_NAMESPACES = new Set(['algorand', 'aptos', 'stellar', 'near', 'hedera']);   // recognised families whose payTo and asset formats are not checked here
 
 // USDC by network (CAIP-2 key, address in its canonical spelling). EVM addresses are compared case-insensitively, a Solana mint exactly. Each EVM row is also a default asset of @x402/evm

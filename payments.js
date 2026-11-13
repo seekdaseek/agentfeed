@@ -8,7 +8,7 @@ const { bazaarResourceServerExtension, declareDiscoveryExtension } = require('@x
 const { SOLANA_MAINNET_CAIP2, SOLANA_DEVNET_CAIP2 } = require('@x402/svm');
 const { ExactSvmScheme } = require('@x402/svm/exact/server');
 const { ExactEvmScheme } = require('@x402/evm/exact/server');
-const { ExactAvmScheme } = require('@x402/avm/exact/server');
+const { ExactAvmSchemeFullId } = require('./lib/avm-network');   // @x402/avm ExactAvmScheme with the full-genesis-hash Algorand id mapped at its boundary (lib/avm-network.js)
 
 // ---- pricing table: single source of truth (spec §2)
 //
@@ -331,7 +331,7 @@ function buildPaymentLayer(deps = {}) {
     .register(network, new ExactSvmScheme());
   for (const r of EVM) resourceServer.register(r.network, new ExactEvmScheme());
   for (const r of EXT) resourceServer.register(r.network, new ExactEvmScheme());
-  if (ALGO) resourceServer.register(ALGO.network, new ExactAvmScheme());
+  if (ALGO) resourceServer.register(ALGO.network, new ExactAvmSchemeFullId());
   if (HF.batch) {
     for (const { network: n, scheme } of batchSchemes(HF.batch, require('./db').db)) resourceServer.register(n, scheme);
     console.log(`[payments] batch-settlement: ${HF.batch.networks.join(',')} receiver ${HF.batch.receiver} authorizer ${HF.batch.authorizer.address}`);

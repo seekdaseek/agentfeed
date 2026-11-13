@@ -16,7 +16,7 @@ const Database = require('better-sqlite3');
 const { paymentMiddleware, x402ResourceServer } = require('@x402/express');
 const { ExactSvmScheme } = require('@x402/svm/exact/server');
 const { ExactEvmScheme } = require('@x402/evm/exact/server');
-const { ExactAvmScheme } = require('@x402/avm/exact/server');
+const { ExactAvmSchemeFullId } = require('../lib/avm-network');   // the same scheme class payments.js registers for the Algorand rail (R27)
 const { SOLANA_MAINNET_CAIP2 } = require('@x402/svm');
 const { privateKeyToAccount, generatePrivateKey } = require('viem/accounts');
 
@@ -166,7 +166,7 @@ async function prodShaped(t, { withExt, gatewayNetworks = hf.GATEWAY_NETWORKS })
   ];
   const rs = new x402ResourceServer([{ async getSupported() { return { kinds, extensions: [], signers: {} }; } }]).register(SOLANA_MAINNET_CAIP2, new ExactSvmScheme());
   for (const n of nets) rs.register(n, new ExactEvmScheme());
-  rs.register(ALGO.network, new ExactAvmScheme());
+  rs.register(ALGO.network, new ExactAvmSchemeFullId());
   for (const { network, scheme } of hf.batchSchemes(HF.batch, new Database(':memory:'))) rs.register(network, scheme);
   rs.registerExtension(require('@x402/extensions/bazaar').bazaarResourceServerExtension);
   const { challengeDesc, challengeLead, TAGS, ICON_URL, BAZAAR_META } = payments;

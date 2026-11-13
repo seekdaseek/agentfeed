@@ -15,7 +15,7 @@ const Database = require('better-sqlite3');
 const { paymentMiddleware, x402ResourceServer } = require('@x402/express');
 const { ExactSvmScheme } = require('@x402/svm/exact/server');
 const { ExactEvmScheme } = require('@x402/evm/exact/server');
-const { ExactAvmScheme } = require('@x402/avm/exact/server');
+const { ExactAvmSchemeFullId } = require('../lib/avm-network');   // the same scheme class payments.js registers for the Algorand rail (R27)
 const { SOLANA_MAINNET_CAIP2 } = require('@x402/svm');
 const { privateKeyToAccount, generatePrivateKey } = require('viem/accounts');
 
@@ -51,7 +51,7 @@ async function layer() {
   const fac = { async getSupported() { return { kinds, extensions: [], signers: {} }; }, async verify() { return { isValid: false, invalidReason: 'stub' }; }, async settle() { return { success: false }; } };
   const rs = new x402ResourceServer([fac]).register(SOLANA_MAINNET_CAIP2, new ExactSvmScheme());
   for (const n of evmNets) rs.register(n, new ExactEvmScheme());
-  rs.register(ALGO.network, new ExactAvmScheme());
+  rs.register(ALGO.network, new ExactAvmSchemeFullId());
   for (const { network, scheme } of hf.batchSchemes(HF.batch, new Database(':memory:'))) rs.register(network, scheme);
   const routes = {};
   const inDefault = new Set(EXT.filter((r) => r.inDefault).map((r) => r.network));

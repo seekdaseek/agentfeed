@@ -5,6 +5,8 @@
 
 **Crypto market data for AI agents (liquidations, funding, open interest, prices), Solana pre-trade checks, OFAC sanctions screening, scholarly papers, utilities and fixed-purpose language tasks (OCR, translate, summarize, extract, classify, prompt-injection check, transcribe). Pay per call in USDC. No accounts, no subscriptions, and no API key needed (prepaid keys are optional, for bots that cannot pay x402).**
 
+Free daily crypto brief and the biggest moves, on Telegram: [t.me/ochinimus_signals](https://t.me/ochinimus_signals)
+
 AgentFeed sells live trading data through the [x402 payment protocol](https://solana.com/x402) on Solana, Base, Polygon, Arbitrum, Arc, Optimism, Monad and Avalanche, and on request on Celo, HyperEVM, Unichain, Scroll, SKALE Base, BNB Chain, Ethereum, Robinhood Chain, World Chain, Sei and X Layer (`GET /api/<route>|<network>`). An agent hits an endpoint, gets a `402 Payment Required` with the price, pays a fraction of a cent in USDC (or the dollar token the network names) from its own wallet, and receives the data — in about two seconds, gas sponsored by the facilitator.
 
 Two rails, same data:

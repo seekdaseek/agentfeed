@@ -50,6 +50,19 @@ const eqAddr = (family, a, b) => (family === 'evm' ? String(a).toLowerCase() ===
 const sameEntry = (a, b) => JSON.stringify(P.sortKeys(a)) === JSON.stringify(P.sortKeys(b));
 
 /**
+ * The instructions of a decoded compiled message as [{ programAddressIndex, accountIndices, data }], for both message shapes @solana/kit 8 decodes (R27, 13 Nov 2026):
+ * a legacy or v0 message carries `instructions`; a version 1 message (what @x402/svm 2.31 builds when the offer's extra.transactionVersions lists 1) carries `instructionHeaders` and
+ * `instructionPayloads` side by side, with the compute-budget settings in `configValues` instead of instructions (settings are not instructions: nothing in them moves funds). Any other shape is refused.
+ */
+function instructionsOf(msg, fail) {
+  if (Array.isArray(msg.instructions)) return msg.instructions.map((i) => ({ programAddressIndex: i.programAddressIndex, accountIndices: i.accountIndices, data: i.data }));
+  if (Array.isArray(msg.instructionHeaders) && Array.isArray(msg.instructionPayloads) && msg.instructionHeaders.length === msg.instructionPayloads.length) {
+    return msg.instructionHeaders.map((h, i) => ({ programAddressIndex: h.programAccountIndex, accountIndices: msg.instructionPayloads[i].instructionAccountIndices, data: msg.instructionPayloads[i].instructionData }));
+  }
+  return fail('the transaction message has a shape this check does not know');
+}
+
+/**
  * Check that a signed payload pays exactly the linted offer from exactly this wallet. Throws an Error (no payload text in it) when anything is off, and the caller then sends nothing.
  * EVM: the EIP-3009 authorization names this wallet, the offer's payTo and amount, and expires within the offer's window. Solana: the transaction is decoded and must hold one
  * TransferChecked of the offer's amount of the offer's mint from this wallet's account to the payTo's account, and only compute-budget and memo instructions besides it.
@@ -82,7 +95,7 @@ async function assertPays({ payload, offer, ver, payer, now = Date.now }) {
   if (tx.signatures[feePayer]) fail('the fee payer signature should be left to the facilitator');
   const COMPUTE = 'ComputeBudget111111111111111111111111111111'; const MEMO = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
   const transfers = [];
-  for (const ins of msg.instructions) {
+  for (const ins of instructionsOf(msg, fail)) {
     const prog = keys[ins.programAddressIndex];
     if (prog === COMPUTE || prog === MEMO) continue;
     if (prog !== require('./wallet').TOKEN_PROGRAM) fail(`an instruction of program ${P.show(prog, 20)} is not allowed`);
@@ -132,4 +145,4 @@ function checkReceipt(rc, { offer, payer }) {
   return { ok: problems.length === 0, problems, settlement };
 }
 
-module.exports = { buildClient, createPayment, assertPays, readReceipt, checkReceipt, scrub };
+module.exports = { buildClient, createPayment, assertPays, readReceipt, checkReceipt, scrub, instructionsOf };

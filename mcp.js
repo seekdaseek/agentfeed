@@ -182,7 +182,7 @@ async function initMcp(app, keys) {
   if (!facilitatorUrl || !payTo) throw new Error('FACILITATOR_URL / PAY_TO missing from .env');
 
   const facilitatorCfg = facilitatorUrl.includes('api.cdp.coinbase.com')
-    ? require('@coinbase/x402').facilitator
+    ? require('./lib/cdp-facilitator').facilitator
     : { url: facilitatorUrl };
   const payToEvm = process.env.PAY_TO_EVM;
   const { evmRails, railPrice, railPayTo } = require('./lib/rails');

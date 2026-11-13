@@ -278,7 +278,7 @@ function buildPaymentLayer(deps = {}) {
 
   const facilitator = makeClient(
     facilitatorUrl.includes('api.cdp.coinbase.com')
-      ? require('@coinbase/x402').facilitator
+      ? require('./lib/cdp-facilitator').facilitator
       : { url: facilitatorUrl },
   );
   const payToEvm = process.env.PAY_TO_EVM;

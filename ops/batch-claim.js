@@ -97,7 +97,7 @@ async function readWithdrawal(network, channelId) {
   const cfg = hfConfig();
   if (!cfg.batch) { console.log(`${now()} batch-claim: batch-settlement is off (no authorizer key or X402_HF=off)`); return; }
   const db = new Database(process.env.AGENTFEED_DB || path.join(ROOT, 'agentfeed.db'));
-  const facilitator = new HTTPFacilitatorClient(require('@coinbase/x402').facilitator);
+  const facilitator = new HTTPFacilitatorClient(require('../lib/cdp-facilitator').facilitator);
   const state = (() => { try { return JSON.parse(fs.readFileSync(STATE, 'utf8')); } catch { return { failures: 0 }; } })();
   state.networks = state.networks || {};
   let failed = 0;

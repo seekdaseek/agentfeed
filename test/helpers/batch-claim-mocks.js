@@ -62,7 +62,7 @@ const scheme = { getStorage: () => ({ list: async () => channels.map((c) => ({ .
 const MOCKS = {
   'better-sqlite3': class FakeDatabase { constructor() {} },
   '@x402/core/server': { HTTPFacilitatorClient: class FakeFacilitator { constructor() {} } },
-  '@coinbase/x402': { facilitator: {} },
+  '../lib/cdp-facilitator': { facilitator: {} },
   '@x402/evm': { BATCH_SETTLEMENT_ADDRESS: '0x4020074e9dF2ce1deE5A9C1b5c3f541D02a10003' },
   viem: {
     http: () => ({}),

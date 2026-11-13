@@ -40,3 +40,11 @@ test('real server: openapi, the /api index, llms.txt and SKILL.md list it as a f
   const n = (llms.match(/(\d+) free routes/) || [])[1];
   assert.equal(Number(n), llms.split('## Free routes')[1].split('## Paid')[0].split('\n').filter((l) => l.startsWith('- GET ')).length, 'the free-route count in llms.txt equals the list under it');
 });
+
+test('R28: the version is service.version (not a top-level field) and equals server.json, the registry version the box serves; it cannot silently fall back to "unknown"', async () => {
+  const j = JSON.parse((await get('/api/status')).body);
+  const want = require('../server.json').version;
+  assert.equal(j.service.version, want);
+  assert.notEqual(j.service.version, 'unknown');
+  assert.ok(!('version' in j), 'the document has no top-level version: it lives under service');
+});

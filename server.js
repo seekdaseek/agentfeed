@@ -23,8 +23,18 @@ app.disable('x-powered-by');
 const compat = require('./lib/compat');
 const { canonPath, isApiPath, pricedMatcher } = require('./lib/canon-path');
 app.use(compat.stripNetworkSuffix);
+// R34: a path that matches no route, with a client's debris on its tail (|<any network>, -<network>:<payTo>:<asset>, :<digits>, ":", &quot, %22), is served as the route it names when that
+// one candidate matches; a path that already matches is never touched (lib/path-normalize.js). isKnownPath reads PRICED and the router at request time (both exist by then).
+const { routeExists: routeExistsFor } = require('./lib/telegraph-redirect');
+const isKnownPath = (p) => {
+  if (PRICED.test(p) || compat.WITHDRAWN.includes(canonPath(p))) return true;
+  return routeExistsFor(app, 'GET', p.split('?')[0]);
+};
+app.use(require('./lib/path-normalize').makePathNormalizer({ isKnown: isKnownPath, db }));
 // R23 F1: the old /telegraph/api/<route> path (130 requests in October) is a 308 to /api/<route> when that route exists (lib/telegraph-redirect.js)
 app.use(require('./lib/telegraph-redirect').telegraphRedirect());
+// R34: /api/funding and /api/funding-rates are 308s to /api/funding-rate; /api/<route>/openapi.json and /api/<route>/.well-known/x402 are 308s to the real documents (lib/legacy-routes.js)
+app.use(require('./lib/legacy-routes').legacyRedirects());
 // R17: /api/paper/10.1038/nature14539 (a literal slash in the DOI) is the same route as /api/paper/10.1038%2Fnature14539: rewritten to the
 // canonical one-segment form before the rate limiter, the key rail and the paywall (lib/slash-path.js).
 app.use(require('./lib/slash-path').slashPathCanonical());
@@ -168,6 +178,8 @@ app.use((req, _res, next) => {
 // of /api/x|network) and BEFORE the key reserve, the refusal recorder, x402 v1 and v2, tempo and MPP, a value the handler would reject is a 400:
 // no challenge, no price, no reserve, nothing to sign. Shape only, with the handler's own validator; existence is still the handler's answer.
 const routeUrls = require('./lib/route-urls').makeRouteUrls({ ORIGIN: require('./tools/discovery').ORIGIN, meta: BAZAAR_META });
+// R34: /api/wallet-holdings and /api/wallet-activity with no wallet: a 400 with an example path (after the ?wallet= canonicalisation above, so the query form never reaches it)
+app.use(require('./lib/legacy-routes').bareParamHelp({ example: (pattern) => routeUrls.concrete(pattern) }));
 // R20f: AF_QUERY_GUARD=off turns the QUERY rules (lib/query-rules.js) off and leaves the path rules on: the operator's way back if a rule ever refuses a value the
 // handler would have served, and how test/query-guard-real-server.test.js reads the handler's own answer to the same request.
 const queryGuardOn = (process.env.AF_QUERY_GUARD || 'on').toLowerCase() !== 'off';
@@ -402,6 +414,8 @@ app.get('/SKILL.md', (_req, res) => res.type('text/markdown; charset=utf-8').sen
 require('./lib/discovery-aliases').mountDiscoveryAliases(app, { docs, PRICES, ORIGIN: discovery.ORIGIN, version: require('./server.json').version });
 // R17: what the agent-readiness scan and the agent registries read (lib/agent-ready.js): ard.json, api-catalog, the skills index, auth.md
 require('./lib/agent-ready').mountAgentReady(app, { docs, PRICES, ORIGIN: discovery.ORIGIN });
+// R34: /llms-full.txt, /apis.json, /.well-known/x402-payto.json (lib/discovery-r34.js); manifestAccepts is defined further down and read at request time
+require('./lib/discovery-r34').mountDiscoveryR34(app, { docs, PRICES, routeUrls, ORIGIN: discovery.ORIGIN, version: require('./server.json').version, manifestAccepts: () => manifestAccepts() });
 // Directory domain claims (402index, nohumans): inert 404s until a claim writes a value.
 require('./lib/well-known-claims').mountWellKnownClaims(app);
 

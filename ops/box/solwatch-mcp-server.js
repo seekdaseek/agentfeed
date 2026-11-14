@@ -269,8 +269,12 @@ function build() {
         rec.NOTE = "rows_in_window counts ALL rows; sums, by_tool and payer counts below are scoped to the paid status once identified.";
         let paidVal = null;
         if (statusCol) {
-          rec.by_status = await q("SELECT \"" + statusCol + "\" AS status, COUNT(*) AS n FROM \"" + t + "\" WHERE \"" + tsCol + "\" >= " + bound + " GROUP BY 1 ORDER BY n DESC");
-          rec.by_status_all_time = await q("SELECT \"" + statusCol + "\" AS status, COUNT(*) AS n FROM \"" + t + "\" GROUP BY 1 ORDER BY n DESC");
+          // R34 (14 Nov 2026): our own unpaid sweep (ops/r23-unpaid-sweep.mjs, user agent 'r23-unpaid-sweep') is left out of the not_found counts, the rows stay in the table.
+          // Only when the table has a user_agent column, and only for status not_found: every other status and every sum is untouched.
+          const sweepOut = names.includes("user_agent") ? " AND NOT (\"" + statusCol + "\" = 'not_found' AND \"user_agent\" IS 'r23-unpaid-sweep')" : "";
+          if (sweepOut) rec.not_found_excludes = "user agent r23-unpaid-sweep (our own sweep), rows kept in the table";
+          rec.by_status = await q("SELECT \"" + statusCol + "\" AS status, COUNT(*) AS n FROM \"" + t + "\" WHERE \"" + tsCol + "\" >= " + bound + sweepOut + " GROUP BY 1 ORDER BY n DESC");
+          rec.by_status_all_time = await q("SELECT \"" + statusCol + "\" AS status, COUNT(*) AS n FROM \"" + t + "\" WHERE 1=1" + sweepOut + " GROUP BY 1 ORDER BY n DESC");
           const vals = rec.by_status_all_time.map(r => String(r.status));
           paidVal = vals.find(v => /^(paid|settled|success|ok|complete[d]?)$/i.test(v)) || null;
           rec.paid_status_value = paidVal || "NONE MATCHED — revenue figures below cover ALL rows, not just successful payments";

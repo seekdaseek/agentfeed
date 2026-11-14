@@ -18,3 +18,12 @@ console.log('day | ref | free-answer callers | 402 callers');
 for (const k of Object.keys(agg).sort()) console.log(k, '|', agg[k].free.size, '|', agg[k].u402.size);
 const tot = {}; for (const [k, o] of Object.entries(agg)) { const ref = k.split(' | ')[1]; const t = (tot[ref] = tot[ref] || { free: new Set(), u402: new Set() }); o.free.forEach((x) => t.free.add(x)); o.u402.forEach((x) => t.u402.add(x)); }
 console.log(`--- ${days} days, unique callers per ref`); for (const [ref, t] of Object.entries(tot).sort()) console.log(ref, '| free', t.free.size, '| 402', t.u402.size);
+
+// R34: unknown-path (not_found) rows per day, without our own unpaid sweep (ops/r23-unpaid-sweep.mjs sends user agent 'r23-unpaid-sweep': 612 of the 6,553 not_found rows since 12 Oct were it).
+// The rows stay in calls; they are only left out of this count. Prints: day | not_found rows | of them the sweep (left out).
+try {
+  const nf = db.prepare(`SELECT date(ts/1000, 'unixepoch') AS day, SUM(user_agent IS NOT 'r23-unpaid-sweep') AS counted, SUM(user_agent IS 'r23-unpaid-sweep') AS sweep FROM calls WHERE status = 'not_found' AND ts >= strftime('%s', 'now', ?) * 1000 GROUP BY 1 ORDER BY 1`).all(`-${days} days`);
+  console.log('--- not_found rows per day, without the r23-unpaid-sweep user agent');
+  console.log('day | not_found (counted) | sweep (left out)');
+  for (const r of nf) console.log(r.day, '|', r.counted, '|', r.sweep);
+} catch { console.log('no calls table to count not_found from'); }

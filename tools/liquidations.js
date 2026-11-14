@@ -1,7 +1,16 @@
 // Liquidation data from local collector DB — multi-exchange (Bybit complete + OKX sampled)
 // side convention (verified live): 'Sell' = short liquidated, 'Buy' = long liquidated
 const Database = require('better-sqlite3');
-const db = new Database('/opt/agentfeed/liquidations.db', { readonly: true, fileMustExist: true });
+// R36 (14 Nov 2026): opened on the first request that needs it, not at require time (a missing file stopped the whole server from starting). A tape that cannot be opened is a 503
+// "data source unavailable" on the routes that read it, never charged, retried on the next request; the handle and the queries are unchanged (read-only, fileMustExist).
+const TAPE = '/opt/agentfeed/liquidations.db';
+let _db = null;
+const db = {
+  prepare(sql) {
+    if (!_db) { try { _db = new Database(TAPE, { readonly: true, fileMustExist: true }); } catch { _db = null; throw Object.assign(new Error('data source unavailable: the liquidation tape cannot be read right now. Not charged.'), { status: 503, retryAfter: 60 }); } }
+    return _db.prepare(sql);
+  },
+};
 
 const { CORE, isAll, inClause } = require('../universe.js');
 const SYMBOLS = { SOL: 'SOLUSDT', BTC: 'BTCUSDT', ETH: 'ETHUSDT', XRP: 'XRPUSDT', DOGE: 'DOGEUSDT' };

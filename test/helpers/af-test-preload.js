@@ -57,7 +57,7 @@ let wrappedDb = null;
 const TOOL_JS = ROOT ? path.join(ROOT, 'lib', 'tool.js') : null;
 Module._load = function (request, parent) {
   const m = origLoad.apply(this, arguments);
-  if (request === 'better-sqlite3') {
+  if (request === 'better-sqlite3' && !process.env.AF_NO_DB_REDIRECT) {   // R36: AF_NO_DB_REDIRECT=1 leaves a missing must-exist database missing, to prove the server boots without it
     if (!wrappedDb) {
       const Orig = m;
       wrappedDb = function Database(file, opts) {

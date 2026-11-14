@@ -17,7 +17,23 @@ const Database = require('better-sqlite3');
 const DB_PATH = process.env.OVERHANG_DB_PATH || '/opt/overhang/overhang.db';
 // No answer from our own tape is a 503, never a 200 saying so: the settlement is cancelled, so nothing is charged (R7 R4)
 const noAnswer = (msg, retryAfter) => Object.assign(new Error(`${msg} Not charged.`), { status: 503, retryAfter });
-const db = new Database(DB_PATH, { readonly: true, fileMustExist: true });
+// R36 (14 Nov 2026): the tape is opened on the FIRST request that needs it, not when this file is required. It used to open here, at require time, so a machine without the file (a dev machine, a
+// scratch box, a restore in progress) could not even load expansion.js and the whole server did not start. Now a missing or unreadable tape is a 503 "data source unavailable" on the routes that
+// read it (get_exit_quote, get_exit_method) and nothing else is affected; a 503 never settles, so nobody is charged, and the next request tries to open it again. The handle and every query are
+// exactly what they were: read-only, fileMustExist, the same SQL.
+let _db = null;
+const dataUnavailable = () => Object.assign(new Error('data source unavailable: the exit-quote tape cannot be read right now. Not charged.'), { status: 503, retryAfter: 60 });
+function getDb() {
+  if (_db) return _db;
+  try { _db = new Database(DB_PATH, { readonly: true, fileMustExist: true }); } catch { _db = null; throw dataUnavailable(); }
+  return _db;
+}
+/** a prepared statement made on first use ({ get, all }); a database that opens but cannot prepare it (a missing table) is the same 503 */
+const lazy = (sql) => {
+  let st = null;
+  const stmt = () => { if (st) return st; try { st = getDb().prepare(sql); } catch (e) { if (e && e.status === 503) throw e; throw dataUnavailable(); } return st; };
+  return { get: (...a) => stmt().get(...a), all: (...a) => stmt().all(...a) };
+};
 
 // GATE. Rows before this timestamp came from a window where the collector read the mark
 // off disk instead of refetching it, so the whole board sat frozen at one value for six
@@ -44,14 +60,14 @@ const ROW_COLS = `
 
 // LEFT JOIN: the adjudication view deliberately excludes rows carrying no observation
 // (measurement_failed, no_ladder), and those rows must still be answerable.
-const latestRow = db.prepare(`
+const latestRow = lazy(`
   SELECT ${ROW_COLS} FROM reserves r
   LEFT JOIN reserves_adjudicated v ON v.id = r.id
   WHERE r.symbol = ? AND r.ts >= ${GATE_TS}
   ORDER BY r.ts DESC LIMIT 1`);
 
 // The most recent row the collector was willing to stand behind.
-const latestCorroborated = db.prepare(`
+const latestCorroborated = lazy(`
   SELECT ${ROW_COLS} FROM reserves r
   LEFT JOIN reserves_adjudicated v ON v.id = r.id
   WHERE r.symbol = ? AND r.ts >= ${GATE_TS}
@@ -59,11 +75,11 @@ const latestCorroborated = db.prepare(`
     AND r.max_exitable_usd IS NOT NULL
   ORDER BY r.ts DESC LIMIT 1`);
 
-const clipsFor = db.prepare(`
+const clipsFor = lazy(`
   SELECT size_usd, routed, realised_usd, haircut_bps, liq_margin_bps, reason
   FROM quotes WHERE reserve_id = ? ORDER BY size_usd ASC`);
 
-const symbolsStmt = db.prepare(`SELECT DISTINCT symbol FROM reserves WHERE ts >= ${GATE_TS} ORDER BY symbol`);
+const symbolsStmt = lazy(`SELECT DISTINCT symbol FROM reserves WHERE ts >= ${GATE_TS} ORDER BY symbol`);
 
 function resolveSymbol(s) {
   if (!s) throw new Error('symbol is required (e.g. SPYx, cbBTC, FWDI). Call get_exit_method (free) for the covered list.');
@@ -241,32 +257,32 @@ function getExitQuote(req) {
 // FREE. Everything below is computed at request time from the tape. No hardcoded counts:
 // overhang's whole pitch is independence, so the method is published rather than asserted.
 function getExitMethod() {
-  const w = db.prepare(`SELECT COUNT(*) rows_, COUNT(DISTINCT sweep_id) sweeps,
+  const w = getDb().prepare(`SELECT COUNT(*) rows_, COUNT(DISTINCT sweep_id) sweeps,
     COUNT(DISTINCT symbol) symbols, MIN(ts) first_ts, MAX(ts) last_ts
     FROM reserves WHERE ts >= ${GATE_TS}`).get();
 
-  const byStatus = db.prepare(`SELECT status, COUNT(*) n FROM reserves
+  const byStatus = getDb().prepare(`SELECT status, COUNT(*) n FROM reserves
     WHERE ts >= ${GATE_TS} GROUP BY status ORDER BY n DESC`).all();
 
-  const bySymbol = db.prepare(`SELECT r.symbol, r.protocol, r.market, COUNT(*) rows_,
+  const bySymbol = getDb().prepare(`SELECT r.symbol, r.protocol, r.market, COUNT(*) rows_,
       MAX(r.ts) last_ts,
       (SELECT status FROM reserves x WHERE x.symbol = r.symbol AND x.ts >= ${GATE_TS} ORDER BY x.ts DESC LIMIT 1) latest_status,
       (SELECT ROUND(marked_usd,2) FROM reserves x WHERE x.symbol = r.symbol AND x.ts >= ${GATE_TS} ORDER BY x.ts DESC LIMIT 1) latest_marked_usd
     FROM reserves r WHERE r.ts >= ${GATE_TS} GROUP BY r.symbol ORDER BY latest_marked_usd DESC`).all();
 
-  const refusals = db.prepare(`SELECT observation, COUNT(*) n, COUNT(DISTINCT symbol) symbols
+  const refusals = getDb().prepare(`SELECT observation, COUNT(*) n, COUNT(DISTINCT symbol) symbols
     FROM reserves_adjudicated WHERE ts >= ${GATE_TS} AND observation IN ('no_route','not_tradable')
     GROUP BY observation`).all();
 
-  const ctl = db.prepare(`SELECT COUNT(*) probes, SUM(routed) routed, SUM(transient) transient,
+  const ctl = getDb().prepare(`SELECT COUNT(*) probes, SUM(routed) routed, SUM(transient) transient,
       ROUND(MAX(size_usd),2) biggest_clip_usd, ROUND(AVG(haircut_bps),2) avg_haircut_bps
     FROM controls WHERE ts >= ${GATE_TS}`).get();
-  const ctlLatest = db.prepare(`SELECT ts, symbol, ROUND(size_usd,2) size_usd, routed,
+  const ctlLatest = getDb().prepare(`SELECT ts, symbol, ROUND(size_usd,2) size_usd, routed,
       ROUND(haircut_bps,2) haircut_bps FROM controls WHERE ts >= ${GATE_TS}
     ORDER BY ts DESC, size_usd DESC LIMIT 1`).get();
 
   // Cadence measured off the tape, not asserted.
-  const gaps = db.prepare(`SELECT ts FROM sweeps WHERE ts >= ${GATE_TS} ORDER BY ts DESC LIMIT 50`).all().map((r) => r.ts);
+  const gaps = getDb().prepare(`SELECT ts FROM sweeps WHERE ts >= ${GATE_TS} ORDER BY ts DESC LIMIT 50`).all().map((r) => r.ts);
   const deltas = [];
   for (let i = 1; i < gaps.length; i++) deltas.push(gaps[i - 1] - gaps[i]);
   deltas.sort((a, b) => a - b);

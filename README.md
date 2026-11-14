@@ -1,7 +1,7 @@
 <!-- mcp-name: io.github.seekdaseek/agentfeed -->
 # AgentFeed
 
-[![smithery badge](https://smithery.ai/badge/ochinimus/agentfeed)](https://smithery.ai/servers/ochinimus/agentfeed)
+
 
 **Crypto market data for AI agents (liquidations, funding, open interest, prices), Solana pre-trade checks, OFAC sanctions screening, scholarly papers, utilities and fixed-purpose language tasks (OCR, translate, summarize, extract, classify, prompt-injection check, transcribe). Pay per call in USDC. No accounts, no subscriptions, and no API key needed (prepaid keys are optional, for bots that cannot pay x402).**
 
@@ -1008,6 +1008,5 @@ Read `DATASET_QUALITY.md` before you use it. It tells you exactly where the data
 ## Links
 
 [MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=agentfeed) ·
-[Smithery](https://smithery.ai/servers/ochinimus/agentfeed) ·
 [x402 manifest](https://x402.ochinimus.app/.well-known/x402.json) ·
 [ochinimus](https://ochinimus.app)

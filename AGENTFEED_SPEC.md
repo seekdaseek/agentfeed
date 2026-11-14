@@ -66,7 +66,7 @@ Pricing logic: commodity data at floor ($0.001), Helius-backed on-chain data at 
 ## 6. Distribution (no hackathon — it ended Nov 2025)
 Priority order:
 1. Official MCP Registry (registry.modelcontextprotocol.io) — GitHub OAuth namespace verification, server.json manifest.
-2. PulseMCP, Glama, Smithery — free listings; free tier boosts ranking.
+2. PulseMCP, Glama — free listings; free tier boosts ranking.
 3. solana.com/x402 ecosystem listing — submit once live on mainnet.
 4. Pay.sh community API provider application (50+ providers listed; being in that catalog = agents on Google Cloud gateway can discover and pay you).
 5. x402scan / any x402 service indexes found at build time.

@@ -48,3 +48,9 @@ test('R28: the version is service.version (not a top-level field) and equals ser
   assert.notEqual(j.service.version, 'unknown');
   assert.ok(!('version' in j), 'the document has no top-level version: it lives under service');
 });
+
+test('R30: /openapi.json info.version equals server.json (it said 1.0.0 while the service was 2.12.0)', async () => {
+  const j = JSON.parse((await get('/openapi.json')).body);
+  assert.equal(j.info.version, require('../server.json').version);
+  assert.equal(j.info.version, require('../package.json').version);
+});

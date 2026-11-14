@@ -104,7 +104,7 @@ Bybit's <code>allLiquidation</code> is the only <b>complete, unthrottled</b> pub
   <a href="/.well-known/x402.json">x402 manifest</a> ·
   <a href="/health">health</a>
 </div>
-<div class="foot">Built by <a href="https://ochinimus.app">ochinimus</a> · USDC settlement on ${httpRailNames()} · <a href="https://www.npmjs.com/package/@seekdaseek/plugin-agentfeed">elizaOS plugin</a> · <a href="https://smithery.ai/servers/ochinimus/agentfeed">Smithery</a> · <a href="https://ochinimuse.gumroad.com/l/liqdata">datasets</a> · agents hitting this URL get JSON</div>
+<div class="foot">Built by <a href="https://ochinimus.app">ochinimus</a> · USDC settlement on ${httpRailNames()} · <a href="https://www.npmjs.com/package/@seekdaseek/plugin-agentfeed">elizaOS plugin</a> · <a href="https://ochinimuse.gumroad.com/l/liqdata">datasets</a> · agents hitting this URL get JSON</div>
 </body></html>`;
 }
 module.exports = { renderLanding, landingHead };

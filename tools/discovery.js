@@ -459,7 +459,7 @@ function buildOpenApi({ PRICES, META, FREE_TOOLS, mpp, tempo }) {
     },
     info: {
       title: 'AgentFeed',
-      version: '1.0.0',
+      version: require('../server.json').version,
       description: `${require('./scope').SCOPE} Paid per call in USDC over x402 on ${require('../lib/rails').httpRailNames()}.${require('../lib/hf').hfSentence()} No API key or account is needed to pay per call. ${keyLine(PRICES)}`.trim(),
       'x-generated-from': 'payments.PRICES + bazaar-examples.json, at boot',
       // x402scan verifies ownership from info.contact; it names the operator, a

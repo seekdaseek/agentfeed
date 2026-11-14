@@ -1,4 +1,5 @@
 'use strict';
+require('./helpers/box-dbs-scratch');   // R35: a dev machine has no /opt/overhang/overhang.db (tools/overhang.js opens it at require time)
 // R3: honeypot simulation helpers, Base launch log parsing and V4 position math, the
 // launch-odds / rwa-yields / base-launches contracts (stale = 503, untracked = 422,
 // bad input = 400 before any upstream call), and the 422 emitter in lib/tool.js.

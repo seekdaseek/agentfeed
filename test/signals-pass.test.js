@@ -3,6 +3,7 @@
 // facilitator, the real key rail and lib/tool.js, as keys-daypass.test.js does. The old bot pass and day pass tests stay unchanged; this file also pins that
 // the two old kinds are what they were.
 'use strict';
+require('./helpers/box-dbs-scratch');   // R35: a dev machine has no /opt/overhang/overhang.db (tools/overhang.js opens it at require time)
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const express = require('express');

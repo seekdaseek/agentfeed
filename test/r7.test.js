@@ -4,6 +4,7 @@
 // Offline: Hyperliquid is a local stub (a switch makes it answer 500), the liquidation tape and the OI sampler are
 // scratch SQLite files, the whale snapshot is a scratch JSON file, and Solana RPC is injected.
 'use strict';
+require('./helpers/box-dbs-scratch');   // R35: a dev machine has no /opt/overhang/overhang.db (tools/overhang.js opens it at require time)
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');

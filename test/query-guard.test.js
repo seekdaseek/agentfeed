@@ -3,6 +3,7 @@
 // included), the examples every document publishes, the middleware, the MCP schemas and the OpenAPI bounds.
 // test/query-guard-real-server.test.js proves the one property that matters on the real stack: whatever the guard refuses, the handler refuses too.
 'use strict';
+require('./helpers/box-dbs-scratch');   // R35: a dev machine has no /opt/overhang/overhang.db (tools/overhang.js opens it at require time)
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const express = require('express');

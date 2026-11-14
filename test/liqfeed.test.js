@@ -9,6 +9,7 @@
 //                middleware and the prepaid-key rail
 //   wiring       price, MCP tool, challenge title and question, description length, no exchange named in any text of the route
 'use strict';
+require('./helpers/box-dbs-scratch');   // R35: a dev machine has no /opt/overhang/overhang.db (tools/overhang.js opens it at require time)
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

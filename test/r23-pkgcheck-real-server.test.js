@@ -8,6 +8,7 @@
 //   - a paid x402 call is served and settled once at 20000 atomic units (USD 0.02); a key caller pays half
 //   - 404 (unknown package), 503 (registry down, OSV down) and 400 (bad name) settle nothing on x402 v2, on x402 v1 and on the prepaid-key rail, and the key rail refunds in full
 'use strict';
+require('./helpers/box-dbs-scratch');   // R35: a dev machine has no /opt/overhang/overhang.db (tools/overhang.js opens it at require time)
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { before, after } = require('node:test');

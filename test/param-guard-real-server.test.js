@@ -8,6 +8,7 @@
 //   - a prepaid key being reserved against an impossible value;
 //   - a request that was verified and then failed in the handler (any status >= 400) being settled, on x402 v2, x402 v1 and the prepaid-key rail.
 'use strict';
+require('./helpers/box-dbs-scratch');   // R35: a dev machine has no /opt/overhang/overhang.db (tools/overhang.js opens it at require time)
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { before, after } = require('node:test');

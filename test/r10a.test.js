@@ -1,4 +1,5 @@
 'use strict';
+require('./helpers/box-dbs-scratch');   // R35: a dev machine has no /opt/overhang/overhang.db (tools/overhang.js opens it at require time)
 // R10 Phase A (14 Oct 2026): the EVM networks after the first thirteen accepts (lib/ext-rails.js).
 //   routing   the REAL buildPaymentLayer with a stub behind every facilitator URL, each stub claiming every network: a payment
 //             on each network reaches its own facilitator and no other; a bad payload is a clean 402 and never reaches a handler

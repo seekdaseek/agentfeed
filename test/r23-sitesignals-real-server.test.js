@@ -10,6 +10,7 @@
 //   - R23_SITESIGNALS_RDAP: the tests above run on a server booted with it "on"; a second server without it (the shipped state) serves no `domain` section, makes no registry
 //     request at all, and publishes no registration words in its challenge, OpenAPI entry or pricing entry (the ON server's do, as the control).
 'use strict';
+require('./helpers/box-dbs-scratch');   // R35: a dev machine has no /opt/overhang/overhang.db (tools/overhang.js opens it at require time)
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { before, after } = require('node:test');

@@ -4,6 +4,7 @@
 //   3. ops/discovery-check.mjs: the robots.txt check asserted OUR Cache-Control header, which Cloudflare overrides (max-age=14400 on that path);
 //      what matters is that the edge asked the origin (cf-cache-status REVALIDATED) and the body carries an ETag.
 'use strict';
+require('./helpers/box-dbs-scratch');   // R35: a dev machine has no /opt/overhang/overhang.db (tools/overhang.js opens it at require time)
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('path');

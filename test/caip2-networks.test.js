@@ -7,6 +7,7 @@
 //   - unit: the grammar, the networks of every other rail, and the Algorand id as the documented exception;
 //   - real server: every priced route's default accepts are CAIP-2 (the harness boots with X402_ALGO=off like the box).
 'use strict';
+require('./helpers/box-dbs-scratch');   // R35: a dev machine has no /opt/overhang/overhang.db (tools/overhang.js opens it at require time)
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { before, after } = require('node:test');

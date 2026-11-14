@@ -6,6 +6,7 @@
 //   - a 400 from a handler check the rules do not copy (an unsupported symbol), a 404 (events nothing can price) and a 503 (events whose prices cannot be fetched) settle nothing on x402 v2, x402 v1 or the prepaid-key rail;
 //   - the MCP tool is listed and goes through the x402 gate; the OpenAPI document and /pricing carry the route at its price.
 'use strict';
+require('./helpers/box-dbs-scratch');   // R35: a dev machine has no /opt/overhang/overhang.db (tools/overhang.js opens it at require time)
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { before, after } = require('node:test');

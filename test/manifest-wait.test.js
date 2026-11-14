@@ -6,6 +6,7 @@
 //          the old failure ("Facilitator does not support exact on eip155:1329") when the build runs too early, then the new
 //          wait builds the manifest with every facilitator's networks, and no facilitator is asked for /supported twice.
 'use strict';
+require('./helpers/box-dbs-scratch');   // R35: a dev machine has no /opt/overhang/overhang.db (tools/overhang.js opens it at require time)
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

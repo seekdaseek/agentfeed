@@ -1,4 +1,5 @@
 'use strict';
+require('./helpers/box-dbs-scratch');   // R35: a dev machine has no /opt/overhang/overhang.db (tools/overhang.js opens it at require time)
 // R10 Phase 0 (14 Oct 2026): the nine fixes found in live traffic.
 //   F1 the manifest's accepts are the 402's own (lib/manifest.js), for every priced route
 //   F2 counts and totals split data routes from key packs; F3 every rail surface names Algorand

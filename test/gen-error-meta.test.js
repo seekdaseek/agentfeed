@@ -2,6 +2,7 @@
 // lib/ratelimit.js and the generator's anchors still read server.js, so nobody could regenerate and the file lost 31 of 91 routes).
 // These tests keep it runnable, keep its numbers equal to the limiter's, and keep it from publishing a scratch's own fault.
 'use strict';
+require('./helpers/box-dbs-scratch');   // R35: a dev machine has no /opt/overhang/overhang.db (tools/overhang.js opens it at require time)
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
@@ -12,7 +13,7 @@ const { execFile } = require('node:child_process');
 
 const ROOT = path.join(__dirname, '..');
 const GEN = path.join(ROOT, 'gen-error-meta.js');
-const run = (args, env) => new Promise((resolve) => execFile(process.execPath, [GEN, ...args], { cwd: ROOT, env: { ...process.env, ...env }, timeout: 60000 },
+const run = (args, env) => new Promise((resolve) => execFile(process.execPath, ['--require', path.join(__dirname, 'helpers', 'box-dbs-scratch.js'), GEN, ...args], { cwd: ROOT, env: { ...process.env, ...env }, timeout: 60000 },
   (err, stdout, stderr) => resolve({ code: err ? (err.code === undefined ? 1 : err.code) : 0, stdout, stderr })));
 const stub = (answer) => new Promise((r) => {
   const srv = http.createServer((req, res) => { res.statusCode = 400; res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(answer)); });

@@ -12,6 +12,7 @@
 // state the harness does not have (liq-feed's tape, tradfi-radar's snapshot). The first two are proven in-process below with a stubbed EDGAR; the others
 // are listed in UNREACHABLE and the test fails if the list changes, so a new unreachable rule cannot hide.
 'use strict';
+require('./helpers/box-dbs-scratch');   // R35: a dev machine has no /opt/overhang/overhang.db (tools/overhang.js opens it at require time)
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { before, after } = require('node:test');

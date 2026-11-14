@@ -2,6 +2,7 @@
 // literal template. Unit level, no server boot: the rule table, the guard against the handlers' own validators, the published examples, the
 // MCP schemas and the documents. test/param-guard-real-server.test.js proves the same on the real middleware stack.
 'use strict';
+require('./helpers/box-dbs-scratch');   // R35: a dev machine has no /opt/overhang/overhang.db (tools/overhang.js opens it at require time)
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');

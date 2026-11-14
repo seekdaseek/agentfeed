@@ -8,6 +8,7 @@
 //   - the MCP tool is listed and goes through the x402 gate; the public documents list the route;
 //   - the region gate refuses a caller outside Google's regions with a 451 before the paywall, once the two additions are made.
 'use strict';
+require('./helpers/box-dbs-scratch');   // R35: a dev machine has no /opt/overhang/overhang.db (tools/overhang.js opens it at require time)
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { before, after } = require('node:test');

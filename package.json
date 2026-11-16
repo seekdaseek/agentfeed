@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@circle-fin/x402-batching": "3.5.0",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@mozilla/readability": "0.6.0",
     "@solana/kit": "8.6.0",
     "@x402/avm": "2.31.0",
@@ -24,7 +24,7 @@
     "@x402/svm": "2.31.0",
     "better-sqlite3": "^11.3.0",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2",
+    "express": "^4.22.3",
     "fast-xml-parser": "5.12.1",
     "jose": "6.2.3",
     "linkedom": "0.18.13",
@@ -33,6 +33,6 @@
     "unpdf": "1.8.1",
     "viem": "2.54.6",
     "ws": "^8.21.0",
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   }
 }

@@ -121,12 +121,15 @@ app.use(compat.makeGetOnly({ PRICES }));
 // process over plain http therefore gets a challenge whose resource.url is
 // http://, so payTo is quoted in a document naming an unauthenticated URL.
 //
-// Note what this does and does not fix. Through the edge it is belt and
-// braces: the zone 308s http to https, so X-Forwarded-Proto is already https.
-// It matters on the path that bypasses the edge entirely -- the origin answers
-// on :3006 directly -- and there it makes the challenge name https. That port
-// being reachable at all is the real exposure and is an infrastructure fix,
-// not this one.
+// This is intentional, not a header spoof: the process listens on loopback only (see app.listen below,
+// BIND_HOST), so the ONLY way a request reaches it is Cloudflare's tunnel (cloudflared, service
+// http://localhost:3006) or a process on this box, and both speak https to the public. The edge also
+// 308s http to https, so X-Forwarded-Proto is already https there; this line only keeps the challenge's
+// resource.url https for the in-box callers (sampler, digest, keeper) that reach the origin over plain
+// http on 127.0.0.1. R38 (16 Nov 2026): before this the listener bound every interface, and the
+// rate limit and the CF-IPCountry region gate both depend on the edge, so the origin must never be
+// reachable around it. Measured from outside on 16 Nov 2026: http://167.233.69.154:3006 and the IPv6
+// address both timed out (filtered at the network edge); the loopback bind makes that true by construction.
 app.use((req, _res, next) => {
   req.headers['x-forwarded-proto'] = 'https';
   next();
@@ -685,8 +688,10 @@ const { initMcp } = require('./mcp');
   } else {
     console.log('[mcp] skipped (X402_MODE=off)');
   }
-  app.listen(PORT, () => {
-    console.log(`agentfeed up on :${PORT} (x402: ${x402Network})`);
+  // loopback only: Cloudflare's tunnel and the box's own tools are the only callers (R38). BIND_HOST overrides it for a dev machine or a container.
+  const BIND_HOST = process.env.BIND_HOST || '127.0.0.1';
+  app.listen(PORT, BIND_HOST, () => {
+    console.log(`agentfeed up on ${BIND_HOST}:${PORT} (x402: ${x402Network})`);
     // R20: every Solana read of this process is counted per method and host and fails over (lib/solrpc.js); one `rpc_usage` line every 10 minutes
     require('./lib/solrpc').startUsageLog(Number(process.env.SOLRPC_USAGE_EVERY_MS) || undefined);
     // build the manifest's accepts (R10 F1) before the first crawler asks, once every facilitator has reported its /supported

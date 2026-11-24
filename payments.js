@@ -60,6 +60,7 @@ Object.assign(PRICES, require('./expansion').PRICES_ADD);
 // service. A missing or corrupt metadata file must degrade to the old empty
 // declaration -- which is exactly what shipped until today -- and never stop the
 // paid surface from serving.
+const { capExample, MAX_EXAMPLE_BYTES } = require('./lib/example-cap');
 const { questionFor } = require('./tools/questions');
 const { TOOL_TITLES } = require('./tools/titles');
 
@@ -196,15 +197,42 @@ const missingMeta = [];
  * values are the actual path segments of the request being answered. Only
  * pathParamsSchema survives from here, which is why it is the one passed.
  */
-function bazaarConfig(pattern) {
+function bazaarConfig(pattern, exampleBytes = MAX_EXAMPLE_BYTES) {
   const m = BAZAAR_META[pattern];
-  if (!m) { missingMeta.push(pattern); return {}; }
+  if (!m) { if (!missingMeta.includes(pattern)) missingMeta.push(pattern); return {}; }
   return {
     input: m.input || {},
     inputSchema: m.inputSchema || { properties: {} },
     ...(m.pathParamsSchema ? { pathParamsSchema: m.pathParamsSchema } : {}),
-    ...(m.output && m.output.example ? { output: m.output } : {}),
+    // R32: the output example rides in the 402 PAYMENT-REQUIRED header, so it is capped (600 B at most, fitBazaar below shrinks it further when a route's header would
+    // still be too big; 0 omits it). bazaar-examples.json itself stays whole: /api/sample, openapi and the generator read the full example.
+    ...(exampleBytes > 0 && m.output && m.output.example ? { output: { ...m.output, example: capExample(m.output.example, exampleBytes) } } : {}),
   };
+}
+
+// R32: header size budget. The 402 PAYMENT-REQUIRED header is base64 of the challenge JSON; aiohttp rejects a header value over 8,190 B (Pitcrew, 24 Nov 2026). The
+// fit below aims at HEADER_FIT_BYTES, 100 B under the 7,500 B limit the test enforces, so every route stays clear of aiohttp with room to spare. It only ever changes the
+// bazaar OUTPUT EXAMPLE (600 B at most, then smaller, then omitted): offers, payTo, amounts, networks, assets and the input schema are never touched. The offers are
+// sized at no less than ACCEPTS_FLOOR_BYTES (12 offers measured 3,296-3,341 B on the live default list) whichever rails this process has on, so the same routes get the
+// same example whether the process runs the full rail set or a test's reduced one.
+const HEADER_FIT_BYTES = 7400;
+const ACCEPTS_FLOOR_BYTES = 3350;
+const FIT_SLACK_BYTES = 120;                       // the pathParams values a path route adds when its challenge is served (measured: a plain route adds nothing)
+const EXAMPLE_STEPS = [MAX_EXAMPLE_BYTES, 450, 300, 200, 120, 60, 0];
+const FIT = { exampleBytes: {}, projected: {} };   // pattern -> example bytes allowed / projected header bytes (boot log and tests read this)
+const b64len = (n) => Math.ceil(n / 3) * 4;
+
+function fitBazaar(pattern, resource, accepts) {
+  const acc = Math.max(Buffer.byteLength(JSON.stringify(accepts)), ACCEPTS_FLOOR_BYTES);
+  const fixed = Buffer.byteLength(JSON.stringify({ x402Version: 2, error: 'Payment required', resource, accepts: [] })) + acc + FIT_SLACK_BYTES;
+  let ext, n, projected;
+  for (n of EXAMPLE_STEPS) {
+    ext = declareDiscoveryExtension(bazaarConfig(pattern, n));
+    projected = b64len(fixed + Buffer.byteLength(JSON.stringify(ext)));
+    if (projected <= HEADER_FIT_BYTES) break;
+  }
+  FIT.exampleBytes[pattern] = n; FIT.projected[pattern] = projected;
+  return ext;
 }
 
 /**
@@ -349,6 +377,8 @@ function buildPaymentLayer(deps = {}) {
     // Today's accepts stay first and in the same order (Agent402 pays the first exact accept on a chain); the ext rows follow.
     const base = routeAccepts(p, { network, payTo, EVM, ALGO, HF, railPrice, railPayTo, hfAccepts });
     const ext = EXT.filter((r) => extAllowed(r, p.usd)).map((r) => extAccept(r, p.usd, payToEvm));
+    const resourceMeta = { url: `https://x402.ochinimus.app${pattern.replace(/^GET /, '')}`, description: challengeDesc(challengeLead(p)), mimeType: 'application/json', serviceName: 'AgentFeed', tags: TAGS[p.tool] || ['crypto','trading'], iconUrl: ICON_URL };
+    const fittedExtensions = fitBazaar(pattern, resourceMeta, [...base, ...ext.filter((a) => isDefault(a.network))]);
     routes[pattern] = {
       // read per request (lib/rail-ctx.js): every accept outside a request, the default list or one asked-for network inside one
       get accepts() { return acceptsFor(base, ext, isDefault); },
@@ -364,7 +394,7 @@ function buildPaymentLayer(deps = {}) {
       tags: TAGS[p.tool] || ['crypto','trading'],
       mimeType: 'application/json',
       iconUrl: ICON_URL,
-      extensions: declareDiscoveryExtension(bazaarConfig(pattern)),
+      extensions: fittedExtensions,
     };
   }
   if (missingMeta.length) {
@@ -378,6 +408,8 @@ function buildPaymentLayer(deps = {}) {
   const withOutput = Object.keys(routes).filter((r) => BAZAAR_META[r] && BAZAAR_META[r].output).length;
   console.log(`[payments] x402 active: network=${networkName} facilitator=${facilitatorUrl} payTo=${payTo} evm=${EVM.map((r) => r.name).join(',') || 'none'}${ALGO ? ' algorand=GoPlausible' : ''} ext=${EXT.length} (${EXT.filter((r) => r.inDefault).map((r) => r.name).join(',')} in every 402, ${EXT.filter((r) => !r.inDefault).length} on request)`);
   console.log(`[payments] bazaar: ${Object.keys(routes).length} routes declared, ${withOutput} with an output example, icon=${ICON_URL}`);
+  { const ex = Object.entries(FIT.exampleBytes); const cut = ex.filter(([, n]) => n < MAX_EXAMPLE_BYTES), none = ex.filter(([, n]) => n === 0);
+    console.log(`[payments] 402 header fit: ${ex.length - cut.length} routes keep the full ${MAX_EXAMPLE_BYTES} B example, ${cut.length - none.length} smaller, ${none.length} without one (${none.map(([r]) => r).join(', ') || 'none'}); max projected header ${Math.max(0, ...Object.values(FIT.projected))} B (limit ${HEADER_FIT_BYTES})`); }
   // One probe per facilitator in `facs`, with a network only it serves: lib/manifest.js waitForFacilitators reads the resource
   // server for these before the startup manifest build, so the build waits for every facilitator's /supported without a second initialize().
   const facilitatorProbes = [
@@ -400,4 +432,4 @@ function decodeSettlement(res) {
   }
 }
 
-module.exports = { buildPaymentLayer, routeAccepts, onlyKinds, decodeSettlement, PRICES, TAGS, BAZAAR_META, ICON_URL, CHALLENGE_DESC_MAX, challengeDesc, challengeLead, splitFirst };
+module.exports = { FIT, HEADER_FIT_BYTES, buildPaymentLayer, routeAccepts, onlyKinds, decodeSettlement, PRICES, TAGS, BAZAAR_META, ICON_URL, CHALLENGE_DESC_MAX, challengeDesc, challengeLead, splitFirst };
